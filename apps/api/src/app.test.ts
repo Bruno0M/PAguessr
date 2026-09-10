@@ -6,10 +6,6 @@ describe('API App', () => {
   beforeAll(() => {
     process.env.LOG_LEVEL = 'silent';
   });
-
-  afterAll(async () => {
-    await sql.end({ timeout: 1 });
-  });
   it('responde na rota /health com status esperado', async () => {
     const app = buildApp();
     const response = await app.inject({

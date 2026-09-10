@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { sql } from './db/index.js';
+import { gameRoutes } from './routes/gameRoutes.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -31,6 +32,9 @@ export function buildApp(): FastifyInstance {
 
   app.get('/health', healthHandler);
   app.get('/api/health', healthHandler);
+
+  app.register(gameRoutes, { prefix: '/api' });
+  app.register(gameRoutes);
 
   return app;
 }
