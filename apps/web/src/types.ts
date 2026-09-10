@@ -10,12 +10,28 @@ export interface LocationPoint {
   category?: string;
 }
 
+export interface RoundData {
+  id: string;
+  order: number;
+}
+
 export interface RoundResult {
   roundNumber: number;
-  location: LocationPoint;
+  location: {
+    lat: number;
+    lng: number;
+    name?: string;
+    description?: string;
+  };
   guess: LatLng;
   distanceMeters: number;
   score: number;
 }
 
-export type GameState = 'guessing' | 'round_result' | 'finished';
+export type GameState =
+  | 'loading'
+  | 'guessing'
+  | 'submitting'
+  | 'round_result'
+  | 'finished'
+  | 'error';

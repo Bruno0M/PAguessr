@@ -73,7 +73,7 @@ export function GameResult({ results, onPlayAgain }: GameResultProps) {
                 <div className="round-item-left">
                   <span className="round-badge">R{r.roundNumber}</span>
                   <div className="round-loc-text">
-                    <span className="round-loc-name">{r.location.name}</span>
+                    <span className="round-loc-name">{r.location.name || `Rodada ${r.roundNumber}`}</span>
                     <span className="round-loc-dist">Erro: {formatDistance(r.distanceMeters)}</span>
                   </div>
                 </div>

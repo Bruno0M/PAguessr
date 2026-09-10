@@ -38,8 +38,10 @@ export function RoundResultModal({
         </div>
 
         <div className="result-location-info">
-          <h3 className="location-name">{result.location.name}</h3>
-          <p className="location-desc">{result.location.description}</p>
+          <h3 className="location-name">{result.location.name || 'Ponto em Paulo Afonso'}</h3>
+          {result.location.description && (
+            <p className="location-desc">{result.location.description}</p>
+          )}
         </div>
 
         <div className="result-banner-action">

@@ -10,12 +10,13 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLng } from '@paguessr/shared';
-import type { GameState, LocationPoint } from '../types';
+import type { GameState } from '../types';
 
 interface GuessMapProps {
   center: LatLng;
   guess: LatLng | null;
-  location: LocationPoint;
+  correctCoords?: LatLng | null;
+  locationName?: string;
   gameState: GameState;
   onSelectGuess: (coords: LatLng) => void;
   onConfirmGuess: () => void;
@@ -80,13 +81,13 @@ function MapViewManager({
 }: {
   gameState: GameState;
   guess: LatLng | null;
-  correct: LatLng;
+  correct?: LatLng | null;
   center: LatLng;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (gameState === 'round_result' && guess) {
+    if (gameState === 'round_result' && guess && correct) {
       const bounds = L.latLngBounds([
         [guess.lat, guess.lng],
         [correct.lat, correct.lng],
@@ -103,21 +104,22 @@ function MapViewManager({
 export function GuessMap({
   center,
   guess,
-  location,
+  correctCoords,
   gameState,
   onSelectGuess,
   onConfirmGuess,
 }: GuessMapProps) {
   const isGuessing = gameState === 'guessing';
-  const showResult = gameState === 'round_result';
+  const isSubmitting = gameState === 'submitting';
+  const showResult = gameState === 'round_result' && !!correctCoords && !!guess;
 
   const linePositions = useMemo(() => {
-    if (!showResult || !guess) return [];
+    if (!showResult || !guess || !correctCoords) return [];
     return [
       [guess.lat, guess.lng] as [number, number],
-      [location.coords.lat, location.coords.lng] as [number, number],
+      [correctCoords.lat, correctCoords.lng] as [number, number],
     ];
-  }, [showResult, guess, location]);
+  }, [showResult, guess, correctCoords]);
 
   return (
     <div className="map-wrapper">
@@ -141,7 +143,7 @@ export function GuessMap({
         <MapViewManager
           gameState={gameState}
           guess={guess}
-          correct={location.coords}
+          correct={correctCoords}
           center={center}
         />
 
@@ -160,10 +162,10 @@ export function GuessMap({
           />
         )}
 
-        {showResult && (
+        {showResult && correctCoords && (
           <>
             <Marker
-              position={[location.coords.lat, location.coords.lng]}
+              position={[correctCoords.lat, correctCoords.lng]}
               icon={correctIcon}
             />
             <Polyline
@@ -179,15 +181,19 @@ export function GuessMap({
         )}
       </MapContainer>
 
-      {isGuessing && (
+      {(isGuessing || isSubmitting) && (
         <div className="map-action-bar">
           <button
             type="button"
-            className={`btn-confirm ${guess ? 'active' : 'disabled'}`}
-            disabled={!guess}
+            className={`btn-confirm ${guess && !isSubmitting ? 'active' : 'disabled'}`}
+            disabled={!guess || isSubmitting}
             onClick={onConfirmGuess}
           >
-            {guess ? 'Confirmar Palpite' : 'Clique no mapa para marcar'}
+            {isSubmitting
+              ? 'Enviando palpite...'
+              : guess
+              ? 'Confirmar Palpite'
+              : 'Clique no mapa para marcar'}
           </button>
         </div>
       )}
