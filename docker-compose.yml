@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paguessr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-paguessr}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-paguessr}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    container_name: paguessr-api
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3333
+      HOST: 0.0.0.0
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-paguessr}}
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "${PORT:-3333}:3333"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    container_name: paguessr-web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
