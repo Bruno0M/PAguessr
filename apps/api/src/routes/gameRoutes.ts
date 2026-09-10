@@ -149,8 +149,29 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       if (apiKey) {
         try {
-          const googleUrl = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${loc.lat},${loc.lng}&fov=90&heading=0&pitch=0&source=outdoor&key=${apiKey}`;
-          const res = await fetch(googleUrl, { signal: AbortSignal.timeout(5000) });
+          const usePano =
+            loc.pano_id &&
+            !loc.pano_id.startsWith('mock-') &&
+            !loc.pano_id.startsWith('seed-');
+
+          const params = new URLSearchParams({
+            size: '800x600',
+            fov: '90',
+            heading: '0',
+            pitch: '0',
+            return_error_code: 'true',
+            key: apiKey
+          });
+
+          if (usePano) {
+            params.set('pano', loc.pano_id);
+          } else {
+            params.set('location', `${loc.lat},${loc.lng}`);
+            params.set('source', 'outdoor');
+          }
+
+          const googleUrl = `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
+          const res = await fetch(googleUrl, { signal: AbortSignal.timeout(6000) });
           if (res.ok) {
             const contentType = res.headers.get('content-type') || 'image/jpeg';
             const buffer = Buffer.from(await res.arrayBuffer());

@@ -28,6 +28,7 @@ services:
       HOST: 0.0.0.0
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-paguessr}}
       NODE_ENV: ${NODE_ENV:-production}
+      GOOGLE_STREET_VIEW_API_KEY: ${GOOGLE_STREET_VIEW_API_KEY:-}
     ports:
       - "${PORT:-3333}:3333"
     depends_on:

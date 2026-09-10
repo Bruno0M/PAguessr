@@ -1,4 +1,5 @@
 import '../src/env.js';
+import { eq } from 'drizzle-orm';
 import { db, sql } from '../src/db/index.js';
 import { locations, NewLocation } from '../src/db/schema.js';
 
@@ -48,24 +49,49 @@ export function generateGrid(
   return points;
 }
 
+export type DiscardReason =
+  | 'NO_PANORAMA'
+  | 'OLD_DATE'
+  | 'DUPLICATE_PANO'
+  | 'API_ERROR';
+
+export function evaluateMetadata(
+  meta: StreetViewMetadataResponse | null,
+  seenPanoIds: Set<string>,
+  minDateCutoff = MINIMUM_YEAR_CUTOFF
+): { valid: true } | { valid: false; reason: DiscardReason; message?: string } {
+  if (!meta || meta.status !== 'OK') {
+    if (meta?.status === 'ZERO_RESULTS' || meta?.status === 'NOT_FOUND') {
+      return { valid: false, reason: 'NO_PANORAMA' };
+    }
+    return {
+      valid: false,
+      reason: 'API_ERROR',
+      message: (meta as Record<string, unknown>)?.error_message as string || meta?.status || 'Erro desconhecido'
+    };
+  }
+
+  if (!meta.pano_id || !meta.location) {
+    return { valid: false, reason: 'NO_PANORAMA' };
+  }
+
+  if (seenPanoIds.has(meta.pano_id)) {
+    return { valid: false, reason: 'DUPLICATE_PANO' };
+  }
+
+  if (meta.date && meta.date < minDateCutoff) {
+    return { valid: false, reason: 'OLD_DATE' };
+  }
+
+  return { valid: true };
+}
+
 export function isValidMetadata(
   meta: StreetViewMetadataResponse,
   seenPanoIds: Set<string>,
   minDateCutoff = MINIMUM_YEAR_CUTOFF
 ): boolean {
-  if (meta.status !== 'OK' || !meta.pano_id || !meta.location) {
-    return false;
-  }
-
-  if (seenPanoIds.has(meta.pano_id)) {
-    return false;
-  }
-
-  if (meta.date && meta.date < minDateCutoff) {
-    return false;
-  }
-
-  return true;
+  return evaluateMetadata(meta, seenPanoIds, minDateCutoff).valid;
 }
 
 export async function fetchStreetViewMetadata(
@@ -99,34 +125,74 @@ export async function runCoverage() {
   const existing = await db.select({ pano_id: locations.pano_id }).from(locations);
   const seenPanoIds = new Set<string>(existing.map((e) => e.pano_id));
 
+  const initialSeedLocations = await db
+    .select()
+    .from(locations)
+    .where(eq(locations.source, 'seed'));
+
   const grid = generateGrid();
   console.log(`Iniciando varredura de grade com ${grid.length} pontos em Paulo Afonso...`);
 
-  let insertedCount = 0;
+  const stats = {
+    consultados: 0,
+    inseridos: 0,
+    semPanorama: 0,
+    dataAntiga: 0,
+    panoRepetido: 0,
+    erroApi: 0,
+    ultimoErroApi: ''
+  };
 
   for (const point of grid) {
+    stats.consultados++;
     const meta = await fetchStreetViewMetadata(point.lat, point.lng, apiKey);
-    if (!meta || !isValidMetadata(meta, seenPanoIds)) {
+    const evaluation = evaluateMetadata(meta, seenPanoIds);
+
+    if (!evaluation.valid) {
+      if (evaluation.reason === 'NO_PANORAMA') stats.semPanorama++;
+      else if (evaluation.reason === 'OLD_DATE') stats.dataAntiga++;
+      else if (evaluation.reason === 'DUPLICATE_PANO') stats.panoRepetido++;
+      else if (evaluation.reason === 'API_ERROR') {
+        stats.erroApi++;
+        if (evaluation.message) stats.ultimoErroApi = evaluation.message;
+      }
       continue;
     }
 
-    seenPanoIds.add(meta.pano_id!);
+    seenPanoIds.add(meta!.pano_id!);
 
     const newLoc: NewLocation = {
-      pano_id: meta.pano_id!,
-      lat: meta.location!.lat,
-      lng: meta.location!.lng,
+      pano_id: meta!.pano_id!,
+      lat: meta!.location!.lat,
+      lng: meta!.location!.lng,
       source: 'streetview',
-      captured_at: meta.date ? new Date(meta.date) : null
+      captured_at: meta!.date ? new Date(meta!.date) : null
     };
 
     await db.insert(locations).values(newLoc).onConflictDoNothing();
-    insertedCount++;
+    stats.inseridos++;
 
-    await new Promise((res) => setTimeout(res, 100));
+    await new Promise((res) => setTimeout(res, 50));
   }
 
-  console.log(`Varredura concluída. ${insertedCount} novos locais inseridos.`);
+  const finalSeedLocations = await db
+    .select()
+    .from(locations)
+    .where(eq(locations.source, 'seed'));
+
+  const totalFinalLocations = await db.select().from(locations);
+
+  console.log('\n--- Relatório da Varredura de Cobertura ---');
+  console.log(`Pontos da grade consultados: ${stats.consultados}`);
+  console.log(`Locais válidos inseridos: ${stats.inseridos}`);
+  console.log(`Descartados sem panorama: ${stats.semPanorama}`);
+  console.log(`Descartados por data antiga (< ${MINIMUM_YEAR_CUTOFF}): ${stats.dataAntiga}`);
+  console.log(`Descartados por pano_id repetido: ${stats.panoRepetido}`);
+  console.log(`Descartados por erro na API: ${stats.erroApi} ${stats.ultimoErroApi ? `(${stats.ultimoErroApi})` : ''}`);
+  console.log(`Locais de seed preservados na tabela: ${finalSeedLocations.length} de ${initialSeedLocations.length}`);
+  console.log(`Total geral de locais no banco: ${totalFinalLocations.length}`);
+
+  return stats;
 }
 
 if (process.argv[1]?.endsWith('coverage.ts')) {
