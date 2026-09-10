@@ -27,4 +27,4 @@ WORKDIR /app/apps/api
 
 EXPOSE 3333
 
-CMD ["sh", "-c", "pnpm db:migrate && pnpm db:seed && node dist/index.js"]
+CMD ["sh", "-c", "pnpm db:migrate && node dist/index.js"]

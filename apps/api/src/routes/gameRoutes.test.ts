@@ -48,22 +48,32 @@ describe('Game Routes Integration', () => {
   });
 
   it('GET /api/rounds/:id/image retorna imagem placeholder quando sem chave do Google', async () => {
-    const gameRes = await app.inject({
-      method: 'POST',
-      url: '/api/games'
-    });
-    const game = JSON.parse(gameRes.body);
-    const roundId = game.rounds[0].id;
+    const origKey = process.env.GOOGLE_STREET_VIEW_API_KEY;
+    const origMapsKey = process.env.GOOGLE_MAPS_API_KEY;
+    delete process.env.GOOGLE_STREET_VIEW_API_KEY;
+    delete process.env.GOOGLE_MAPS_API_KEY;
 
-    const imgRes = await app.inject({
-      method: 'GET',
-      url: `/api/rounds/${roundId}/image`
-    });
+    try {
+      const gameRes = await app.inject({
+        method: 'POST',
+        url: '/api/games'
+      });
+      const game = JSON.parse(gameRes.body);
+      const roundId = game.rounds[0].id;
 
-    expect(imgRes.statusCode).toBe(200);
-    expect(imgRes.headers['content-type']).toContain('image/svg+xml');
-    expect(imgRes.body).toContain('<svg');
-    expect(imgRes.body).toContain('PAguessr');
+      const imgRes = await app.inject({
+        method: 'GET',
+        url: `/api/rounds/${roundId}/image`
+      });
+
+      expect(imgRes.statusCode).toBe(200);
+      expect(imgRes.headers['content-type']).toContain('image/svg+xml');
+      expect(imgRes.body).toContain('<svg');
+      expect(imgRes.body).toContain('PAguessr');
+    } finally {
+      if (origKey !== undefined) process.env.GOOGLE_STREET_VIEW_API_KEY = origKey;
+      if (origMapsKey !== undefined) process.env.GOOGLE_MAPS_API_KEY = origMapsKey;
+    }
   });
 
   it('POST /api/rounds/:id/guess calcula distância, pontos e rejeita segundo palpite', async () => {

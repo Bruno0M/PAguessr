@@ -155,6 +155,16 @@ export async function runCoverage() {
       else if (evaluation.reason === 'API_ERROR') {
         stats.erroApi++;
         if (evaluation.message) stats.ultimoErroApi = evaluation.message;
+        if (
+          meta?.status === 'OVER_QUERY_LIMIT' ||
+          evaluation.message?.toLowerCase().includes('quota') ||
+          evaluation.message?.toLowerCase().includes('over_query_limit')
+        ) {
+          console.warn(
+            `Interrompido por limite de cota no ponto ${stats.consultados}: ${evaluation.message || meta?.status}`
+          );
+          break;
+        }
       }
       continue;
     }
