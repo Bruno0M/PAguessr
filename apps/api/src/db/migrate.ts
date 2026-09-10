@@ -3,7 +3,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import 'dotenv/config';
+import '../env.js';
 
 const connectionString =
   process.env.DATABASE_URL ||
