@@ -11,7 +11,7 @@ export interface LocationPoint {
 }
 
 export interface RoundData {
-  id: string;
+  id: string | number;
   order: number;
 }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 interface ImagePanelProps {
-  roundId?: string;
+  roundId?: string | number;
   imageUrl?: string;
   placeholderText?: string;
   category?: string;

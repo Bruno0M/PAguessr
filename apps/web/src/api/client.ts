@@ -1,8 +1,9 @@
 import type { LatLng } from '@paguessr/shared';
 
 export interface ApiRoundInitial {
-  id: string;
+  id: string | number;
   order?: number;
+  ordem?: number;
   roundNumber?: number;
 }
 
@@ -64,7 +65,7 @@ export async function createGame(): Promise<ApiGameCreated> {
 }
 
 export async function submitGuess(
-  roundId: string,
+  roundId: string | number,
   guess: LatLng
 ): Promise<ApiGuessResponse> {
   const res = await fetch(`/api/rounds/${roundId}/guess`, {
@@ -92,6 +93,6 @@ export async function getGameSummary(gameId: string): Promise<ApiGameSummary> {
   return res.json();
 }
 
-export function getRoundImageUrl(roundId: string): string {
+export function getRoundImageUrl(roundId: string | number): string {
   return `/api/rounds/${roundId}/image`;
 }
