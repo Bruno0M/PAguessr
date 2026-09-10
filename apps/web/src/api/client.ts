@@ -55,6 +55,7 @@ export async function createGame(): Promise<ApiGameCreated> {
     headers: {
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({}),
   });
 
   if (!res.ok) {
