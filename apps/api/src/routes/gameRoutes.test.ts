@@ -35,6 +35,18 @@ describe('Game Routes Integration', () => {
     }
   });
 
+  it('POST /api/games aceita header application/json sem corpo', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/games',
+      headers: {
+        'content-type': 'application/json'
+      }
+    });
+
+    expect(res.statusCode).toBe(201);
+  });
+
   it('GET /api/rounds/:id/image retorna imagem placeholder quando sem chave do Google', async () => {
     const gameRes = await app.inject({
       method: 'POST',

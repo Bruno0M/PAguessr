@@ -14,6 +14,22 @@ export function buildApp(): FastifyInstance {
     origin: true
   });
 
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (req, body, done) => {
+      const text = typeof body === 'string' ? body.trim() : '';
+      if (!text) {
+        return done(null, {});
+      }
+      try {
+        done(null, JSON.parse(text));
+      } catch (err) {
+        done(err as Error, undefined);
+      }
+    }
+  );
+
   const healthHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       await sql`SELECT 1`;
