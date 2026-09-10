@@ -1,0 +1,21 @@
+{
+  "name": "paguessr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @paguessr/api db:generate",
+    "db:migrate": "pnpm --filter @paguessr/api db:migrate"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
