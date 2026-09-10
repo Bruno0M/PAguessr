@@ -1,0 +1,99 @@
+import type { RoundResult } from '../types';
+
+interface GameResultProps {
+  results: RoundResult[];
+  onPlayAgain: () => void;
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
+}
+
+function getPerformanceTitle(totalScore: number, maxScore: number): { title: string; subtitle: string } {
+  const percentage = (totalScore / maxScore) * 100;
+  if (percentage >= 90) {
+    return {
+      title: 'Mestre da Ilha! 🏆',
+      subtitle: 'Você conhece cada palmo e cânion de Paulo Afonso como ninguém.',
+    };
+  }
+  if (percentage >= 70) {
+    return {
+      title: 'Quase um Pauloafonsino! 🌟',
+      subtitle: 'Excelente navegação! Você acertou com precisão os pontos da cidade.',
+    };
+  }
+  if (percentage >= 45) {
+    return {
+      title: 'Explorador do Velho Chico 🧭',
+      subtitle: 'Bom senso de direção! Com mais algumas rodadas você domina o mapa.',
+    };
+  }
+  return {
+    title: 'Turista Aprendiz 🗺️',
+    subtitle: 'Uma ótima oportunidade para desbravar mais a história e os pontos de Paulo Afonso.',
+  };
+}
+
+export function GameResult({ results, onPlayAgain }: GameResultProps) {
+  const totalScore = results.reduce((acc, curr) => acc + curr.score, 0);
+  const maxScore = results.length * 5000;
+  const totalDistance = results.reduce((acc, curr) => acc + curr.distanceMeters, 0);
+  const performance = getPerformanceTitle(totalScore, maxScore);
+
+  return (
+    <div className="game-result-container">
+      <div className="game-result-card">
+        <div className="result-header">
+          <span className="trophy-emoji">🏅</span>
+          <h2 className="result-title">{performance.title}</h2>
+          <p className="result-subtitle">{performance.subtitle}</p>
+
+          <div className="final-score-display">
+            <span className="final-score-number">
+              {totalScore.toLocaleString('pt-BR')}
+            </span>
+            <span className="final-score-max">/ {maxScore.toLocaleString('pt-BR')} pontos</span>
+          </div>
+
+          <p className="total-distance-hint">
+            Distância total de erro acumulada: <strong>{formatDistance(totalDistance)}</strong>
+          </p>
+        </div>
+
+        <div className="rounds-summary">
+          <h3 className="rounds-summary-title">Resumo das Rodadas</h3>
+
+          <div className="rounds-list">
+            {results.map((r) => (
+              <div key={r.roundNumber} className="round-item">
+                <div className="round-item-left">
+                  <span className="round-badge">R{r.roundNumber}</span>
+                  <div className="round-loc-text">
+                    <span className="round-loc-name">{r.location.name}</span>
+                    <span className="round-loc-dist">Erro: {formatDistance(r.distanceMeters)}</span>
+                  </div>
+                </div>
+
+                <div className="round-item-right">
+                  <span className="round-score-pill">
+                    +{r.score.toLocaleString('pt-BR')} pts
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="result-actions">
+          <button type="button" className="btn-play-again" onClick={onPlayAgain}>
+            🔄 Jogar Novamente
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
