@@ -9,7 +9,8 @@
     "dev": "pnpm -r --parallel dev",
     "lint": "pnpm -r lint",
     "db:generate": "pnpm --filter @paguessr/api db:generate",
-    "db:migrate": "pnpm --filter @paguessr/api db:migrate"
+    "db:migrate": "pnpm --filter @paguessr/api db:migrate",
+    "db:seed": "pnpm --filter @paguessr/api db:seed"
   },
   "packageManager": "pnpm@11.9.0",
   "engines": {

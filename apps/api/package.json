@@ -10,7 +10,9 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "coverage": "tsx scripts/coverage.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
