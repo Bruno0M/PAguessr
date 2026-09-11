@@ -9,7 +9,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     const allLocations = await db.select().from(locations);
 
     if (allLocations.length < 5) {
-      return reply.status(500).send({
+      return reply.status(503).send({
         error: 'Não há locais cadastrados suficientes para iniciar uma partida (mínimo 5)'
       });
     }

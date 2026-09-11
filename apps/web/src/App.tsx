@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { HomeScreen } from './components/HomeScreen';
 import { haversine, score, PAULO_AFONSO_CENTER } from '@paguessr/shared';
 import type { LatLng } from '@paguessr/shared';
 import { MOCK_LOCATIONS } from './data/mockLocations';
@@ -16,7 +17,14 @@ import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
 
 export function App() {
-  const [gameState, setGameState] = useState<GameState>('loading');
+  const sessionVersion = useRef(0);
+  const pauseRef = useRef<HTMLDialogElement>(null);
+  const returnHome = useCallback(() => {
+    sessionVersion.current += 1;
+    pauseRef.current?.close();
+    setGameState('home');
+  }, []);
+  const [gameState, setGameState] = useState<GameState>('home');
   const [gameId, setGameId] = useState<string | null>(null);
   const [rounds, setRounds] = useState<RoundData[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
@@ -26,7 +34,19 @@ export function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submittingError, setSubmittingError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (gameState === 'home') return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.repeat || pauseRef.current?.open) return;
+      event.preventDefault();
+      pauseRef.current?.showModal();
+    };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [gameState]);
+
   const startNewGame = useCallback(async (forceMock = false) => {
+    const version = ++sessionVersion.current;
     setGameState('loading');
     setErrorMessage(null);
     setSubmittingError(null);
@@ -48,6 +68,7 @@ export function App() {
 
     try {
       const data = await createGame();
+      if (version !== sessionVersion.current) return;
       const mappedRounds: RoundData[] = (data.rounds || []).map(
         (r: ApiRoundInitial, idx: number) => ({
           id: r.id,
@@ -64,15 +85,12 @@ export function App() {
       setIsOfflineMode(false);
       setGameState('guessing');
     } catch (err: unknown) {
+      if (version !== sessionVersion.current) return;
       const msg = err instanceof Error ? err.message : 'Erro ao conectar com a API.';
       setErrorMessage(msg);
       setGameState('error');
     }
   }, []);
-
-  useEffect(() => {
-    startNewGame();
-  }, [startNewGame]);
 
   const totalRounds = rounds.length || 5;
   const currentRound = rounds[currentRoundIndex];
@@ -86,7 +104,8 @@ export function App() {
   };
 
   const handleConfirmGuess = async () => {
-    if (!currentGuess || (gameState !== 'guessing' && gameState !== 'submitting')) return;
+    if (!currentGuess || gameState !== 'guessing') return;
+    const version = sessionVersion.current;
 
     if (isOfflineMode) {
       const distanceMeters = haversine(currentGuess, currentMockLoc.coords);
@@ -117,6 +136,7 @@ export function App() {
 
     try {
       const res = await submitGuess(currentRound.id, currentGuess);
+      if (version !== sessionVersion.current) return;
       const distanceMeters = res.distance ?? res.distanceMeters ?? 0;
       const roundScore = res.points ?? res.score ?? 0;
 
@@ -136,6 +156,7 @@ export function App() {
       setResults((prev) => [...prev, newResult]);
       setGameState('round_result');
     } catch (err: unknown) {
+      if (version !== sessionVersion.current) return;
       const msg = err instanceof Error ? err.message : 'Erro ao enviar palpite.';
       setSubmittingError(msg);
       setGameState('guessing');
@@ -143,6 +164,7 @@ export function App() {
   };
 
   const handleNextRound = async () => {
+    const version = sessionVersion.current;
     if (currentRoundIndex + 1 < totalRounds) {
       setCurrentRoundIndex((prev) => prev + 1);
       setCurrentGuess(null);
@@ -156,6 +178,7 @@ export function App() {
           // Ignora falha de resumo se já possuímos os resultados locais acumulados
         }
       }
+      if (version !== sessionVersion.current) return;
       setGameState('finished');
     }
   };
@@ -167,6 +190,10 @@ export function App() {
   const latestResult = results[results.length - 1];
   const isLastRound = currentRoundIndex === totalRounds - 1;
 
+  if (gameState === 'home') {
+    return <HomeScreen onStart={() => startNewGame()} />;
+  }
+
   return (
     <div className="app-shell">
       <RoundHeader
@@ -174,6 +201,8 @@ export function App() {
         totalRounds={totalRounds}
         totalScore={totalScore}
         isOfflineMode={isOfflineMode}
+        onHome={returnHome}
+        onPause={() => pauseRef.current?.showModal()}
       />
 
       <main className="game-body">
@@ -191,6 +220,9 @@ export function App() {
             <h2>Não foi possível iniciar a partida</h2>
             <p className="error-text">{errorMessage}</p>
             <div className="status-actions">
+              <button type="button" className="btn-secondary" onClick={returnHome}>
+                Voltar ao início
+              </button>
               <button
                 type="button"
                 className="btn-primary"
@@ -261,6 +293,13 @@ export function App() {
           </div>
         )}
       </main>
+      <dialog ref={pauseRef} className="pause-menu" aria-labelledby="pause-title">
+        <span className="pause-kicker">PAGUESSR</span>
+        <h2 id="pause-title">Pausa</h2>
+        <button autoFocus className="pause-continue" onClick={() => pauseRef.current?.close()}>Continuar partida <kbd>Esc</kbd></button>
+        <button className="pause-home" onClick={returnHome}>Voltar ao início</button>
+        <p>Ao voltar, a próxima partida começa do zero.</p>
+      </dialog>
     </div>
   );
 }
