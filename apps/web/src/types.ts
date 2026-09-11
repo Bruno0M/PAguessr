@@ -29,6 +29,7 @@ export interface RoundResult {
 }
 
 export type GameState =
+  | 'home'
   | 'loading'
   | 'guessing'
   | 'submitting'

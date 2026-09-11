@@ -3,6 +3,8 @@ interface RoundHeaderProps {
   totalRounds: number;
   totalScore: number;
   isOfflineMode?: boolean;
+  onHome: () => void;
+  onPause: () => void;
 }
 
 export function RoundHeader({
@@ -10,17 +12,19 @@ export function RoundHeader({
   totalRounds,
   totalScore,
   isOfflineMode = false,
+  onHome,
+  onPause,
 }: RoundHeaderProps) {
   return (
     <header className="header">
       <div className="header-brand">
-        <span className="logo-pin">📍</span>
-        <h1 className="logo-title">PAguessr</h1>
+<button type="button" className="header-home" onClick={onHome} aria-label="PAguessr — voltar ao início" title="Voltar ao início"><span className="logo-pin" aria-hidden="true">📍</span><span className="logo-title">PAguessr</span></button>
         <span className="city-tag">Paulo Afonso - BA</span>
         {isOfflineMode && <span className="offline-tag">Modo Offline (Mock)</span>}
       </div>
 
       <div className="header-stats">
+        <button type="button" className="header-pause" onClick={onPause} aria-label="Pausar partida" title="Pausar (Esc)">Ⅱ <kbd>Esc</kbd></button>
         <div className="stat-pill">
           <span className="stat-label">Rodada</span>
           <span className="stat-value">

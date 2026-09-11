@@ -59,7 +59,12 @@ export async function createGame(): Promise<ApiGameCreated> {
   });
 
   if (!res.ok) {
-    throw new Error(`Falha ao iniciar partida na API (${res.status} ${res.statusText})`);
+    const details = await res.json().catch(() => null);
+    throw new Error(
+      typeof details?.error === 'string' && !details.statusCode
+        ? details.error
+        : 'Não foi possível conectar ao servidor do jogo. Verifique se a API e o banco de dados estão em execução.'
+    );
   }
 
   return res.json();
