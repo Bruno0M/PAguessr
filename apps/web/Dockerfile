@@ -4,12 +4,12 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
-COPY package.json pnpm-workspace.yaml tsconfig.base.json* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-RUN pnpm install
-RUN pnpm --filter @paguessr/shared build || true
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @paguessr/shared build
 RUN pnpm --filter @paguessr/web build
 
 FROM nginx:alpine
