@@ -1,14 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
-import { sql } from '../db/index.js';
-import { runSeed } from '../db/seed.js';
+import { resetTestDatabase } from '../test/fixtures.js';
 
 describe('Game Routes Integration', () => {
   const app = buildApp();
 
   beforeAll(async () => {
     process.env.LOG_LEVEL = 'silent';
-    await runSeed();
+    await resetTestDatabase();
   });
 
   afterAll(async () => {
@@ -18,7 +17,7 @@ describe('Game Routes Integration', () => {
   it('POST /api/games cria nova partida com 5 rodadas sem expor coordenadas', async () => {
     const res = await app.inject({
       method: 'POST',
-      url: '/api/games'
+      url: '/api/games',
     });
 
     expect(res.statusCode).toBe(201);
@@ -40,8 +39,8 @@ describe('Game Routes Integration', () => {
       method: 'POST',
       url: '/api/games',
       headers: {
-        'content-type': 'application/json'
-      }
+        'content-type': 'application/json',
+      },
     });
 
     expect(res.statusCode).toBe(201);
@@ -56,14 +55,14 @@ describe('Game Routes Integration', () => {
     try {
       const gameRes = await app.inject({
         method: 'POST',
-        url: '/api/games'
+        url: '/api/games',
       });
       const game = JSON.parse(gameRes.body);
       const roundId = game.rounds[0].id;
 
       const imgRes = await app.inject({
         method: 'GET',
-        url: `/api/rounds/${roundId}/image`
+        url: `/api/rounds/${roundId}/image`,
       });
 
       expect(imgRes.statusCode).toBe(200);
@@ -79,7 +78,7 @@ describe('Game Routes Integration', () => {
   it('POST /api/rounds/:id/guess calcula distância, pontos e rejeita segundo palpite', async () => {
     const gameRes = await app.inject({
       method: 'POST',
-      url: '/api/games'
+      url: '/api/games',
     });
     const game = JSON.parse(gameRes.body);
     const roundId = game.rounds[0].id;
@@ -89,8 +88,8 @@ describe('Game Routes Integration', () => {
       url: `/api/rounds/${roundId}/guess`,
       payload: {
         lat: -9.4064,
-        lng: -38.2147
-      }
+        lng: -38.2147,
+      },
     });
 
     expect(guessRes.statusCode).toBe(200);
@@ -108,8 +107,8 @@ describe('Game Routes Integration', () => {
       url: `/api/rounds/${roundId}/guess`,
       payload: {
         lat: -9.4,
-        lng: -38.2
-      }
+        lng: -38.2,
+      },
     });
     expect(secondGuess.statusCode).toBe(409);
   });
@@ -120,8 +119,8 @@ describe('Game Routes Integration', () => {
       url: '/api/rounds/1/guess',
       payload: {
         lat: 200,
-        lng: -38.2
-      }
+        lng: -38.2,
+      },
     });
 
     expect(res.statusCode).toBe(400);
@@ -130,7 +129,7 @@ describe('Game Routes Integration', () => {
   it('GET /api/games/:id retorna resumo completo da partida', async () => {
     const gameRes = await app.inject({
       method: 'POST',
-      url: '/api/games'
+      url: '/api/games',
     });
     const game = JSON.parse(gameRes.body);
 
@@ -139,13 +138,13 @@ describe('Game Routes Integration', () => {
       url: `/api/rounds/${game.rounds[0].id}/guess`,
       payload: {
         lat: -9.4064,
-        lng: -38.2147
-      }
+        lng: -38.2147,
+      },
     });
 
     const summaryRes = await app.inject({
       method: 'GET',
-      url: `/api/games/${game.id}`
+      url: `/api/games/${game.id}`,
     });
 
     expect(summaryRes.statusCode).toBe(200);

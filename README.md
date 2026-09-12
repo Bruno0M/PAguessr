@@ -83,8 +83,32 @@ Não execute o comando de iniciar o banco se ele já estiver rodando. Essa pasta
 
 ## Testes
 
-Para rodar os testes automatizados do monorepo:
+Os testes da API rodam contra um banco **separado** do de desenvolvimento (`paguessr_test`, no lugar de `paguessr`), para nunca apagar locais reais coletados via `pnpm coverage`. Esse banco é criado automaticamente na primeira vez que o container do Postgres sobe (`docker compose up -d postgres`). Se o seu `postgres_data` já existia antes dessa mudança, crie o banco manualmente uma vez:
+
+```bash
+docker compose exec postgres createdb -U postgres paguessr_test
+```
+
+Depois, rode as migrações nele e os testes:
+
+```bash
+pnpm db:migrate:test
+```
 
 ```bash
 pnpm test
+```
+
+Outros comandos úteis:
+
+```bash
+pnpm lint
+```
+
+```bash
+pnpm typecheck
+```
+
+```bash
+pnpm format
 ```
