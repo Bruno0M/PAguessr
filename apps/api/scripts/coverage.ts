@@ -17,21 +17,19 @@ export interface StreetViewMetadataResponse {
   };
   date?: string;
   copyright?: string;
+  error_message?: string;
 }
 
 export const PAULO_AFONSO_BOUNDS = {
   minLat: -9.435,
   maxLat: -9.375,
   minLng: -38.245,
-  maxLng: -38.185
+  maxLng: -38.185,
 };
 
 export const MINIMUM_YEAR_CUTOFF = '2018-01';
 
-export function generateGrid(
-  bounds = PAULO_AFONSO_BOUNDS,
-  stepMeters = 200
-): GridPoint[] {
+export function generateGrid(bounds = PAULO_AFONSO_BOUNDS, stepMeters = 200): GridPoint[] {
   const points: GridPoint[] = [];
   const latStep = stepMeters / 111000;
   const avgLatRad = ((bounds.minLat + bounds.maxLat) / 2) * (Math.PI / 180);
@@ -41,7 +39,7 @@ export function generateGrid(
     for (let lng = bounds.minLng; lng <= bounds.maxLng; lng += lngStep) {
       points.push({
         lat: Math.round(lat * 1000000) / 1000000,
-        lng: Math.round(lng * 1000000) / 1000000
+        lng: Math.round(lng * 1000000) / 1000000,
       });
     }
   }
@@ -49,11 +47,7 @@ export function generateGrid(
   return points;
 }
 
-export type DiscardReason =
-  | 'NO_PANORAMA'
-  | 'OLD_DATE'
-  | 'DUPLICATE_PANO'
-  | 'API_ERROR';
+export type DiscardReason = 'NO_PANORAMA' | 'OLD_DATE' | 'DUPLICATE_PANO' | 'API_ERROR';
 
 export function evaluateMetadata(
   meta: StreetViewMetadataResponse | null,
@@ -67,7 +61,7 @@ export function evaluateMetadata(
     return {
       valid: false,
       reason: 'API_ERROR',
-      message: (meta as Record<string, unknown>)?.error_message as string || meta?.status || 'Erro desconhecido'
+      message: meta?.error_message || meta?.status || 'Erro desconhecido',
     };
   }
 
@@ -111,9 +105,7 @@ export async function fetchStreetViewMetadata(
 }
 
 export async function runCoverage() {
-  const apiKey =
-    process.env.GOOGLE_MAPS_API_KEY ||
-    process.env.GOOGLE_STREET_VIEW_API_KEY;
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_STREET_VIEW_API_KEY;
 
   if (!apiKey) {
     console.error(
@@ -140,7 +132,7 @@ export async function runCoverage() {
     dataAntiga: 0,
     panoRepetido: 0,
     erroApi: 0,
-    ultimoErroApi: ''
+    ultimoErroApi: '',
   };
 
   for (const point of grid) {
@@ -176,7 +168,7 @@ export async function runCoverage() {
       lat: meta!.location!.lat,
       lng: meta!.location!.lng,
       source: 'streetview',
-      captured_at: meta!.date ? new Date(meta!.date) : null
+      captured_at: meta!.date ? new Date(meta!.date) : null,
     };
 
     await db.insert(locations).values(newLoc).onConflictDoNothing();
@@ -185,10 +177,7 @@ export async function runCoverage() {
     await new Promise((res) => setTimeout(res, 50));
   }
 
-  const finalSeedLocations = await db
-    .select()
-    .from(locations)
-    .where(eq(locations.source, 'seed'));
+  const finalSeedLocations = await db.select().from(locations).where(eq(locations.source, 'seed'));
 
   const totalFinalLocations = await db.select().from(locations);
 
@@ -198,8 +187,12 @@ export async function runCoverage() {
   console.log(`Descartados sem panorama: ${stats.semPanorama}`);
   console.log(`Descartados por data antiga (< ${MINIMUM_YEAR_CUTOFF}): ${stats.dataAntiga}`);
   console.log(`Descartados por pano_id repetido: ${stats.panoRepetido}`);
-  console.log(`Descartados por erro na API: ${stats.erroApi} ${stats.ultimoErroApi ? `(${stats.ultimoErroApi})` : ''}`);
-  console.log(`Locais de seed preservados na tabela: ${finalSeedLocations.length} de ${initialSeedLocations.length}`);
+  console.log(
+    `Descartados por erro na API: ${stats.erroApi} ${stats.ultimoErroApi ? `(${stats.ultimoErroApi})` : ''}`
+  );
+  console.log(
+    `Locais de seed preservados na tabela: ${finalSeedLocations.length} de ${initialSeedLocations.length}`
+  );
   console.log(`Total geral de locais no banco: ${totalFinalLocations.length}`);
 
   return stats;
