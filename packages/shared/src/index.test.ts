@@ -1,17 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import {
-  LatLng,
-  PAULO_AFONSO_CENTER,
-  haversine,
-  score
-} from './index.js';
+import { LatLng, PAULO_AFONSO_CENTER, haversine, score } from './index.js';
 
 describe('@paguessr/shared', () => {
   describe('PAULO_AFONSO_CENTER', () => {
     it('possui as coordenadas esperadas de Paulo Afonso-BA', () => {
       expect(PAULO_AFONSO_CENTER).toEqual({
         lat: -9.4064,
-        lng: -38.2147
+        lng: -38.2147,
       });
     });
   });

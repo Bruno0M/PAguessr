@@ -4,12 +4,7 @@ import { haversine, score, PAULO_AFONSO_CENTER } from '@paguessr/shared';
 import type { LatLng } from '@paguessr/shared';
 import { MOCK_LOCATIONS } from './data/mockLocations';
 import type { GameState, RoundResult, RoundData } from './types';
-import {
-  createGame,
-  submitGuess,
-  getGameSummary,
-  type ApiRoundInitial,
-} from './api/client';
+import { createGame, submitGuess, getGameSummary, type ApiRoundInitial } from './api/client';
 import { RoundHeader } from './components/RoundHeader';
 import { ImagePanel } from './components/ImagePanel';
 import { GuessMap } from './components/GuessMap';
@@ -223,27 +218,17 @@ export function App() {
               <button type="button" className="btn-secondary" onClick={returnHome}>
                 Voltar ao início
               </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => startNewGame(false)}
-              >
+              <button type="button" className="btn-primary" onClick={() => startNewGame(false)}>
                 Tentar Conectar Novamente
               </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => startNewGame(true)}
-              >
+              <button type="button" className="btn-secondary" onClick={() => startNewGame(true)}>
                 Jogar no Modo Offline (Mock)
               </button>
             </div>
           </div>
         )}
 
-        {gameState === 'finished' && (
-          <GameResult results={results} onPlayAgain={handlePlayAgain} />
-        )}
+        {gameState === 'finished' && <GameResult results={results} onPlayAgain={handlePlayAgain} />}
 
         {(gameState === 'guessing' ||
           gameState === 'submitting' ||
@@ -273,9 +258,7 @@ export function App() {
               center={PAULO_AFONSO_CENTER}
               guess={currentGuess}
               correctCoords={
-                gameState === 'round_result' && latestResult
-                  ? latestResult.location
-                  : null
+                gameState === 'round_result' && latestResult ? latestResult.location : null
               }
               locationName={latestResult?.location.name}
               gameState={gameState}
@@ -296,8 +279,12 @@ export function App() {
       <dialog ref={pauseRef} className="pause-menu" aria-labelledby="pause-title">
         <span className="pause-kicker">PAGUESSR</span>
         <h2 id="pause-title">Pausa</h2>
-        <button autoFocus className="pause-continue" onClick={() => pauseRef.current?.close()}>Continuar partida <kbd>Esc</kbd></button>
-        <button className="pause-home" onClick={returnHome}>Voltar ao início</button>
+        <button autoFocus className="pause-continue" onClick={() => pauseRef.current?.close()}>
+          Continuar partida <kbd>Esc</kbd>
+        </button>
+        <button className="pause-home" onClick={returnHome}>
+          Voltar ao início
+        </button>
         <p>Ao voltar, a próxima partida começa do zero.</p>
       </dialog>
     </div>

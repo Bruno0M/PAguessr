@@ -13,27 +13,19 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-export function RoundResultModal({
-  result,
-  isLastRound,
-  onNext,
-}: RoundResultModalProps) {
+export function RoundResultModal({ result, isLastRound, onNext }: RoundResultModalProps) {
   return (
     <div className="result-banner">
       <div className="result-banner-card">
         <div className="result-main-metrics">
           <div className="metric-box">
             <span className="metric-label">Distância do alvo</span>
-            <span className="metric-value distance">
-              {formatDistance(result.distanceMeters)}
-            </span>
+            <span className="metric-value distance">{formatDistance(result.distanceMeters)}</span>
           </div>
 
           <div className="metric-box highlight">
             <span className="metric-label">Pontuação</span>
-            <span className="metric-value points">
-              +{result.score.toLocaleString('pt-BR')}
-            </span>
+            <span className="metric-value points">+{result.score.toLocaleString('pt-BR')}</span>
           </div>
         </div>
 

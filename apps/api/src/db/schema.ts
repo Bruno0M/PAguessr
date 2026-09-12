@@ -5,7 +5,7 @@ import {
   doublePrecision,
   timestamp,
   uuid,
-  integer
+  integer,
 } from 'drizzle-orm/pg-core';
 
 export const locations = pgTable('locations', {
@@ -15,14 +15,14 @@ export const locations = pgTable('locations', {
   lng: doublePrecision('lng').notNull(),
   captured_at: timestamp('captured_at', { withTimezone: true }),
   source: varchar('source', { length: 50 }).notNull().default('streetview'),
-  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const games = pgTable('games', {
   id: uuid('id').defaultRandom().primaryKey(),
   total_score: integer('total_score').notNull().default(0),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  finished_at: timestamp('finished_at', { withTimezone: true })
+  finished_at: timestamp('finished_at', { withTimezone: true }),
 });
 
 export const rounds = pgTable('rounds', {
@@ -38,7 +38,7 @@ export const rounds = pgTable('rounds', {
   guess_lng: doublePrecision('guess_lng'),
   distancia: doublePrecision('distancia'),
   pontos: integer('pontos'),
-  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export type Location = typeof locations.$inferSelect;

@@ -29,10 +29,4 @@ export interface RoundResult {
 }
 
 export type GameState =
-  | 'home'
-  | 'loading'
-  | 'guessing'
-  | 'submitting'
-  | 'round_result'
-  | 'finished'
-  | 'error';
+  'home' | 'loading' | 'guessing' | 'submitting' | 'round_result' | 'finished' | 'error';

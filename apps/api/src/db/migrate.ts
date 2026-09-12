@@ -6,8 +6,7 @@ import path from 'node:path';
 import '../env.js';
 
 const connectionString =
-  process.env.DATABASE_URL ||
-  'postgres://postgres:postgres@localhost:5432/paguessr';
+  process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/paguessr';
 
 export async function runMigrations() {
   const maxRetries = 20;

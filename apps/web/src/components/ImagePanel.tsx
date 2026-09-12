@@ -53,7 +53,8 @@ export function ImagePanel({
             {category && <span className="category-chip">{category}</span>}
 
             <p className="placeholder-desc">
-              {placeholderText || 'Local turístico de Paulo Afonso-BA. Tente descobrir a localização no mapa.'}
+              {placeholderText ||
+                'Local turístico de Paulo Afonso-BA. Tente descobrir a localização no mapa.'}
             </p>
           </div>
         </div>
@@ -75,7 +76,8 @@ export function ImagePanel({
           <span className="error-icon">⚠️</span>
           <h4>Não foi possível carregar a imagem desta rodada</h4>
           <p>
-            O serviço de imagem ou Street View não respondeu a tempo. Você ainda pode marcar seu palpite no mapa abaixo.
+            O serviço de imagem ou Street View não respondeu a tempo. Você ainda pode marcar seu
+            palpite no mapa abaixo.
           </p>
           <button
             type="button"
