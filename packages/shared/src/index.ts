@@ -5,7 +5,7 @@ export interface LatLng {
 
 export const PAULO_AFONSO_CENTER: LatLng = {
   lat: -9.4064,
-  lng: -38.2147
+  lng: -38.2147,
 };
 
 const EARTH_RADIUS_METERS = 6371000;
@@ -24,9 +24,7 @@ export function haversine(a: LatLng, b: LatLng): number {
   const sinHalfLat = Math.sin(dLat / 2);
   const sinHalfLng = Math.sin(dLng / 2);
 
-  const h =
-    sinHalfLat * sinHalfLat +
-    Math.cos(lat1) * Math.cos(lat2) * sinHalfLng * sinHalfLng;
+  const h = sinHalfLat * sinHalfLat + Math.cos(lat1) * Math.cos(lat2) * sinHalfLng * sinHalfLng;
 
   const clampedH = Math.min(1, Math.max(0, h));
   const c = 2 * Math.atan2(Math.sqrt(clampedH), Math.sqrt(1 - clampedH));

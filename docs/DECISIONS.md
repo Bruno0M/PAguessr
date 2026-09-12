@@ -11,15 +11,15 @@ Registrado em 2026-09-10.
 
 ## Stack
 
-| Camada | Escolha |
-|---|---|
-| Monorepo | pnpm workspaces: `apps/api`, `apps/web`, `packages/shared` |
-| Frontend | React + Vite + TypeScript |
-| Mapa do palpite | Leaflet (react-leaflet) com tiles do OpenStreetMap |
-| Backend | Node + TypeScript + Fastify |
-| ORM | Drizzle |
-| Banco | PostgreSQL |
-| Infra | Docker Compose (Postgres + API + frontend), igual em dev e em produção numa VPS |
+| Camada          | Escolha                                                                         |
+| --------------- | ------------------------------------------------------------------------------- |
+| Monorepo        | pnpm workspaces: `apps/api`, `apps/web`, `packages/shared`                      |
+| Frontend        | React + Vite + TypeScript                                                       |
+| Mapa do palpite | Leaflet (react-leaflet) com tiles do OpenStreetMap                              |
+| Backend         | Node + TypeScript + Fastify                                                     |
+| ORM             | Drizzle                                                                         |
+| Banco           | PostgreSQL                                                                      |
+| Infra           | Docker Compose (Postgres + API + frontend), igual em dev e em produção numa VPS |
 
 - **Fastify** em vez de Hono: validação por schema nativa e ecossistema maduro para uma API Node tradicional.
 - **Drizzle** em vez de Prisma: schema em TypeScript, migrations em SQL legível e sem binário de engine.

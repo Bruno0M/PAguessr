@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --if-present test",
+    "test:coverage": "pnpm -r --if-present test:coverage",
     "dev": "pnpm -r --parallel dev",
-    "lint": "pnpm -r lint",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
     "db:generate": "pnpm --filter @paguessr/api db:generate",
     "db:migrate": "pnpm --filter @paguessr/api db:migrate",
+    "db:migrate:test": "pnpm --filter @paguessr/api db:migrate:test",
     "db:seed": "pnpm --filter @paguessr/api db:seed"
   },
   "packageManager": "pnpm@11.9.0",
@@ -17,6 +22,14 @@
     "node": ">=22.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.2"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.70.0"
   }
 }

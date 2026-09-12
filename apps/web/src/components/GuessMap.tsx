@@ -1,12 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Polyline,
-  useMap,
-  useMapEvents,
-} from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLng } from '@paguessr/shared';
@@ -135,10 +128,7 @@ export function GuessMap({
           maxZoom={19}
         />
 
-        <MapInteractionHandler
-          enabled={isGuessing}
-          onMapClick={onSelectGuess}
-        />
+        <MapInteractionHandler enabled={isGuessing} onMapClick={onSelectGuess} />
 
         <MapViewManager
           gameState={gameState}
@@ -164,10 +154,7 @@ export function GuessMap({
 
         {showResult && correctCoords && (
           <>
-            <Marker
-              position={[correctCoords.lat, correctCoords.lng]}
-              icon={correctIcon}
-            />
+            <Marker position={[correctCoords.lat, correctCoords.lng]} icon={correctIcon} />
             <Polyline
               positions={linePositions}
               pathOptions={{
@@ -192,8 +179,8 @@ export function GuessMap({
             {isSubmitting
               ? 'Enviando palpite...'
               : guess
-              ? 'Confirmar Palpite'
-              : 'Clique no mapa para marcar'}
+                ? 'Confirmar Palpite'
+                : 'Clique no mapa para marcar'}
           </button>
         </div>
       )}

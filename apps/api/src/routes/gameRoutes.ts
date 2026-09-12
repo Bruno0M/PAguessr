@@ -10,7 +10,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
     if (allLocations.length < 5) {
       return reply.status(503).send({
-        error: 'Não há locais cadastrados suficientes para iniciar uma partida (mínimo 5)'
+        error: 'Não há locais cadastrados suficientes para iniciar uma partida (mínimo 5)',
       });
     }
 
@@ -25,7 +25,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         selected.map((loc, idx) => ({
           game_id: newGame.id,
           location_id: loc.id,
-          ordem: idx + 1
+          ordem: idx + 1,
         }))
       )
       .returning();
@@ -37,8 +37,8 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       rounds: createdRounds.map((r) => ({
         id: r.id,
         ordem: r.ordem,
-        order: r.ordem
-      }))
+        order: r.ordem,
+      })),
     });
   });
 
@@ -50,10 +50,10 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           type: 'object',
           required: ['id'],
           properties: {
-            id: { type: 'string', format: 'uuid' }
-          }
-        }
-      }
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+      },
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -73,7 +73,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           pontos: rounds.pontos,
           created_at: rounds.created_at,
           location_lat: locations.lat,
-          location_lng: locations.lng
+          location_lng: locations.lng,
         })
         .from(rounds)
         .innerJoin(locations, eq(rounds.location_id, locations.id))
@@ -96,9 +96,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           distance: r.distancia,
           pontos: r.pontos,
           score: r.pontos,
-          ...(isAnswered
-            ? { location: { lat: r.location_lat, lng: r.location_lng } }
-            : {})
+          ...(isAnswered ? { location: { lat: r.location_lat, lng: r.location_lng } } : {}),
         };
       });
 
@@ -109,7 +107,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         score: game.total_score,
         created_at: game.created_at.toISOString(),
         finished_at: game.finished_at ? game.finished_at.toISOString() : null,
-        rounds: mappedRounds
+        rounds: mappedRounds,
       });
     }
   );
@@ -122,10 +120,10 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           type: 'object',
           required: ['id'],
           properties: {
-            id: { type: 'integer', minimum: 1 }
-          }
-        }
-      }
+            id: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
     },
     async (request, reply) => {
       const { id } = request.params as { id: number };
@@ -135,24 +133,17 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         return reply.status(404).send({ error: 'Rodada não encontrada' });
       }
 
-      const [loc] = await db
-        .select()
-        .from(locations)
-        .where(eq(locations.id, round.location_id));
+      const [loc] = await db.select().from(locations).where(eq(locations.id, round.location_id));
       if (!loc) {
         return reply.status(404).send({ error: 'Local não encontrado' });
       }
 
-      const apiKey =
-        process.env.GOOGLE_MAPS_API_KEY ||
-        process.env.GOOGLE_STREET_VIEW_API_KEY;
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_STREET_VIEW_API_KEY;
 
       if (apiKey) {
         try {
           const usePano =
-            loc.pano_id &&
-            !loc.pano_id.startsWith('mock-') &&
-            !loc.pano_id.startsWith('seed-');
+            loc.pano_id && !loc.pano_id.startsWith('mock-') && !loc.pano_id.startsWith('seed-');
 
           const params = new URLSearchParams({
             size: '800x600',
@@ -160,7 +151,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
             heading: '0',
             pitch: '0',
             return_error_code: 'true',
-            key: apiKey
+            key: apiKey,
           });
 
           if (usePano) {
@@ -223,18 +214,18 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           type: 'object',
           required: ['id'],
           properties: {
-            id: { type: 'integer', minimum: 1 }
-          }
+            id: { type: 'integer', minimum: 1 },
+          },
         },
         body: {
           type: 'object',
           required: ['lat', 'lng'],
           properties: {
             lat: { type: 'number', minimum: -90, maximum: 90 },
-            lng: { type: 'number', minimum: -180, maximum: 180 }
-          }
-        }
-      }
+            lng: { type: 'number', minimum: -180, maximum: 180 },
+          },
+        },
+      },
     },
     async (request, reply) => {
       const { id } = request.params as { id: number };
@@ -246,15 +237,10 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       }
 
       if (round.distancia !== null || round.guess_lat !== null) {
-        return reply
-          .status(409)
-          .send({ error: 'Palpite já registrado para esta rodada' });
+        return reply.status(409).send({ error: 'Palpite já registrado para esta rodada' });
       }
 
-      const [loc] = await db
-        .select()
-        .from(locations)
-        .where(eq(locations.id, round.location_id));
+      const [loc] = await db.select().from(locations).where(eq(locations.id, round.location_id));
       if (!loc) {
         return reply.status(404).send({ error: 'Local não encontrado' });
       }
@@ -272,29 +258,24 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           guess_lat: body.lat,
           guess_lng: body.lng,
           distancia: roundedDist,
-          pontos: roundScore
+          pontos: roundScore,
         })
         .where(eq(rounds.id, id));
 
-      const allGameRounds = await db
-        .select()
-        .from(rounds)
-        .where(eq(rounds.game_id, round.game_id));
+      const allGameRounds = await db.select().from(rounds).where(eq(rounds.game_id, round.game_id));
 
       const totalScore = allGameRounds.reduce((acc, r) => {
         if (r.id === id) return acc + roundScore;
         return acc + (r.pontos || 0);
       }, 0);
 
-      const allFinished = allGameRounds.every((r) =>
-        r.id === id ? true : r.distancia !== null
-      );
+      const allFinished = allGameRounds.every((r) => (r.id === id ? true : r.distancia !== null));
 
       await db
         .update(games)
         .set({
           total_score: totalScore,
-          ...(allFinished ? { finished_at: new Date() } : {})
+          ...(allFinished ? { finished_at: new Date() } : {}),
         })
         .where(eq(games.id, round.game_id));
 
@@ -306,8 +287,8 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         score: roundScore,
         location: {
           lat: loc.lat,
-          lng: loc.lng
-        }
+          lng: loc.lng,
+        },
       });
     }
   );

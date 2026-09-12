@@ -12,7 +12,10 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-function getPerformanceTitle(totalScore: number, maxScore: number): { title: string; subtitle: string } {
+function getPerformanceTitle(
+  totalScore: number,
+  maxScore: number
+): { title: string; subtitle: string } {
   const percentage = (totalScore / maxScore) * 100;
   if (percentage >= 90) {
     return {
@@ -53,9 +56,7 @@ export function GameResult({ results, onPlayAgain }: GameResultProps) {
           <p className="result-subtitle">{performance.subtitle}</p>
 
           <div className="final-score-display">
-            <span className="final-score-number">
-              {totalScore.toLocaleString('pt-BR')}
-            </span>
+            <span className="final-score-number">{totalScore.toLocaleString('pt-BR')}</span>
             <span className="final-score-max">/ {maxScore.toLocaleString('pt-BR')} pontos</span>
           </div>
 
@@ -73,15 +74,15 @@ export function GameResult({ results, onPlayAgain }: GameResultProps) {
                 <div className="round-item-left">
                   <span className="round-badge">R{r.roundNumber}</span>
                   <div className="round-loc-text">
-                    <span className="round-loc-name">{r.location.name || `Rodada ${r.roundNumber}`}</span>
+                    <span className="round-loc-name">
+                      {r.location.name || `Rodada ${r.roundNumber}`}
+                    </span>
                     <span className="round-loc-dist">Erro: {formatDistance(r.distanceMeters)}</span>
                   </div>
                 </div>
 
                 <div className="round-item-right">
-                  <span className="round-score-pill">
-                    +{r.score.toLocaleString('pt-BR')} pts
-                  </span>
+                  <span className="round-score-pill">+{r.score.toLocaleString('pt-BR')} pts</span>
                 </div>
               </div>
             ))}

@@ -1,6 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from './app.js';
-import { sql } from './db/index.js';
 
 describe('API App', () => {
   beforeAll(() => {
@@ -10,7 +9,7 @@ describe('API App', () => {
     const app = buildApp();
     const response = await app.inject({
       method: 'GET',
-      url: '/health'
+      url: '/health',
     });
 
     expect([200, 503]).toContain(response.statusCode);
@@ -24,7 +23,7 @@ describe('API App', () => {
     const app = buildApp();
     const response = await app.inject({
       method: 'GET',
-      url: '/api/health'
+      url: '/api/health',
     });
 
     expect([200, 503]).toContain(response.statusCode);
