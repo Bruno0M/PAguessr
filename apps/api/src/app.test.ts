@@ -32,4 +32,17 @@ describe('API App', () => {
     expect(body).toHaveProperty('database');
     await app.close();
   });
+
+  it('retorna erro ao receber um corpo JSON malformado', async () => {
+    const app = buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/games',
+      headers: { 'content-type': 'application/json' },
+      payload: '{ isto não é json',
+    });
+
+    expect(response.statusCode).toBeGreaterThanOrEqual(400);
+    await app.close();
+  });
 });

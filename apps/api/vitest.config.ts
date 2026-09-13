@@ -21,6 +21,7 @@ export default defineConfig({
         '**/*.config.ts',
         'src/index.ts',
         'src/db/migrate.ts',
+        'src/db/seed.ts',
         'src/test/**',
         'scripts/bootstrap-locations.ts',
       ],

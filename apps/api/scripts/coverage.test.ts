@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { generateGrid, isValidMetadata, StreetViewMetadataResponse } from './coverage.js';
+import {
+  evaluateMetadata,
+  generateGrid,
+  isValidMetadata,
+  StreetViewMetadataResponse,
+} from './coverage.js';
 
 describe('Coverage script logic', () => {
   it('gera grade de pontos dentro dos limites de Paulo Afonso', () => {
@@ -52,5 +57,33 @@ describe('Coverage script logic', () => {
     };
     const seen = new Set<string>();
     expect(isValidMetadata(meta, seen)).toBe(true);
+  });
+
+  it('reporta erro de API usando error_message quando disponível', () => {
+    const meta: StreetViewMetadataResponse = {
+      status: 'OVER_QUERY_LIMIT',
+      error_message: 'Você excedeu sua cota diária.',
+    };
+    const result = evaluateMetadata(meta, new Set<string>());
+    expect(result).toEqual({
+      valid: false,
+      reason: 'API_ERROR',
+      message: 'Você excedeu sua cota diária.',
+    });
+  });
+
+  it('reporta erro de API usando o status quando não há error_message', () => {
+    const meta: StreetViewMetadataResponse = { status: 'OVER_QUERY_LIMIT' };
+    const result = evaluateMetadata(meta, new Set<string>());
+    expect(result).toEqual({ valid: false, reason: 'API_ERROR', message: 'OVER_QUERY_LIMIT' });
+  });
+
+  it('reporta erro desconhecido quando a resposta da API é nula', () => {
+    const result = evaluateMetadata(null, new Set<string>());
+    expect(result).toEqual({
+      valid: false,
+      reason: 'API_ERROR',
+      message: 'Erro desconhecido',
+    });
   });
 });
