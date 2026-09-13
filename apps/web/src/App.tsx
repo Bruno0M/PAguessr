@@ -333,7 +333,14 @@ export function App() {
             </div>
           }
         >
-          <RankingScreen user={authUser} onBack={() => setShowRanking(false)} />
+          <RankingScreen
+            user={authUser}
+            onBack={() => setShowRanking(false)}
+            onPlayRanked={() => {
+              setShowRanking(false);
+              startNewGame(false);
+            }}
+          />
         </Suspense>
       );
     }
