@@ -19,6 +19,7 @@
     "coverage": "tsx scripts/coverage.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^10.0.2",
     "@paguessr/shared": "workspace:*",
     "dotenv": "^16.4.7",

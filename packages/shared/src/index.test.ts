@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { LatLng, PAULO_AFONSO_CENTER, haversine, score } from './index.js';
+import {
+  AVATAR_COUNT,
+  LatLng,
+  NICK_MAX_LENGTH,
+  NICK_MIN_LENGTH,
+  PAULO_AFONSO_CENTER,
+  haversine,
+  isValidNickFormat,
+  score,
+} from './index.js';
 
 describe('@paguessr/shared', () => {
   describe('PAULO_AFONSO_CENTER', () => {
@@ -49,6 +58,32 @@ describe('@paguessr/shared', () => {
     it('respeita uma escala personalizada', () => {
       expect(score(3000, 3000)).toBe(1839);
       expect(score(0, 3000)).toBe(5000);
+    });
+  });
+
+  describe('isValidNickFormat', () => {
+    it('aceita nicks dentro do formato esperado', () => {
+      expect(isValidNickFormat('abc')).toBe(true);
+      expect(isValidNickFormat('Tiago_123')).toBe(true);
+      expect(isValidNickFormat('a'.repeat(NICK_MAX_LENGTH))).toBe(true);
+    });
+
+    it('rejeita nicks fora dos limites de tamanho', () => {
+      expect(isValidNickFormat('a'.repeat(NICK_MIN_LENGTH - 1))).toBe(false);
+      expect(isValidNickFormat('a'.repeat(NICK_MAX_LENGTH + 1))).toBe(false);
+    });
+
+    it('rejeita caracteres fora de letras, números e underscore', () => {
+      expect(isValidNickFormat('tia go')).toBe(false);
+      expect(isValidNickFormat('tiago!')).toBe(false);
+      expect(isValidNickFormat('tiago-santos')).toBe(false);
+      expect(isValidNickFormat('tiagoçã')).toBe(false);
+    });
+  });
+
+  describe('AVATAR_COUNT', () => {
+    it('define 8 avatares disponíveis', () => {
+      expect(AVATAR_COUNT).toBe(8);
     });
   });
 });

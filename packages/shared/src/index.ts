@@ -39,3 +39,16 @@ export function score(distanciaMetros: number, escala = 1500): number {
 
   return Math.round(5000 * Math.exp(-distanciaMetros / escala));
 }
+
+// Regras de nick compartilhadas entre API e web, pra nunca divergir: o front
+// valida o formato ao vivo, a API valida de novo (é a fonte da verdade).
+export const NICK_MIN_LENGTH = 3;
+export const NICK_MAX_LENGTH = 16;
+export const NICK_PATTERN_SOURCE = `^[A-Za-z0-9_]{${NICK_MIN_LENGTH},${NICK_MAX_LENGTH}}$`;
+export const NICK_PATTERN = new RegExp(NICK_PATTERN_SOURCE);
+
+export function isValidNickFormat(nick: string): boolean {
+  return NICK_PATTERN.test(nick);
+}
+
+export const AVATAR_COUNT = 8;

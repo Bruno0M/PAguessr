@@ -1,17 +1,36 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import './styles/navyTheme.css';
 import { HomeScreen } from './components/HomeScreen';
+import { LoginScreen } from './components/auth/LoginScreen';
+import { RegisterScreen } from './components/auth/RegisterScreen';
+import { RecoverPasswordScreen } from './components/auth/RecoverPasswordScreen';
+import { RecoveryCodeScreen } from './components/auth/RecoveryCodeScreen';
 import { haversine, score, PAULO_AFONSO_CENTER } from '@paguessr/shared';
 import type { LatLng } from '@paguessr/shared';
 import { MOCK_LOCATIONS } from './data/mockLocations';
 import type { GameState, RoundResult, RoundData } from './types';
 import { createGame, submitGuess, getGameSummary, type ApiRoundInitial } from './api/client';
+import { me, logout, type PublicUser } from './api/auth';
 import { RoundHeader } from './components/RoundHeader';
 import { ImagePanel } from './components/ImagePanel';
 import { GuessMap } from './components/GuessMap';
 import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
 
+type AuthView = 'login' | 'register' | 'recover';
+
 export function App() {
+  const [authUser, setAuthUser] = useState<PublicUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authView, setAuthView] = useState<AuthView>('login');
+  const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    me()
+      .then((res) => setAuthUser(res.user))
+      .finally(() => setAuthChecked(true));
+  }, []);
+
   const sessionVersion = useRef(0);
   const pauseRef = useRef<HTMLDialogElement>(null);
   const returnHome = useCallback(() => {
@@ -19,6 +38,14 @@ export function App() {
     pauseRef.current?.close();
     setGameState('home');
   }, []);
+
+  const handleLogout = useCallback(async () => {
+    await logout().catch(() => {});
+    setAuthUser(null);
+    setAuthView('login');
+    returnHome();
+  }, [returnHome]);
+
   const [gameState, setGameState] = useState<GameState>('home');
   const [gameId, setGameId] = useState<string | null>(null);
   const [rounds, setRounds] = useState<RoundData[]>([]);
@@ -185,8 +212,60 @@ export function App() {
   const latestResult = results[results.length - 1];
   const isLastRound = currentRoundIndex === totalRounds - 1;
 
+  if (!authChecked) {
+    return (
+      <div className="status-screen">
+        <div className="spinner large"></div>
+      </div>
+    );
+  }
+
+  if (pendingRecoveryCode) {
+    return (
+      <RecoveryCodeScreen
+        recoveryCode={pendingRecoveryCode}
+        onContinue={() => setPendingRecoveryCode(null)}
+      />
+    );
+  }
+
+  if (!authUser) {
+    if (authView === 'register') {
+      return (
+        <RegisterScreen
+          onSuccess={(user, recoveryCode) => {
+            setAuthUser(user);
+            setPendingRecoveryCode(recoveryCode);
+          }}
+          onGoToLogin={() => setAuthView('login')}
+        />
+      );
+    }
+    if (authView === 'recover') {
+      return (
+        <RecoverPasswordScreen
+          onSuccess={(user) => setAuthUser(user)}
+          onGoToLogin={() => setAuthView('login')}
+        />
+      );
+    }
+    return (
+      <LoginScreen
+        onSuccess={(user) => setAuthUser(user)}
+        onGoToRegister={() => setAuthView('register')}
+        onGoToRecover={() => setAuthView('recover')}
+      />
+    );
+  }
+
   if (gameState === 'home') {
-    return <HomeScreen onStart={() => startNewGame()} />;
+    return (
+      <HomeScreen
+        user={authUser}
+        onLogout={handleLogout}
+        onStartTraining={() => startNewGame(true)}
+      />
+    );
   }
 
   return (

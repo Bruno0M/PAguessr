@@ -1,0 +1,16 @@
+/* Paleta navy + verde-neon da identidade visual do PAguessr (ver HomeScreen.css),
+   compartilhada pelas telas de conta pra não divergir do resto do jogo. */
+:root {
+  --navy-bg: #0e1b2d;
+  --navy-bg-glow: radial-gradient(ellipse at 80% 42%, #16425b66, transparent 55%);
+  --navy-card: #13283e;
+  --navy-card-border: #26456380;
+  --navy-text: #eef6ff;
+  --navy-text-muted: #92a9c0;
+  --navy-accent: #3ee3ad;
+  --navy-accent-strong: #2bc995;
+  --navy-cyan: #40cddd;
+  --navy-danger: #ff8fa3;
+  --navy-input-bg: #0c1c2e;
+  --navy-input-border: #2c4863;
+}
