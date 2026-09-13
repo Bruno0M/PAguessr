@@ -124,6 +124,16 @@ body {
   color: #34d399;
 }
 
+.stat-pill.timer-warning {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--danger);
+}
+
+.stat-pill.timer-warning .stat-value {
+  color: var(--danger);
+}
+
 /* Main stage */
 .game-body {
   flex: 1;

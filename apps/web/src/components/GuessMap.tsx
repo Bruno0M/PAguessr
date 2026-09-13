@@ -86,6 +86,8 @@ function MapViewManager({
         [correct.lat, correct.lng],
       ]);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    } else if (gameState === 'round_result' && !guess && correct) {
+      map.setView([correct.lat, correct.lng], 15);
     } else if (gameState === 'guessing' && !guess) {
       map.setView([center.lat, center.lng], 14);
     }
@@ -104,15 +106,17 @@ export function GuessMap({
 }: GuessMapProps) {
   const isGuessing = gameState === 'guessing';
   const isSubmitting = gameState === 'submitting';
-  const showResult = gameState === 'round_result' && !!correctCoords && !!guess;
+  const isRoundResult = gameState === 'round_result';
+  const showCorrectMarker = isRoundResult && !!correctCoords;
+  const showGuessLine = showCorrectMarker && !!guess;
 
   const linePositions = useMemo(() => {
-    if (!showResult || !guess || !correctCoords) return [];
+    if (!showGuessLine || !guess || !correctCoords) return [];
     return [
       [guess.lat, guess.lng] as [number, number],
       [correctCoords.lat, correctCoords.lng] as [number, number],
     ];
-  }, [showResult, guess, correctCoords]);
+  }, [showGuessLine, guess, correctCoords]);
 
   return (
     <div className="map-wrapper">
@@ -152,19 +156,20 @@ export function GuessMap({
           />
         )}
 
-        {showResult && correctCoords && (
-          <>
-            <Marker position={[correctCoords.lat, correctCoords.lng]} icon={correctIcon} />
-            <Polyline
-              positions={linePositions}
-              pathOptions={{
-                color: '#ef4444',
-                weight: 3,
-                dashArray: '8, 8',
-                opacity: 0.9,
-              }}
-            />
-          </>
+        {showCorrectMarker && correctCoords && (
+          <Marker position={[correctCoords.lat, correctCoords.lng]} icon={correctIcon} />
+        )}
+
+        {showGuessLine && (
+          <Polyline
+            positions={linePositions}
+            pathOptions={{
+              color: '#ef4444',
+              weight: 3,
+              dashArray: '8, 8',
+              opacity: 0.9,
+            }}
+          />
         )}
       </MapContainer>
 

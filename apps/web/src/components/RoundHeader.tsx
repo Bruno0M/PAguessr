@@ -3,6 +3,7 @@ interface RoundHeaderProps {
   totalRounds: number;
   totalScore: number;
   isOfflineMode?: boolean;
+  secondsLeft?: number | null;
   onHome: () => void;
   onPause: () => void;
 }
@@ -12,6 +13,7 @@ export function RoundHeader({
   totalRounds,
   totalScore,
   isOfflineMode = false,
+  secondsLeft = null,
   onHome,
   onPause,
 }: RoundHeaderProps) {
@@ -50,6 +52,13 @@ export function RoundHeader({
             {currentRound} / {totalRounds}
           </span>
         </div>
+
+        {secondsLeft !== null && (
+          <div className={`stat-pill ${secondsLeft <= 10 ? 'timer-warning' : ''}`}>
+            <span className="stat-label">Tempo</span>
+            <span className="stat-value">{secondsLeft}s</span>
+          </div>
+        )}
 
         <div className="stat-pill highlight">
           <span className="stat-label">Pontos</span>
