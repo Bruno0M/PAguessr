@@ -1,0 +1,47 @@
+.recovery-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--navy-input-bg);
+  border: 1px solid var(--navy-input-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 4px 0 16px;
+}
+
+.recovery-code-value {
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--navy-accent);
+}
+
+.recovery-copy-btn {
+  background: transparent;
+  border: 1px solid var(--navy-input-border);
+  color: var(--navy-text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.recovery-copy-btn:hover {
+  border-color: var(--navy-accent);
+}
+
+.recovery-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--navy-text-muted);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.recovery-confirm input {
+  margin-top: 2px;
+}

@@ -1,4 +1,6 @@
 import { useRef } from 'react';
+import type { PublicUser } from '../api/auth';
+import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
 
 function Pin({ className = '' }: { className?: string }) {
@@ -17,11 +19,36 @@ function Pin({ className = '' }: { className?: string }) {
   );
 }
 
-export function HomeScreen({ onStart }: { onStart: () => void }) {
+export function HomeScreen({
+  user,
+  onLogout,
+  onStartTraining,
+}: {
+  user: PublicUser;
+  onLogout: () => void;
+  onStartTraining: () => void;
+}) {
   const instructionsRef = useRef<HTMLDialogElement>(null);
 
   return (
     <div className="home-screen">
+      <header className="home-header">
+        <div className="home-brand">
+          <span>
+            PA<span className="brand-light">guessr</span>
+            <span className="brand-dot">.</span>
+          </span>
+        </div>
+        <div className="home-player">
+          <span>
+            <AvatarSvg id={user.avatarId} />
+          </span>
+          {user.nick}
+          <button type="button" className="home-logout" onClick={onLogout}>
+            Sair
+          </button>
+        </div>
+      </header>
       <main className="home-main">
         <section className="home-intro" aria-labelledby="home-title">
           <div className="game-emblem" aria-hidden="true">
@@ -45,12 +72,20 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
             </div>
           </div>
           <nav className="game-menu" aria-label="Menu principal">
-            <button className="home-play" onClick={onStart}>
+            <button className="home-play" onClick={onStartTraining}>
               <span className="play-triangle" aria-hidden="true" />
-              <span>JOGAR</span>
+              <span>TREINO</span>
               <span className="play-arrow" aria-hidden="true">
                 →
               </span>
+            </button>
+            <button
+              className="menu-help menu-ranked-disabled"
+              disabled
+              aria-disabled="true"
+              title="Ranqueado chega em breve"
+            >
+              RANQUEADO <span className="menu-soon-badge">EM BREVE</span>
             </button>
             <button
               className="menu-help"
@@ -205,7 +240,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
             className="home-play instructions-play"
             onClick={() => {
               instructionsRef.current?.close();
-              onStart();
+              onStartTraining();
             }}
           >
             Entendi, vamos jogar{' '}

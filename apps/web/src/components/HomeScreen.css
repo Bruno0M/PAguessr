@@ -1014,6 +1014,42 @@
   height: 18px;
   font-size: 10px;
 }
+.home-logout {
+  background: none;
+  border: 0;
+  color: #7fa0c2;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin-left: 4px;
+}
+.home-logout:hover {
+  color: #eef6ff;
+}
+.home-player svg {
+  width: 100%;
+  height: 100%;
+}
+.menu-ranked-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  gap: 8px;
+}
+.menu-ranked-disabled:hover {
+  transform: none;
+}
+.menu-soon-badge {
+  display: inline-flex !important;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #3ee3ad22;
+  color: #3ee3ad;
+  border: 1px solid #3ee3ad55;
+}
 .home-map {
   transform: rotate(-12deg) scale(1.35);
   opacity: 0.75;
