@@ -88,6 +88,10 @@ export function isValidMetadata(
   return evaluateMetadata(meta, seenPanoIds, minDateCutoff).valid;
 }
 
+// A partir daqui o código sempre chama a API real do Google — de propósito
+// não testamos isso automaticamente (ver docs/DECISIONS.md, seção anti-cola /
+// cautela de custo), por isso fica fora do piso de cobertura.
+/* v8 ignore start */
 export async function fetchStreetViewMetadata(
   lat: number,
   lng: number,
@@ -210,3 +214,4 @@ if (process.argv[1]?.endsWith('coverage.ts')) {
       process.exit(1);
     });
 }
+/* v8 ignore stop */
