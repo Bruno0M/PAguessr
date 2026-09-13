@@ -24,11 +24,13 @@ export function HomeScreen({
   onLogout,
   onStartTraining,
   onStartRanked,
+  onOpenRanking,
 }: {
   user: PublicUser;
   onLogout: () => void;
   onStartTraining: () => void;
   onStartRanked: () => void;
+  onOpenRanking: () => void;
 }) {
   const instructionsRef = useRef<HTMLDialogElement>(null);
 
@@ -97,6 +99,12 @@ export function HomeScreen({
                 ?
               </span>{' '}
               Como jogar <span aria-hidden="true">↗</span>
+            </button>
+            <button className="menu-help" onClick={onOpenRanking}>
+              <span className="menu-help-icon" aria-hidden="true">
+                🏆
+              </span>{' '}
+              Ranking <span aria-hidden="true">↗</span>
             </button>
           </nav>
         </section>

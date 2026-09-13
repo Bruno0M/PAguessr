@@ -462,6 +462,9 @@ body {
   overflow-y: auto;
   display: flex;
   align-items: center;
+  /* Repetido com "safe": sem isso, um card mais alto que a viewport (ex: com
+     a faixa de novo recorde) fica centralizado sem deixar rolar até o topo. */
+  align-items: safe center;
   justify-content: center;
   padding: 2rem 1rem;
   background: radial-gradient(circle at 50% 20%, #1e293b 0%, #090d16 80%);
@@ -490,6 +493,38 @@ body {
 .trophy-emoji {
   font-size: 3rem;
   margin-bottom: 0.5rem;
+}
+
+.new-record-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #1c1400;
+  background: linear-gradient(90deg, #ffd166, #ffb703);
+  box-shadow: 0 0 18px #ffd16680;
+  animation: new-record-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes new-record-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 18px #ffd16680;
+  }
+  50% {
+    box-shadow: 0 0 28px #ffd166cc;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-record-banner {
+    animation: none;
+  }
 }
 
 .result-title {
@@ -604,7 +639,12 @@ body {
 
 .result-actions {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.result-actions .btn-secondary {
+  width: 100%;
 }
 
 .btn-play-again {

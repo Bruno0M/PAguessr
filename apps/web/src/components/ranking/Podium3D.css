@@ -1,0 +1,62 @@
+.podium-3d {
+  width: 100%;
+  height: clamp(260px, 34vw, 360px);
+  touch-action: none;
+}
+
+.podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(-100%);
+  padding-bottom: 6px;
+  white-space: nowrap;
+}
+
+.podium-crown {
+  font-size: 20px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px #ffd16699);
+}
+
+.podium-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--navy-card-border, #26456380);
+  box-shadow: 0 0 14px #3ee3ad33;
+}
+
+.podium-slot.is-me .podium-avatar {
+  border-color: var(--navy-cyan, #40cddd);
+  box-shadow: 0 0 16px #40cddd80;
+}
+
+.podium-slot.is-me .podium-nick {
+  color: var(--navy-cyan, #40cddd);
+}
+
+.podium-nick {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy-text, #eef6ff);
+  letter-spacing: 0.02em;
+}
+
+.podium-score {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--navy-accent, #3ee3ad);
+}
+
+.podium-slot-empty {
+  color: var(--navy-text-muted, #92a9c0);
+}
+
+.podium-vago {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}

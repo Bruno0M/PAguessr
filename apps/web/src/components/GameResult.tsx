@@ -3,6 +3,9 @@ import type { RoundResult } from '../types';
 interface GameResultProps {
   results: RoundResult[];
   onPlayAgain: () => void;
+  isRanked?: boolean;
+  isNewRecord?: boolean;
+  onViewRanking?: () => void;
 }
 
 function formatDistance(meters: number): string {
@@ -41,16 +44,28 @@ function getPerformanceTitle(
   };
 }
 
-export function GameResult({ results, onPlayAgain }: GameResultProps) {
+export function GameResult({
+  results,
+  onPlayAgain,
+  isRanked = false,
+  isNewRecord = false,
+  onViewRanking,
+}: GameResultProps) {
   const totalScore = results.reduce((acc, curr) => acc + curr.score, 0);
   const maxScore = results.length * 5000;
   const totalDistance = results.reduce((acc, curr) => acc + (curr.distanceMeters ?? 0), 0);
   const performance = getPerformanceTitle(totalScore, maxScore);
+  const showCelebration = isRanked && isNewRecord;
 
   return (
     <div className="game-result-container">
       <div className="game-result-card">
         <div className="result-header">
+          {showCelebration && (
+            <div className="new-record-banner">
+              <span aria-hidden="true">🏆</span> Novo recorde!
+            </div>
+          )}
           <span className="trophy-emoji">🏅</span>
           <h2 className="result-title">{performance.title}</h2>
           <p className="result-subtitle">{performance.subtitle}</p>
@@ -97,6 +112,11 @@ export function GameResult({ results, onPlayAgain }: GameResultProps) {
           <button type="button" className="btn-play-again" onClick={onPlayAgain}>
             🔄 Jogar Novamente
           </button>
+          {showCelebration && onViewRanking && (
+            <button type="button" className="btn-secondary" onClick={onViewRanking}>
+              🏆 Ver Ranking
+            </button>
+          )}
         </div>
       </div>
     </div>
