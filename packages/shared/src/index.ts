@@ -52,3 +52,7 @@ export function isValidNickFormat(nick: string): boolean {
 }
 
 export const AVATAR_COUNT = 8;
+
+// Tempo por rodada no modo Ranqueado, compartilhado entre API (autoridade,
+// decide a pontuação) e front (só exibe a contagem regressiva).
+export const ROUND_DURATION_MS = 60_000;
