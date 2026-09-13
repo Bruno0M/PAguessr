@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { sql } from './db/index.js';
 import { gameRoutes } from './routes/gameRoutes.js';
 import { authRoutes } from './routes/authRoutes.js';
+import { rankingRoutes } from './routes/rankingRoutes.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -62,6 +63,8 @@ export function buildApp(): FastifyInstance {
   app.register(gameRoutes);
   app.register(authRoutes, { prefix: '/api' });
   app.register(authRoutes);
+  app.register(rankingRoutes, { prefix: '/api' });
+  app.register(rankingRoutes);
 
   return app;
 }
