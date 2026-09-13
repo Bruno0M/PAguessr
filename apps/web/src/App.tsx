@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import './styles/navyTheme.css';
 import { HomeScreen } from './components/HomeScreen';
 import { LoginScreen } from './components/auth/LoginScreen';
@@ -11,11 +11,18 @@ import { MOCK_LOCATIONS } from './data/mockLocations';
 import type { GameState, RoundResult, RoundData } from './types';
 import { createGame, submitGuess, getGameSummary, type ApiRoundInitial } from './api/client';
 import { me, logout, type PublicUser } from './api/auth';
+import { getRanking } from './api/ranking';
 import { RoundHeader } from './components/RoundHeader';
 import { ImagePanel } from './components/ImagePanel';
 import { GuessMap } from './components/GuessMap';
 import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
+
+// Carregado sob demanda: three.js/@react-three só entram no bundle de quem
+// realmente abre o ranking, não pesam no carregamento inicial do jogo.
+const RankingScreen = lazy(() =>
+  import('./components/ranking/RankingScreen').then((m) => ({ default: m.RankingScreen }))
+);
 
 type AuthView = 'login' | 'register' | 'recover';
 
@@ -43,8 +50,12 @@ export function App() {
     await logout().catch(() => {});
     setAuthUser(null);
     setAuthView('login');
+    setShowRanking(false);
     returnHome();
   }, [returnHome]);
+
+  const [showRanking, setShowRanking] = useState(false);
+  const previousBestRef = useRef<number | undefined>(undefined);
 
   const [gameState, setGameState] = useState<GameState>('home');
   const [gameId, setGameId] = useState<string | null>(null);
@@ -87,6 +98,15 @@ export function App() {
       setGameState('guessing');
       return;
     }
+
+    previousBestRef.current = undefined;
+    getRanking('geral', 1)
+      .then((res) => {
+        previousBestRef.current = res.me?.score ?? 0;
+      })
+      .catch(() => {
+        // Ranking é só decoração da tela final; falha aqui não deve travar a partida.
+      });
 
     try {
       const data = await createGame();
@@ -304,12 +324,26 @@ export function App() {
   }
 
   if (gameState === 'home') {
+    if (showRanking) {
+      return (
+        <Suspense
+          fallback={
+            <div className="status-screen">
+              <div className="spinner large"></div>
+            </div>
+          }
+        >
+          <RankingScreen user={authUser} onBack={() => setShowRanking(false)} />
+        </Suspense>
+      );
+    }
     return (
       <HomeScreen
         user={authUser}
         onLogout={handleLogout}
         onStartTraining={() => startNewGame(true)}
         onStartRanked={() => startNewGame(false)}
+        onOpenRanking={() => setShowRanking(true)}
       />
     );
   }
@@ -354,7 +388,20 @@ export function App() {
           </div>
         )}
 
-        {gameState === 'finished' && <GameResult results={results} onPlayAgain={handlePlayAgain} />}
+        {gameState === 'finished' && (
+          <GameResult
+            results={results}
+            onPlayAgain={handlePlayAgain}
+            isRanked={!isOfflineMode}
+            isNewRecord={
+              previousBestRef.current !== undefined && totalScore > previousBestRef.current
+            }
+            onViewRanking={() => {
+              returnHome();
+              setShowRanking(true);
+            }}
+          />
+        )}
 
         {(gameState === 'guessing' ||
           gameState === 'submitting' ||
