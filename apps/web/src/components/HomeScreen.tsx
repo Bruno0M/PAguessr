@@ -23,10 +23,12 @@ export function HomeScreen({
   user,
   onLogout,
   onStartTraining,
+  onStartRanked,
 }: {
   user: PublicUser;
   onLogout: () => void;
   onStartTraining: () => void;
+  onStartRanked: () => void;
 }) {
   const instructionsRef = useRef<HTMLDialogElement>(null);
 
@@ -79,13 +81,12 @@ export function HomeScreen({
                 →
               </span>
             </button>
-            <button
-              className="menu-help menu-ranked-disabled"
-              disabled
-              aria-disabled="true"
-              title="Ranqueado chega em breve"
-            >
-              RANQUEADO <span className="menu-soon-badge">EM BREVE</span>
+            <button className="home-play home-play-ranked" onClick={onStartRanked}>
+              <span className="play-triangle" aria-hidden="true" />
+              <span>RANQUEADO</span>
+              <span className="play-arrow" aria-hidden="true">
+                →
+              </span>
             </button>
             <button
               className="menu-help"

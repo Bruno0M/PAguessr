@@ -44,7 +44,7 @@ function getPerformanceTitle(
 export function GameResult({ results, onPlayAgain }: GameResultProps) {
   const totalScore = results.reduce((acc, curr) => acc + curr.score, 0);
   const maxScore = results.length * 5000;
-  const totalDistance = results.reduce((acc, curr) => acc + curr.distanceMeters, 0);
+  const totalDistance = results.reduce((acc, curr) => acc + (curr.distanceMeters ?? 0), 0);
   const performance = getPerformanceTitle(totalScore, maxScore);
 
   return (
@@ -77,7 +77,11 @@ export function GameResult({ results, onPlayAgain }: GameResultProps) {
                     <span className="round-loc-name">
                       {r.location.name || `Rodada ${r.roundNumber}`}
                     </span>
-                    <span className="round-loc-dist">Erro: {formatDistance(r.distanceMeters)}</span>
+                    <span className="round-loc-dist">
+                      {r.distanceMeters === null
+                        ? 'Tempo esgotado'
+                        : `Erro: ${formatDistance(r.distanceMeters)}`}
+                    </span>
                   </div>
                 </div>
 

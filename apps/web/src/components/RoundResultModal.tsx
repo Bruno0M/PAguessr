@@ -14,13 +14,17 @@ function formatDistance(meters: number): string {
 }
 
 export function RoundResultModal({ result, isLastRound, onNext }: RoundResultModalProps) {
+  const timedOut = result.distanceMeters === null;
+
   return (
     <div className="result-banner">
       <div className="result-banner-card">
         <div className="result-main-metrics">
           <div className="metric-box">
             <span className="metric-label">Distância do alvo</span>
-            <span className="metric-value distance">{formatDistance(result.distanceMeters)}</span>
+            <span className="metric-value distance">
+              {timedOut ? 'Tempo esgotado' : formatDistance(result.distanceMeters as number)}
+            </span>
           </div>
 
           <div className="metric-box highlight">

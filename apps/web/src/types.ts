@@ -13,6 +13,7 @@ export interface LocationPoint {
 export interface RoundData {
   id: string | number;
   order: number;
+  startedAt?: string | null;
 }
 
 export interface RoundResult {
@@ -23,8 +24,8 @@ export interface RoundResult {
     name?: string;
     description?: string;
   };
-  guess: LatLng;
-  distanceMeters: number;
+  guess: LatLng | null;
+  distanceMeters: number | null;
   score: number;
 }
 

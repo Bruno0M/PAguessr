@@ -5,6 +5,8 @@ export interface ApiRoundInitial {
   order?: number;
   ordem?: number;
   roundNumber?: number;
+  startedAt?: string | null;
+  started_at?: string | null;
 }
 
 export interface ApiGameCreated {
@@ -12,9 +14,15 @@ export interface ApiGameCreated {
   rounds: ApiRoundInitial[];
 }
 
+export interface ApiNextRound {
+  id: string | number;
+  startedAt?: string | null;
+  started_at?: string | null;
+}
+
 export interface ApiGuessResponse {
-  distance?: number;
-  distanceMeters?: number;
+  distance?: number | null;
+  distanceMeters?: number | null;
   points?: number;
   score?: number;
   location: {
@@ -23,17 +31,20 @@ export interface ApiGuessResponse {
     name?: string;
     description?: string;
   };
+  nextRound?: ApiNextRound | null;
 }
 
 export interface ApiRoundSummary {
   id: string;
   order?: number;
   roundNumber?: number;
-  distance?: number;
-  distanceMeters?: number;
+  distance?: number | null;
+  distanceMeters?: number | null;
   points?: number;
   score?: number;
-  guess?: LatLng;
+  guess?: LatLng | null;
+  startedAt?: string | null;
+  started_at?: string | null;
   location?: {
     lat: number;
     lng: number;
@@ -72,14 +83,14 @@ export async function createGame(): Promise<ApiGameCreated> {
 
 export async function submitGuess(
   roundId: string | number,
-  guess: LatLng
+  guess: LatLng | null
 ): Promise<ApiGuessResponse> {
   const res = await fetch(`/api/rounds/${roundId}/guess`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(guess),
+    body: JSON.stringify(guess ?? {}),
   });
 
   if (!res.ok) {

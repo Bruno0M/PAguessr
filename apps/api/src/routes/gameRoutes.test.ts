@@ -1,23 +1,49 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
+import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
+import { db } from '../db/index.js';
+import { rounds } from '../db/schema.js';
+
+async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Promise<string> {
+  const res = await registerUser(app, { nick });
+  return extractSessionCookie(res.headers['set-cookie']);
+}
+
+async function createAuthenticatedGame(app: ReturnType<typeof buildApp>, cookie: string) {
+  const res = await app.inject({
+    method: 'POST',
+    url: '/api/games',
+    headers: { cookie },
+  });
+  return JSON.parse(res.body);
+}
 
 describe('Game Routes Integration', () => {
   const app = buildApp();
+  let authCookie: string;
 
   beforeAll(async () => {
     process.env.LOG_LEVEL = 'silent';
     await resetTestDatabase();
+    authCookie = await loginNewUser(app, 'jogadorpadrao');
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  it('POST /api/games cria nova partida com 5 rodadas sem expor coordenadas', async () => {
+  it('POST /api/games sem sessão retorna 401', async () => {
+    const res = await app.inject({ method: 'POST', url: '/api/games' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('POST /api/games cria nova partida com 5 rodadas, sem coordenadas, só a 1ª com cronômetro ativo', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/games',
+      headers: { cookie: authCookie },
     });
 
     expect(res.statusCode).toBe(201);
@@ -32,6 +58,10 @@ describe('Game Routes Integration', () => {
       expect(r).not.toHaveProperty('location');
       expect(r).not.toHaveProperty('pano_id');
     }
+    expect(data.rounds[0].startedAt).toEqual(expect.any(String));
+    for (const r of data.rounds.slice(1)) {
+      expect(r.startedAt).toBeNull();
+    }
   });
 
   it('POST /api/games aceita header application/json sem corpo', async () => {
@@ -40,6 +70,7 @@ describe('Game Routes Integration', () => {
       url: '/api/games',
       headers: {
         'content-type': 'application/json',
+        cookie: authCookie,
       },
     });
 
@@ -53,16 +84,13 @@ describe('Game Routes Integration', () => {
     delete process.env.GOOGLE_MAPS_API_KEY;
 
     try {
-      const gameRes = await app.inject({
-        method: 'POST',
-        url: '/api/games',
-      });
-      const game = JSON.parse(gameRes.body);
+      const game = await createAuthenticatedGame(app, authCookie);
       const roundId = game.rounds[0].id;
 
       const imgRes = await app.inject({
         method: 'GET',
         url: `/api/rounds/${roundId}/image`,
+        headers: { cookie: authCookie },
       });
 
       expect(imgRes.statusCode).toBe(200);
@@ -75,17 +103,14 @@ describe('Game Routes Integration', () => {
     }
   });
 
-  it('POST /api/rounds/:id/guess calcula distância, pontos e rejeita segundo palpite', async () => {
-    const gameRes = await app.inject({
-      method: 'POST',
-      url: '/api/games',
-    });
-    const game = JSON.parse(gameRes.body);
+  it('POST /api/rounds/:id/guess calcula distância, pontos, ativa a próxima rodada e rejeita segundo palpite', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
     const roundId = game.rounds[0].id;
 
     const guessRes = await app.inject({
       method: 'POST',
       url: `/api/rounds/${roundId}/guess`,
+      headers: { cookie: authCookie },
       payload: {
         lat: -9.4064,
         lng: -38.2147,
@@ -101,10 +126,16 @@ describe('Game Routes Integration', () => {
     expect(guessData).toHaveProperty('location');
     expect(guessData.location).toHaveProperty('lat');
     expect(guessData.location).toHaveProperty('lng');
+    expect(guessData.nextRound).toEqual({
+      id: game.rounds[1].id,
+      started_at: expect.any(String),
+      startedAt: expect.any(String),
+    });
 
     const secondGuess = await app.inject({
       method: 'POST',
       url: `/api/rounds/${roundId}/guess`,
+      headers: { cookie: authCookie },
       payload: {
         lat: -9.4,
         lng: -38.2,
@@ -117,6 +148,7 @@ describe('Game Routes Integration', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/rounds/1/guess',
+      headers: { cookie: authCookie },
       payload: {
         lat: 200,
         lng: -38.2,
@@ -126,16 +158,142 @@ describe('Game Routes Integration', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('GET /api/games/:id retorna resumo completo da partida', async () => {
-    const gameRes = await app.inject({
+  it('POST /api/rounds/:id/guess rejeita corpo com só lat ou só lng', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+
+    const res = await app.inject({
       method: 'POST',
-      url: '/api/games',
+      url: `/api/rounds/${game.rounds[0].id}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064 },
     });
-    const game = JSON.parse(gameRes.body);
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /api/rounds/:id/guess sem sessão retorna 401', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${game.rounds[0].id}/guess`,
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('rodada de outro jogador não é acessível: 404 em guess, imagem e resumo da partida', async () => {
+    const owner = await createAuthenticatedGame(app, authCookie);
+    const intruderCookie = await loginNewUser(app, 'jogadorintruso');
+
+    const guessRes = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${owner.rounds[0].id}/guess`,
+      headers: { cookie: intruderCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+    expect(guessRes.statusCode).toBe(404);
+
+    const imageRes = await app.inject({
+      method: 'GET',
+      url: `/api/rounds/${owner.rounds[0].id}/image`,
+      headers: { cookie: intruderCookie },
+    });
+    expect(imageRes.statusCode).toBe(404);
+
+    const summaryRes = await app.inject({
+      method: 'GET',
+      url: `/api/games/${owner.id}`,
+      headers: { cookie: intruderCookie },
+    });
+    expect(summaryRes.statusCode).toBe(404);
+  });
+
+  it('POST /api/rounds/:id/guess numa rodada ainda não iniciada retorna 409', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+    const notStartedRoundId = game.rounds[1].id;
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${notStartedRoundId}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('POST /api/rounds/:id/guess sem coords conta como timeout: 0 pontos, sem distância, local revelado', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${game.rounds[0].id}/guess`,
+      headers: { cookie: authCookie },
+      payload: {},
+    });
+
+    expect(res.statusCode).toBe(200);
+    const data = JSON.parse(res.body);
+    expect(data.pontos).toBe(0);
+    expect(data.distancia).toBeNull();
+    expect(data.location).toHaveProperty('lat');
+    expect(data.nextRound.id).toBe(game.rounds[1].id);
+  });
+
+  it('POST /api/rounds/:id/guess com coords mas fora do prazo pontua 0, ainda registrando a distância', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+    const roundId = game.rounds[0].id;
+
+    await db
+      .update(rounds)
+      .set({ started_at: new Date(Date.now() - 61_000) })
+      .where(eq(rounds.id, roundId));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${roundId}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const data = JSON.parse(res.body);
+    expect(data.pontos).toBe(0);
+    expect(data.distancia).not.toBeNull();
+  });
+
+  it('dois palpites concorrentes na mesma rodada: só um vale, o outro é rejeitado', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+    const roundId = game.rounds[0].id;
+
+    const [first, second] = await Promise.all([
+      app.inject({
+        method: 'POST',
+        url: `/api/rounds/${roundId}/guess`,
+        headers: { cookie: authCookie },
+        payload: { lat: -9.4064, lng: -38.2147 },
+      }),
+      app.inject({
+        method: 'POST',
+        url: `/api/rounds/${roundId}/guess`,
+        headers: { cookie: authCookie },
+        payload: { lat: -9.4, lng: -38.2 },
+      }),
+    ]);
+
+    const statuses = [first.statusCode, second.statusCode].sort();
+    expect(statuses).toEqual([200, 409]);
+  });
+
+  it('GET /api/games/:id retorna resumo completo da partida', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
 
     await app.inject({
       method: 'POST',
       url: `/api/rounds/${game.rounds[0].id}/guess`,
+      headers: { cookie: authCookie },
       payload: {
         lat: -9.4064,
         lng: -38.2147,
@@ -145,6 +303,7 @@ describe('Game Routes Integration', () => {
     const summaryRes = await app.inject({
       method: 'GET',
       url: `/api/games/${game.id}`,
+      headers: { cookie: authCookie },
     });
 
     expect(summaryRes.statusCode).toBe(200);
@@ -155,5 +314,6 @@ describe('Game Routes Integration', () => {
     expect(summary.rounds[0].location).toHaveProperty('lat');
     expect(summary.rounds[1].distancia).toBeNull();
     expect(summary.rounds[1].location).toBeUndefined();
+    expect(summary.rounds[1].startedAt).toEqual(expect.any(String));
   });
 });

@@ -5,7 +5,7 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { RegisterScreen } from './components/auth/RegisterScreen';
 import { RecoverPasswordScreen } from './components/auth/RecoverPasswordScreen';
 import { RecoveryCodeScreen } from './components/auth/RecoveryCodeScreen';
-import { haversine, score, PAULO_AFONSO_CENTER } from '@paguessr/shared';
+import { haversine, score, PAULO_AFONSO_CENTER, ROUND_DURATION_MS } from '@paguessr/shared';
 import type { LatLng } from '@paguessr/shared';
 import { MOCK_LOCATIONS } from './data/mockLocations';
 import type { GameState, RoundResult, RoundData } from './types';
@@ -95,6 +95,7 @@ export function App() {
         (r: ApiRoundInitial, idx: number) => ({
           id: r.id,
           order: r.order ?? r.roundNumber ?? idx + 1,
+          startedAt: r.startedAt ?? r.started_at ?? null,
         })
       );
 
@@ -125,9 +126,56 @@ export function App() {
     setCurrentGuess(coords);
   };
 
+  const submitOnlineGuess = useCallback(
+    async (guess: LatLng | null) => {
+      if (!currentRound) return;
+      const version = sessionVersion.current;
+
+      setGameState('submitting');
+      setSubmittingError(null);
+
+      try {
+        const res = await submitGuess(currentRound.id, guess);
+        if (version !== sessionVersion.current) return;
+        const distanceMeters = res.distance ?? res.distanceMeters ?? null;
+        const roundScore = res.points ?? res.score ?? 0;
+
+        const newResult: RoundResult = {
+          roundNumber: currentRoundIndex + 1,
+          location: {
+            lat: res.location.lat,
+            lng: res.location.lng,
+            name: res.location.name,
+            description: res.location.description,
+          },
+          guess,
+          distanceMeters,
+          score: roundScore,
+        };
+
+        setResults((prev) => [...prev, newResult]);
+
+        const nextRound = res.nextRound;
+        if (nextRound) {
+          const nextStartedAt = nextRound.startedAt ?? nextRound.started_at ?? null;
+          setRounds((prev) =>
+            prev.map((r) => (r.id === nextRound.id ? { ...r, startedAt: nextStartedAt } : r))
+          );
+        }
+
+        setGameState('round_result');
+      } catch (err: unknown) {
+        if (version !== sessionVersion.current) return;
+        const msg = err instanceof Error ? err.message : 'Erro ao enviar palpite.';
+        setSubmittingError(msg);
+        setGameState('guessing');
+      }
+    },
+    [currentRound, currentRoundIndex]
+  );
+
   const handleConfirmGuess = async () => {
-    if (!currentGuess || gameState !== 'guessing') return;
-    const version = sessionVersion.current;
+    if (gameState !== 'guessing' || !currentGuess) return;
 
     if (isOfflineMode) {
       const distanceMeters = haversine(currentGuess, currentMockLoc.coords);
@@ -151,39 +199,36 @@ export function App() {
       return;
     }
 
-    if (!currentRound) return;
-
-    setGameState('submitting');
-    setSubmittingError(null);
-
-    try {
-      const res = await submitGuess(currentRound.id, currentGuess);
-      if (version !== sessionVersion.current) return;
-      const distanceMeters = res.distance ?? res.distanceMeters ?? 0;
-      const roundScore = res.points ?? res.score ?? 0;
-
-      const newResult: RoundResult = {
-        roundNumber: currentRoundIndex + 1,
-        location: {
-          lat: res.location.lat,
-          lng: res.location.lng,
-          name: res.location.name,
-          description: res.location.description,
-        },
-        guess: currentGuess,
-        distanceMeters,
-        score: roundScore,
-      };
-
-      setResults((prev) => [...prev, newResult]);
-      setGameState('round_result');
-    } catch (err: unknown) {
-      if (version !== sessionVersion.current) return;
-      const msg = err instanceof Error ? err.message : 'Erro ao enviar palpite.';
-      setSubmittingError(msg);
-      setGameState('guessing');
-    }
+    await submitOnlineGuess(currentGuess);
   };
+
+  // Cronômetro do modo Ranqueado: só exibição, o servidor é quem decide a
+  // pontuação (ver started_at/ROUND_DURATION_MS em gameRoutes.ts). Ao zerar,
+  // envia o palpite atual (se houver) ou um timeout explícito (sem coords).
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isOfflineMode || gameState !== 'guessing' || !currentRound?.startedAt) {
+      setSecondsLeft(null);
+      return;
+    }
+
+    const deadline = new Date(currentRound.startedAt).getTime() + ROUND_DURATION_MS;
+    let timeoutFired = false;
+
+    const tick = () => {
+      const remainingMs = deadline - Date.now();
+      setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
+      if (remainingMs <= 0 && !timeoutFired) {
+        timeoutFired = true;
+        submitOnlineGuess(currentGuess);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 250);
+    return () => clearInterval(interval);
+  }, [isOfflineMode, gameState, currentRound?.startedAt, submitOnlineGuess, currentGuess]);
 
   const handleNextRound = async () => {
     const version = sessionVersion.current;
@@ -264,6 +309,7 @@ export function App() {
         user={authUser}
         onLogout={handleLogout}
         onStartTraining={() => startNewGame(true)}
+        onStartRanked={() => startNewGame(false)}
       />
     );
   }
@@ -275,6 +321,7 @@ export function App() {
         totalRounds={totalRounds}
         totalScore={totalScore}
         isOfflineMode={isOfflineMode}
+        secondsLeft={secondsLeft}
         onHome={returnHome}
         onPause={() => pauseRef.current?.showModal()}
       />
