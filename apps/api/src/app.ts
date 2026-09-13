@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import rateLimit from '@fastify/rate-limit';
 import { sql } from './db/index.js';
 import { gameRoutes } from './routes/gameRoutes.js';
 import { authRoutes } from './routes/authRoutes.js';
@@ -21,6 +22,10 @@ export function buildApp(): FastifyInstance {
     credentials: true,
   });
   app.register(cookie);
+  // global: false — só as rotas que passam `config.rateLimit` (login e
+  // recuperação de senha, ver authRoutes.ts) ficam limitadas; o resto do
+  // jogo continua sem limite.
+  app.register(rateLimit, { global: false });
 
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
     const text = typeof body === 'string' ? body.trim() : '';
