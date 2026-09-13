@@ -1,62 +1,135 @@
 .podium-3d {
-  width: 100%;
-  height: clamp(260px, 34vw, 360px);
-  touch-action: none;
+  position: absolute;
+  inset: 0;
 }
 
-.podium-slot {
+.pin-tag {
+  --tag-color: #3ee3ad;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  transform: translateY(-100%);
-  padding-bottom: 6px;
+  gap: 1px;
+  padding: 6px 12px 7px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 55%, transparent);
+  border-bottom-width: 3px;
+  background: linear-gradient(180deg, #102338ee, #081524ee);
+  box-shadow:
+    0 8px 22px #02070d99,
+    0 0 18px color-mix(in srgb, var(--tag-color) 22%, transparent);
   white-space: nowrap;
+  opacity: 0;
+  /* O Html do drei centraliza no ponto 3D; o -50% apoia a base da etiqueta nele. */
+  transform: translateY(calc(-50% + 8px)) scale(0.92);
+  transition:
+    opacity 0.35s ease,
+    transform 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
-.podium-crown {
-  font-size: 20px;
-  line-height: 1;
-  filter: drop-shadow(0 0 6px #ffd16699);
+.pin-tag.is-visible {
+  opacity: 1;
+  transform: translateY(-50%);
 }
 
-.podium-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid var(--navy-card-border, #26456380);
-  box-shadow: 0 0 14px #3ee3ad33;
+.pin-tag.is-me {
+  border-color: #40cddd;
+  box-shadow:
+    0 8px 22px #02070d99,
+    0 0 22px #40cddd66;
 }
 
-.podium-slot.is-me .podium-avatar {
-  border-color: var(--navy-cyan, #40cddd);
-  box-shadow: 0 0 16px #40cddd80;
+.pin-tag-you {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #40cddd;
 }
 
-.podium-slot.is-me .podium-nick {
-  color: var(--navy-cyan, #40cddd);
+.pin-tag-nick {
+  font-family: 'Arial Black', 'Segoe UI', sans-serif;
+  font-style: italic;
+  font-size: 14px;
+  color: #eef6ff;
 }
 
-.podium-nick {
+.pin-tag-score {
   font-size: 13px;
   font-weight: 700;
-  color: var(--navy-text, #eef6ff);
-  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tag-color);
 }
 
-.podium-score {
-  font-size: 11px;
+.pin-tag-score small {
+  font-size: 10px;
   font-weight: 600;
-  color: var(--navy-accent, #3ee3ad);
+  opacity: 0.75;
 }
 
-.podium-slot-empty {
-  color: var(--navy-text-muted, #92a9c0);
-}
-
-.podium-vago {
-  font-size: 11px;
-  letter-spacing: 0.12em;
+.pin-tag-empty {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  opacity: 0.6;
+  color: #40cddd;
+  opacity: 0.7;
+}
+
+.podium-fallback {
+  list-style: none;
+  margin: 0;
+  padding: 140px 6% 0;
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+.podium-fallback li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #13283e;
+  color: #eef6ff;
+}
+
+.podium-fallback li span:last-child {
+  margin-left: auto;
+  color: #3ee3ad;
+}
+
+.podium-fallback-avatar {
+  width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 640px) {
+  .pin-tag {
+    padding: 3px 7px 4px;
+    border-radius: 7px;
+    border-bottom-width: 2px;
+  }
+
+  .pin-tag-nick {
+    font-size: 10px;
+    max-width: 84px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pin-tag-score {
+    font-size: 10px;
+  }
+
+  .pin-tag-you {
+    font-size: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pin-tag {
+    transition: none;
+  }
 }
