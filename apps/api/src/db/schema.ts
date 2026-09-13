@@ -20,12 +20,19 @@ export const locations = pgTable('locations', {
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const games = pgTable('games', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  total_score: integer('total_score').notNull().default(0),
-  created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  finished_at: timestamp('finished_at', { withTimezone: true }),
-});
+export const games = pgTable(
+  'games',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    user_id: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    total_score: integer('total_score').notNull().default(0),
+    created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    finished_at: timestamp('finished_at', { withTimezone: true }),
+  },
+  (table) => [index('games_user_id_idx').on(table.user_id)]
+);
 
 export const rounds = pgTable('rounds', {
   id: serial('id').primaryKey(),
@@ -40,6 +47,7 @@ export const rounds = pgTable('rounds', {
   guess_lng: doublePrecision('guess_lng'),
   distancia: doublePrecision('distancia'),
   pontos: integer('pontos'),
+  started_at: timestamp('started_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

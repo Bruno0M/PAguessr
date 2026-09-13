@@ -1,10 +1,37 @@
-import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { eq } from 'drizzle-orm';
-import { haversine, score, LatLng } from '@paguessr/shared';
+import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { and, eq, isNull } from 'drizzle-orm';
+import { haversine, score, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
 import { db } from '../db/index.js';
-import { games, locations, rounds } from '../db/schema.js';
+import { games, locations, rounds, Round } from '../db/schema.js';
+import { requireAuth } from '../auth/session.js';
+
+function currentUserId(request: FastifyRequest): string {
+  return request.authUser!.id;
+}
+
+// Ativa o cronômetro de uma rodada (define started_at = agora) na primeira vez
+// que ela é alcançada — na criação da partida (ordem 1) ou logo após o
+// palpite da rodada anterior ser resolvido. Idempotente: se a rodada já
+// estava ativada, devolve ela sem mexer no started_at original.
+async function activateRound(gameId: string, ordem: number): Promise<Round | null> {
+  const [activated] = await db
+    .update(rounds)
+    .set({ started_at: new Date() })
+    .where(and(eq(rounds.game_id, gameId), eq(rounds.ordem, ordem), isNull(rounds.started_at)))
+    .returning();
+
+  if (activated) return activated;
+
+  const [existing] = await db
+    .select()
+    .from(rounds)
+    .where(and(eq(rounds.game_id, gameId), eq(rounds.ordem, ordem)));
+  return existing ?? null;
+}
 
 export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
+  app.addHook('preHandler', requireAuth);
+
   app.post('/games', async (request, reply) => {
     const allLocations = await db.select().from(locations);
 
@@ -17,7 +44,10 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     const shuffled = [...allLocations].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, 5);
 
-    const [newGame] = await db.insert(games).values({}).returning();
+    const [newGame] = await db
+      .insert(games)
+      .values({ user_id: currentUserId(request) })
+      .returning();
 
     const createdRounds = await db
       .insert(rounds)
@@ -32,12 +62,17 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
     createdRounds.sort((a, b) => a.ordem - b.ordem);
 
+    const firstRound = await activateRound(newGame.id, 1);
+    const firstRoundStartedAt = firstRound?.started_at ? firstRound.started_at.toISOString() : null;
+
     return reply.status(201).send({
       id: newGame.id,
       rounds: createdRounds.map((r) => ({
         id: r.id,
         ordem: r.ordem,
         order: r.ordem,
+        started_at: r.ordem === 1 ? firstRoundStartedAt : null,
+        startedAt: r.ordem === 1 ? firstRoundStartedAt : null,
       })),
     });
   });
@@ -59,7 +94,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       const { id } = request.params as { id: string };
 
       const [game] = await db.select().from(games).where(eq(games.id, id));
-      if (!game) {
+      if (!game || game.user_id !== currentUserId(request)) {
         return reply.status(404).send({ error: 'Partida não encontrada' });
       }
 
@@ -71,6 +106,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           guess_lng: rounds.guess_lng,
           distancia: rounds.distancia,
           pontos: rounds.pontos,
+          started_at: rounds.started_at,
           created_at: rounds.created_at,
           location_lat: locations.lat,
           location_lng: locations.lng,
@@ -81,7 +117,8 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         .orderBy(rounds.ordem);
 
       const mappedRounds = gameRounds.map((r) => {
-        const isAnswered = r.distancia !== null;
+        const isAnswered = r.pontos !== null;
+        const startedAt = r.started_at ? r.started_at.toISOString() : null;
         return {
           id: r.id,
           ordem: r.ordem,
@@ -96,6 +133,8 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           distance: r.distancia,
           pontos: r.pontos,
           score: r.pontos,
+          started_at: startedAt,
+          startedAt,
           ...(isAnswered ? { location: { lat: r.location_lat, lng: r.location_lng } } : {}),
         };
       });
@@ -130,6 +169,11 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       const [round] = await db.select().from(rounds).where(eq(rounds.id, id));
       if (!round) {
+        return reply.status(404).send({ error: 'Rodada não encontrada' });
+      }
+
+      const [game] = await db.select().from(games).where(eq(games.id, round.game_id));
+      if (!game || game.user_id !== currentUserId(request)) {
         return reply.status(404).send({ error: 'Rodada não encontrada' });
       }
 
@@ -219,7 +263,6 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         },
         body: {
           type: 'object',
-          required: ['lat', 'lng'],
           properties: {
             lat: { type: 'number', minimum: -90, maximum: 90 },
             lng: { type: 'number', minimum: -180, maximum: 180 },
@@ -229,15 +272,35 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     },
     async (request, reply) => {
       const { id } = request.params as { id: number };
-      const body = request.body as { lat: number; lng: number };
+      const body = request.body as { lat?: number; lng?: number };
+
+      // Corpo vazio = timeout explícito (o front chama assim quando o
+      // cronômetro local zera sem palpite selecionado). lat/lng têm que vir
+      // juntos ou não vir nenhum dos dois — o schema JSON sozinho não pega
+      // "só um dos dois" quando os campos são opcionais.
+      if ((body.lat === undefined) !== (body.lng === undefined)) {
+        return reply
+          .status(400)
+          .send({ error: 'Envie lat e lng juntos, ou nenhum dos dois (timeout)' });
+      }
+      const hasGuess = body.lat !== undefined && body.lng !== undefined;
 
       const [round] = await db.select().from(rounds).where(eq(rounds.id, id));
       if (!round) {
         return reply.status(404).send({ error: 'Rodada não encontrada' });
       }
 
-      if (round.distancia !== null || round.guess_lat !== null) {
+      const [game] = await db.select().from(games).where(eq(games.id, round.game_id));
+      if (!game || game.user_id !== currentUserId(request)) {
+        return reply.status(404).send({ error: 'Rodada não encontrada' });
+      }
+
+      if (round.pontos !== null) {
         return reply.status(409).send({ error: 'Palpite já registrado para esta rodada' });
+      }
+
+      if (round.started_at === null) {
+        return reply.status(409).send({ error: 'Rodada ainda não iniciada' });
       }
 
       const [loc] = await db.select().from(locations).where(eq(locations.id, round.location_id));
@@ -245,22 +308,37 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         return reply.status(404).send({ error: 'Local não encontrado' });
       }
 
-      const guessPoint: LatLng = { lat: body.lat, lng: body.lng };
-      const actualPoint: LatLng = { lat: loc.lat, lng: loc.lng };
+      const elapsedMs = Date.now() - round.started_at.getTime();
+      const isLate = elapsedMs > ROUND_DURATION_MS;
 
-      const rawDist = haversine(guessPoint, actualPoint);
-      const roundedDist = Math.round(rawDist * 10) / 10;
-      const roundScore = score(roundedDist);
+      let roundedDist: number | null = null;
+      let roundScore = 0;
 
-      await db
+      if (hasGuess) {
+        const guessPoint: LatLng = { lat: body.lat as number, lng: body.lng as number };
+        const actualPoint: LatLng = { lat: loc.lat, lng: loc.lng };
+
+        const rawDist = haversine(guessPoint, actualPoint);
+        roundedDist = Math.round(rawDist * 10) / 10;
+        roundScore = isLate ? 0 : score(roundedDist);
+      }
+
+      // Update atômico: só grava se ninguém venceu a corrida antes (evita
+      // que dois palpites simultâneos pra mesma rodada os dois "ganhem").
+      const [updated] = await db
         .update(rounds)
         .set({
-          guess_lat: body.lat,
-          guess_lng: body.lng,
+          guess_lat: hasGuess ? (body.lat as number) : null,
+          guess_lng: hasGuess ? (body.lng as number) : null,
           distancia: roundedDist,
           pontos: roundScore,
         })
-        .where(eq(rounds.id, id));
+        .where(and(eq(rounds.id, id), isNull(rounds.pontos)))
+        .returning();
+
+      if (!updated) {
+        return reply.status(409).send({ error: 'Palpite já registrado para esta rodada' });
+      }
 
       const allGameRounds = await db.select().from(rounds).where(eq(rounds.game_id, round.game_id));
 
@@ -269,7 +347,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         return acc + (r.pontos || 0);
       }, 0);
 
-      const allFinished = allGameRounds.every((r) => (r.id === id ? true : r.distancia !== null));
+      const allFinished = allGameRounds.every((r) => (r.id === id ? true : r.pontos !== null));
 
       await db
         .update(games)
@@ -278,6 +356,9 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           ...(allFinished ? { finished_at: new Date() } : {}),
         })
         .where(eq(games.id, round.game_id));
+
+      const nextRound = await activateRound(round.game_id, round.ordem + 1);
+      const nextRoundStartedAt = nextRound?.started_at ? nextRound.started_at.toISOString() : null;
 
       return reply.send({
         roundId: round.id,
@@ -289,6 +370,9 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           lat: loc.lat,
           lng: loc.lng,
         },
+        nextRound: nextRound
+          ? { id: nextRound.id, started_at: nextRoundStartedAt, startedAt: nextRoundStartedAt }
+          : null,
       });
     }
   );

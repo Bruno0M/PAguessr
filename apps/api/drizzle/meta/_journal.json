@@ -15,6 +15,13 @@
       "when": 1789272467836,
       "tag": "0001_typical_felicia_hardy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789307712340,
+      "tag": "0002_flat_human_torch",
+      "breakpoints": true
     }
   ]
 }
