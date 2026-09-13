@@ -19,6 +19,16 @@ import {
 const PASSWORD_MIN_LENGTH = 6;
 const PASSWORD_MAX_LENGTH = 72;
 
+// Rotas que verificam uma credencial (senha ou código de recuperação) contra
+// um valor já existente precisam de limite de tentativas — sem isso, um
+// ataque de força bruta pode testar senhas/códigos sem restrição (apontado
+// pelo CodeQL). Ajustável por env pra não travar a suíte de testes, que bate
+// nessas rotas várias vezes seguidas a partir do mesmo IP (ver .env.test).
+const AUTH_RATE_LIMIT = {
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX || 10),
+  timeWindow: '1 minute',
+};
+
 const PUBLIC_USER_COLUMNS = {
   id: users.id,
   nick: users.nick,
@@ -122,27 +132,34 @@ export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     return reply.status(201).send({ user: created, recoveryCode });
   });
 
-  app.post('/auth/login', { schema: { body: loginBodySchema } }, async (request, reply) => {
-    const { nick, password } = request.body as { nick: string; password: string };
-    const genericError = { error: 'Nick ou senha incorretos' };
+  app.post(
+    '/auth/login',
+    { schema: { body: loginBodySchema }, config: { rateLimit: AUTH_RATE_LIMIT } },
+    async (request, reply) => {
+      const { nick, password } = request.body as { nick: string; password: string };
+      const genericError = { error: 'Nick ou senha incorretos' };
 
-    const nickNormalizado = normalizeNick(nick);
-    const [user] = await db.select().from(users).where(eq(users.nick_normalizado, nickNormalizado));
+      const nickNormalizado = normalizeNick(nick);
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.nick_normalizado, nickNormalizado));
 
-    if (!user) {
-      return reply.status(401).send(genericError);
+      if (!user) {
+        return reply.status(401).send(genericError);
+      }
+
+      const senhaValida = await verifySecret(password, user.password_hash);
+      if (!senhaValida) {
+        return reply.status(401).send(genericError);
+      }
+
+      const { token, expiresAt } = await createSession(user.id);
+      setSessionCookie(reply, request, token, expiresAt);
+
+      return reply.send({ user: toPublicUser(user) });
     }
-
-    const senhaValida = await verifySecret(password, user.password_hash);
-    if (!senhaValida) {
-      return reply.status(401).send(genericError);
-    }
-
-    const { token, expiresAt } = await createSession(user.id);
-    setSessionCookie(reply, request, token, expiresAt);
-
-    return reply.send({ user: toPublicUser(user) });
-  });
+  );
 
   app.post('/auth/logout', async (request, reply) => {
     const token = request.cookies[SESSION_COOKIE_NAME];
@@ -160,7 +177,10 @@ export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
   app.post(
     '/auth/recover-password',
-    { schema: { body: recoverPasswordBodySchema } },
+    {
+      schema: { body: recoverPasswordBodySchema },
+      config: { rateLimit: AUTH_RATE_LIMIT },
+    },
     async (request, reply) => {
       const { nick, recoveryCode, newPassword } = request.body as {
         nick: string;
