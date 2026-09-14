@@ -49,8 +49,11 @@ Registrado em 2026-09-10.
   - **limite diário de quota** no Cloud Console: é o que de fato bloqueia cobrança;
   - chave restrita por API (e por IP do servidor, já que as chamadas saem do proxy);
   - alerta de orçamento: só avisa, não bloqueia.
+- **A imagem não pode ser guardada no servidor.** A política do Street View Static API proíbe pré-carregar, indexar, armazenar ou fazer cache do conteúdo; só o `pano_id` pode ser guardado indefinidamente. Por isso não existe cache de imagem por local.
+- No lugar do cache, o proxy limita as buscas (cada uma é cobrada): só busca no Google enquanto a rodada está aberta (iniciada, sem palpite, dentro dos 60 s + 10 s de folga) e no máximo 3 vezes por rodada (`rounds.image_fetches`, incrementado de forma atômica). Fora disso devolve o placeholder com `no-store`.
+- A resposta com a foto sai com `Cache-Control: private, max-age=300`: só o navegador do jogador guarda, pelo tempo da rodada.
 
-Fonte: <https://developers.google.com/maps/billing-and-pricing/pricing>
+Fontes: <https://developers.google.com/maps/billing-and-pricing/pricing>, <https://developers.google.com/maps/documentation/streetview/policies>
 
 ## Pontuação
 
@@ -59,6 +62,6 @@ Fonte: <https://developers.google.com/maps/billing-and-pricing/pricing>
 
 ## Em aberto
 
-- **Termos de uso do Google:** conferir o que pode ser guardado de forma permanente (`pano_id`, coordenadas).
+- **Termos de uso do Google:** `pano_id` pode ser guardado e imagem não (ver "Custos e proteções"). Falta conferir as coordenadas que a tabela `locations` guarda vindas da Metadata API.
 - Provedor da VPS.
 - Ranking e login: v1 ou depois.
