@@ -1,12 +1,59 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { haversine, score, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
 import { db } from '../db/index.js';
-import { games, locations, rounds, Round } from '../db/schema.js';
+import { games, locations, rounds, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
+
+const MIN_LOCATIONS_PER_GAME = 5;
+const RECENT_GAMES_TO_AVOID = 2;
 
 function currentUserId(request: FastifyRequest): string {
   return request.authUser!.id;
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Evita repetir, na medida do possível, locais já vistos pelo jogador nas
+// últimas partidas dele. Se excluir esses locais deixasse o pool pequeno
+// demais para montar uma partida (banco com poucos locais, ex.: testes),
+// cai de volta no conjunto completo.
+async function pickLocationsForUser(userId: string, count: number): Promise<Location[]> {
+  const allLocations = await db.select().from(locations);
+
+  const recentGames = await db
+    .select({ id: games.id })
+    .from(games)
+    .where(eq(games.user_id, userId))
+    .orderBy(desc(games.created_at))
+    .limit(RECENT_GAMES_TO_AVOID);
+
+  let pool = allLocations;
+  if (recentGames.length > 0) {
+    const recentRounds = await db
+      .select({ location_id: rounds.location_id })
+      .from(rounds)
+      .where(
+        inArray(
+          rounds.game_id,
+          recentGames.map((g) => g.id)
+        )
+      );
+    const recentLocationIds = new Set(recentRounds.map((r) => r.location_id));
+    const filtered = allLocations.filter((loc) => !recentLocationIds.has(loc.id));
+    if (filtered.length >= count) {
+      pool = filtered;
+    }
+  }
+
+  return shuffle(pool).slice(0, count);
 }
 
 // Ativa o cronômetro de uma rodada (define started_at = agora) na primeira vez
@@ -33,16 +80,15 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   app.addHook('preHandler', requireAuth);
 
   app.post('/games', async (request, reply) => {
-    const allLocations = await db.select().from(locations);
+    const totalLocations = await db.$count(locations);
 
-    if (allLocations.length < 5) {
+    if (totalLocations < MIN_LOCATIONS_PER_GAME) {
       return reply.status(503).send({
         error: 'Não há locais cadastrados suficientes para iniciar uma partida (mínimo 5)',
       });
     }
 
-    const shuffled = [...allLocations].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 5);
+    const selected = await pickLocationsForUser(currentUserId(request), MIN_LOCATIONS_PER_GAME);
 
     const [newGame] = await db
       .insert(games)

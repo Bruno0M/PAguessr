@@ -4,7 +4,12 @@ import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
-import { rounds } from '../db/schema.js';
+import { locations, rounds } from '../db/schema.js';
+
+async function locationIdsOf(gameId: string): Promise<number[]> {
+  const gameRounds = await db.select().from(rounds).where(eq(rounds.game_id, gameId));
+  return gameRounds.map((r) => r.location_id);
+}
 
 async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Promise<string> {
   const res = await registerUser(app, { nick });
@@ -315,5 +320,29 @@ describe('Game Routes Integration', () => {
     expect(summary.rounds[1].distancia).toBeNull();
     expect(summary.rounds[1].location).toBeUndefined();
     expect(summary.rounds[1].startedAt).toEqual(expect.any(String));
+  });
+
+  it('POST /api/games evita repetir locais das últimas partidas do mesmo jogador quando o pool permite', async () => {
+    // Com pool grande o bastante, o sorteio deve excluir os locais das
+    // últimas partidas do jogador em vez de só embaralhar tudo de novo.
+    await db.insert(locations).values(
+      Array.from({ length: 10 }, (_, i) => ({
+        pano_id: `test-no-repeat-${i}`,
+        lat: -9.4 + i * 0.001,
+        lng: -38.2 + i * 0.001,
+        source: 'test',
+      }))
+    );
+
+    const cookie = await loginNewUser(app, 'semrepeticao');
+
+    const firstGame = await createAuthenticatedGame(app, cookie);
+    const secondGame = await createAuthenticatedGame(app, cookie);
+
+    const firstLocationIds = await locationIdsOf(firstGame.id);
+    const secondLocationIds = await locationIdsOf(secondGame.id);
+
+    const overlap = secondLocationIds.filter((id) => firstLocationIds.includes(id));
+    expect(overlap).toHaveLength(0);
   });
 });
