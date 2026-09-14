@@ -28,12 +28,17 @@ export const rankingRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
           properties: {
             period: { type: 'string', enum: ['semana', 'geral'], default: 'geral' },
             limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            offset: { type: 'integer', minimum: 0, default: 0 },
           },
         },
       },
     },
     async (request, reply) => {
-      const { period, limit } = request.query as { period: Period; limit: number };
+      const { period, limit, offset } = request.query as {
+        period: Period;
+        limit: number;
+        offset: number;
+      };
 
       const bestPerUser = await db
         .selectDistinctOn([games.user_id], {
@@ -71,11 +76,12 @@ export const rankingRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
           position: idx + 1,
         }));
 
-      const entries = ranked.slice(0, limit);
+      const entries = ranked.slice(offset, offset + limit);
       const meRow = ranked.find((r) => r.userId === request.authUser!.id);
 
       return reply.send({
         period,
+        total: ranked.length,
         entries,
         me: meRow ? { position: meRow.position, score: meRow.score } : null,
       });

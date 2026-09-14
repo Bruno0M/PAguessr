@@ -3,6 +3,7 @@ import type { PublicUser } from '../../api/auth';
 import { getRanking, type ApiRankingResponse, type RankingPeriod } from '../../api/ranking';
 import { AvatarSvg } from '../auth/avatars';
 import { Podium3D } from './Podium3D';
+import { RankingGeralDialog } from './RankingGeralDialog';
 import './RankingScreen.css';
 
 type Status = 'loading' | 'ready' | 'error';
@@ -28,7 +29,9 @@ export function RankingScreen({
   const [period, setPeriod] = useState<RankingPeriod>('geral');
   const [data, setData] = useState<ApiRankingResponse | null>(null);
   const [status, setStatus] = useState<Status>('loading');
+  const [geralOpen, setGeralOpen] = useState(false);
   const requestId = useRef(0);
+  const openGeral = useCallback(() => setGeralOpen(true), []);
 
   const load = useCallback((p: RankingPeriod) => {
     const id = ++requestId.current;
@@ -60,7 +63,27 @@ export function RankingScreen({
   return (
     <div className="ranking-screen">
       <section className="ranking-stage" aria-labelledby="ranking-title">
-        <Podium3D entries={top3} currentUserId={user.id} periodKey={data?.period ?? period} />
+        <Podium3D
+          entries={top3}
+          currentUserId={user.id}
+          periodKey={data?.period ?? period}
+          onPlayRanked={onPlayRanked}
+          onGoHome={onBack}
+          onOpenGeral={openGeral}
+        />
+
+        {/* Mesmas ações das placas 3D, alcançáveis por teclado e leitor de tela. */}
+        <nav className="ranking-scene-actions" aria-label="Ações do pódio">
+          <button type="button" onClick={onBack}>
+            Paulo Afonso: voltar ao menu
+          </button>
+          <button type="button" onClick={openGeral}>
+            Ver ranking geral completo
+          </button>
+          <button type="button" onClick={onPlayRanked}>
+            Jogar Ranqueado
+          </button>
+        </nav>
 
         <header className="ranking-hud">
           <button type="button" className="ranking-back" onClick={onBack}>
@@ -173,6 +196,8 @@ export function RankingScreen({
           )}
         </section>
       )}
+
+      <RankingGeralDialog open={geralOpen} user={user} onClose={() => setGeralOpen(false)} />
     </div>
   );
 }

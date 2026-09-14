@@ -148,6 +148,56 @@ describe('Ranking Routes Integration', () => {
     expect(cBody.me.position).toBeGreaterThan(1); // fora do entries visível (limit=1)
   });
 
+  it('offset pagina a lista completa sem pular nem repetir jogador, e total conta todos', async () => {
+    const cookie = await loginNewUser(app, 'paginacao');
+    await finishGame(app, cookie, 2);
+
+    const fullRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral&limit=100',
+      headers: { cookie },
+    });
+    const full = JSON.parse(fullRes.body);
+    expect(full.total).toBe(full.entries.length);
+    expect(full.total).toBeGreaterThanOrEqual(3);
+
+    const pages: Array<{ userId: string; position: number }> = [];
+    for (let offset = 0; offset < full.total; offset += 2) {
+      const pageRes = await app.inject({
+        method: 'GET',
+        url: `/api/ranking?period=geral&limit=2&offset=${offset}`,
+        headers: { cookie },
+      });
+      const page = JSON.parse(pageRes.body);
+      expect(page.total).toBe(full.total);
+      pages.push(...page.entries);
+    }
+
+    expect(pages.map((e) => e.userId)).toEqual(
+      full.entries.map((e: { userId: string }) => e.userId)
+    );
+    expect(pages.map((e) => e.position)).toEqual(pages.map((_, idx) => idx + 1));
+
+    const pastEndRes = await app.inject({
+      method: 'GET',
+      url: `/api/ranking?period=geral&limit=10&offset=${full.total}`,
+      headers: { cookie },
+    });
+    const pastEnd = JSON.parse(pastEndRes.body);
+    expect(pastEnd.entries).toEqual([]);
+    expect(pastEnd.me.score).toBe(10000);
+  });
+
+  it('offset negativo é rejeitado', async () => {
+    const cookie = await loginNewUser(app, 'offsetnegativo');
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral&offset=-1',
+      headers: { cookie },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('empate de pontuação gera posições adjacentes, sem compartilhar posição', async () => {
     const cookieFirst = await loginNewUser(app, 'empateprimeiro');
     const cookieSecond = await loginNewUser(app, 'empatesegundo');

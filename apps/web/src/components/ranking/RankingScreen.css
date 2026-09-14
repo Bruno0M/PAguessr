@@ -208,6 +208,35 @@
   box-shadow: 0 2px 0 #0f6f7d;
 }
 
+/* Escondido até alguém navegar por teclado até ele. */
+.ranking-scene-actions {
+  position: absolute;
+  z-index: 35;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+  clip-path: inset(50%);
+  opacity: 0;
+}
+
+.ranking-scene-actions:focus-within {
+  clip-path: none;
+  opacity: 1;
+}
+
+.ranking-scene-actions button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #40cddd;
+  background: #0b1727f2;
+  color: var(--navy-text, #eef6ff);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .ranking-sr-only {
   position: absolute;
   width: 1px;
@@ -331,7 +360,7 @@
   }
 
   .ranking-stage {
-    height: clamp(460px, 78vh, 640px);
+    height: clamp(420px, 58vh, 520px);
   }
 }
 
