@@ -11,12 +11,17 @@ export interface ApiRankingEntry {
 
 export interface ApiRankingResponse {
   period: RankingPeriod;
+  total: number;
   entries: ApiRankingEntry[];
   me: { position: number; score: number } | null;
 }
 
-export async function getRanking(period: RankingPeriod, limit = 20): Promise<ApiRankingResponse> {
-  const res = await fetch(`/api/ranking?period=${period}&limit=${limit}`);
+export async function getRanking(
+  period: RankingPeriod,
+  limit = 20,
+  offset = 0
+): Promise<ApiRankingResponse> {
+  const res = await fetch(`/api/ranking?period=${period}&limit=${limit}&offset=${offset}`);
 
   if (!res.ok) {
     throw new Error(`Falha ao carregar o ranking (${res.status} ${res.statusText})`);

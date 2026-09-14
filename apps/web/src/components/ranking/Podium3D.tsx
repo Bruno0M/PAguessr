@@ -1,43 +1,45 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, Sparkles } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import type { ApiRankingEntry } from '../../api/ranking';
 import { AvatarSvg } from '../auth/avatars';
-import { Island } from './podium/Island';
-import { Pedestal } from './podium/Pedestal';
-import { GhostPin, PlayerPin } from './podium/PlayerPin';
+import { Landmarks } from './podium/Landmarks';
+import { MEDAL, PODIUM_SLOTS, PODIUM_Z } from './podium/layout';
 import { prefersReducedMotion } from './podium/motion';
+import { Pedestal } from './podium/Pedestal';
+import { Platform } from './podium/Platform';
+import { GhostPin, PlayerPin } from './podium/PlayerPin';
+import { Scenery } from './podium/Scenery';
+import { Signpost, type SignAction } from './podium/Signpost';
 import './Podium3D.css';
 
-const FOV = 35;
-
-const SLOTS = [
-  { place: 3 as const, x: 2.05, height: 0.75, color: '#e59a5c', pinScale: 0.58, riseDelay: 0.15 },
-  { place: 2 as const, x: -2.05, height: 1.05, color: '#cfdbe6', pinScale: 0.58, riseDelay: 0.35 },
-  { place: 1 as const, x: 0, height: 1.5, color: '#ffd166', pinScale: 0.72, riseDelay: 0.55 },
-];
+const FOV = 30;
+const RISE_ORDER: Record<1 | 2 | 3, number> = { 3: 0, 2: 1, 1: 2 };
 
 function CameraRig({ reducedMotion }: { reducedMotion: boolean }) {
   const size = useThree((state) => state.size);
-  const target = useMemo(() => new THREE.Vector3(0, 0.9, 0), []);
+  const target = useMemo(() => new THREE.Vector3(0, 1.75, 0.3), []);
 
   useFrame((state, delta) => {
     const aspect = size.width / size.height;
-    // Garante a ilha inteira na largura mesmo em tela de celular.
-    const fitDistance = 4.5 / (Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * aspect);
-    const distance = Math.max(14.5, fitDistance);
+    // Em tela em pé o HUD ocupa duas linhas: mirar mais alto desce a cena.
+    target.y = aspect < 1 ? 1.75 + (1 - aspect) * 5 : 1.75;
+    // Garante o disco inteiro na largura, inclusive em tela de celular.
+    const fitDistance = 5.7 / (Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * aspect);
+    const distance = Math.max(16, fitDistance);
     const t = state.clock.elapsedTime;
-    const goalX = reducedMotion ? 0 : Math.sin(t * 0.22) * 0.8 + state.pointer.x * 1.2;
-    const goalY = distance * 0.46 + (reducedMotion ? 0 : state.pointer.y * 0.5);
+    const goalX = reducedMotion ? 0 : Math.sin(t * 0.2) * 0.45 + state.pointer.x * 0.8;
+    const goalY = distance * 0.32 + (reducedMotion ? 0 : state.pointer.y * 0.35);
     const { position } = state.camera;
 
     if (reducedMotion) {
       position.set(goalX, goalY, distance);
     } else {
-      position.x = THREE.MathUtils.damp(position.x, goalX, 2.2, delta);
-      position.y = THREE.MathUtils.damp(position.y, goalY, 2.2, delta);
-      position.z = THREE.MathUtils.damp(position.z, distance, 1.8, delta);
+      position.x = THREE.MathUtils.damp(position.x, goalX, 2, delta);
+      position.y = THREE.MathUtils.damp(position.y, goalY, 2, delta);
+      position.z = THREE.MathUtils.damp(position.z, distance, 1.6, delta);
     }
     state.camera.lookAt(target);
   });
@@ -64,74 +66,122 @@ export function Podium3D({
   entries,
   currentUserId,
   periodKey,
+  onPlayRanked,
+  onGoHome,
+  onOpenGeral,
 }: {
   entries: ApiRankingEntry[];
   currentUserId?: string;
   periodKey: string;
+  onPlayRanked: () => void;
+  onGoHome: () => void;
+  onOpenGeral: () => void;
 }) {
   const reducedMotion = useMemo(prefersReducedMotion, []);
+  const highQuality = useMemo(() => typeof window !== 'undefined' && window.innerWidth >= 768, []);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hoverCount = useRef(0);
+
+  // Contador em ref (sem estado) pra trocar o cursor sem re-renderizar a cena.
+  const handleHover = useCallback((hovered: boolean) => {
+    hoverCount.current = Math.max(0, hoverCount.current + (hovered ? 1 : -1));
+    if (containerRef.current) {
+      containerRef.current.style.cursor = hoverCount.current > 0 ? 'pointer' : '';
+    }
+  }, []);
+
+  const signActions = useMemo<SignAction[]>(
+    () => [
+      { label: 'PAULO AFONSO', onSelect: onGoHome },
+      { label: 'GERAL', onSelect: onOpenGeral },
+      { label: 'JOGAR', onSelect: onPlayRanked },
+    ],
+    [onGoHome, onOpenGeral, onPlayRanked]
+  );
+
   const hasWinner = Boolean(entries[0]);
 
   return (
-    <div className="podium-3d">
+    <div className="podium-3d" ref={containerRef}>
       <Canvas
-        dpr={[1, 2]}
-        camera={{ fov: FOV, position: [0, 6.5, 18] }}
-        gl={{ antialias: true, alpha: true }}
+        dpr={highQuality ? [1, 2] : [1, 1.5]}
+        camera={{ fov: FOV, position: [0, 9, 26] }}
+        gl={{ antialias: false, powerPreference: 'high-performance', toneMappingExposure: 1.2 }}
         fallback={<PodiumFallback entries={entries} />}
       >
+        <color attach="background" args={['#0b1a2c']} />
         <CameraRig reducedMotion={reducedMotion} />
 
-        <hemisphereLight args={['#8fd3ec', '#0a1522', 0.6]} />
-        <directionalLight position={[4, 8, 6]} intensity={1.8} color="#fff4e0" />
-        <directionalLight position={[-6, 3, -5]} intensity={1.3} color="#40cddd" />
-        <directionalLight position={[0, -6, 8]} intensity={0.9} color="#3fa9c9" />
+        <hemisphereLight args={['#9ad7ff', '#0a1522', 0.55]} />
+        <directionalLight position={[-3, 9, 7]} intensity={1.5} color="#eaf4ff" />
+        <directionalLight position={[5, 4, -7]} intensity={1.6} color="#46d4ff" />
         {hasWinner && (
-          <pointLight position={[0, 3.8, 1.4]} intensity={9} distance={6} color="#ffd166" />
+          <pointLight
+            position={[0, 3.3, PODIUM_Z + 0.9]}
+            intensity={14}
+            distance={6}
+            color="#ffc46b"
+          />
         )}
 
-        <Environment resolution={128} frames={1}>
-          <Lightformer intensity={3} color="#d6f2ff" position={[0, 6, 4]} scale={[10, 3, 1]} />
-          <Lightformer intensity={2} color="#3ee3ad" position={[-6, 2, 3]} scale={[3, 3, 1]} />
-          <Lightformer intensity={1.6} color="#40cddd" position={[6, 1, -3]} scale={[4, 4, 1]} />
+        <Environment resolution={256} frames={1}>
+          <Lightformer intensity={5} color="#eef8ff" position={[0, 7, 3]} scale={[14, 4, 1]} />
+          <Lightformer intensity={3.5} color="#ffe2b0" position={[0, 1.5, 9]} scale={[14, 3, 1]} />
+          <Lightformer intensity={2} color="#9fb4c8" position={[0, -3, 7]} scale={[14, 3, 1]} />
+          <Lightformer intensity={3.5} color="#3fdcff" position={[-8, 2, 0]} scale={[2, 6, 1]} />
+          <Lightformer intensity={3.5} color="#3fdcff" position={[8, 2, 0]} scale={[2, 6, 1]} />
         </Environment>
 
-        <Island reducedMotion={reducedMotion} />
+        <Platform reflective={highQuality} reducedMotion={reducedMotion} />
+        <Scenery />
+        <Landmarks />
 
-        {SLOTS.map((slot, order) => {
+        {PODIUM_SLOTS.map((slot) => {
           const entry = entries[slot.place - 1];
+          const order = RISE_ORDER[slot.place];
+          const medal = MEDAL[slot.place];
+          const pinScale = slot.place === 1 ? 0.74 : 0.62;
           return (
             <Pedestal
               key={slot.place}
               place={slot.place}
               x={slot.x}
+              z={PODIUM_Z}
               height={slot.height}
-              color={slot.color}
-              riseDelay={slot.riseDelay}
+              riseDelay={0.15 + order * 0.2}
               reducedMotion={reducedMotion}
+              onSelect={onPlayRanked}
+              onHover={handleHover}
             >
               {entry ? (
                 <PlayerPin
                   key={`${periodKey}-${entry.userId}`}
                   entry={entry}
-                  scale={slot.pinScale}
-                  medalColor={slot.color}
+                  scale={pinScale}
+                  medalColor={medal.glow}
                   dropDelay={1.05 + order * 0.2}
                   stagger={order * 0.15}
                   isCurrentUser={entry.userId === currentUserId}
                   isWinner={slot.place === 1}
                   reducedMotion={reducedMotion}
+                  onSelect={onPlayRanked}
+                  onHover={handleHover}
                 />
               ) : (
-                <GhostPin scale={slot.pinScale} />
+                <GhostPin
+                  scale={pinScale}
+                  medalColor={medal.glow}
+                  onSelect={onPlayRanked}
+                  onHover={handleHover}
+                />
               )}
               {slot.place === 1 && entry && (
                 <Sparkles
-                  count={36}
-                  position={[0, 1.4, 0]}
-                  scale={[1.8, 2.6, 1.8]}
+                  count={30}
+                  position={[0, 1.2, 0]}
+                  scale={[1.6, 2.2, 1.6]}
                   size={4}
-                  speed={reducedMotion ? 0 : 0.35}
+                  speed={reducedMotion ? 0 : 0.3}
                   color="#ffd166"
                 />
               )}
@@ -139,24 +189,37 @@ export function Podium3D({
           );
         })}
 
+        <Signpost actions={signActions} onHover={handleHover} />
+
         <ContactShadows
-          position={[0, 0.006, 0]}
-          scale={9}
+          position={[0, 0.004, 0]}
+          scale={11}
           resolution={512}
-          blur={2.4}
-          opacity={0.7}
-          far={4}
+          blur={2.2}
+          opacity={0.55}
+          far={3}
           color="#02070d"
         />
         <Sparkles
-          count={70}
-          position={[0, 2.2, 0]}
-          scale={[12, 6, 10]}
-          size={1.6}
-          speed={reducedMotion ? 0 : 0.2}
-          color="#7fdcea"
-          opacity={0.4}
+          count={140}
+          position={[0, 3, -5]}
+          scale={[34, 16, 8]}
+          size={1.4}
+          speed={reducedMotion ? 0 : 0.15}
+          color="#9fd8ff"
+          opacity={0.5}
         />
+
+        <EffectComposer multisampling={highQuality ? 4 : 0}>
+          <Bloom
+            mipmapBlur
+            luminanceThreshold={1}
+            luminanceSmoothing={0.25}
+            intensity={0.85}
+            radius={0.7}
+          />
+          <Vignette offset={0.25} darkness={0.7} />
+        </EffectComposer>
       </Canvas>
     </div>
   );

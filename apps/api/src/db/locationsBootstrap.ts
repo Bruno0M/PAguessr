@@ -8,10 +8,7 @@ const MINIMUM_VIABLE = 5;
 const GRID_SCAN_LIMIT = 80;
 
 export type EnsureLocationsReason =
-  | 'ALREADY_POPULATED'
-  | 'NO_API_KEY'
-  | 'API_ERROR'
-  | 'INSUFFICIENT_PANORAMAS';
+  'ALREADY_POPULATED' | 'NO_API_KEY' | 'API_ERROR' | 'INSUFFICIENT_PANORAMAS';
 
 export interface EnsureLocationsResult {
   added: number;

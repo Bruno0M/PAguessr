@@ -107,24 +107,33 @@
 
 @media (max-width: 640px) {
   .pin-tag {
-    padding: 3px 7px 4px;
-    border-radius: 7px;
+    padding: 2px 5px 3px;
+    border-radius: 6px;
     border-bottom-width: 2px;
   }
 
+  /* Pedestais ficam a ~60px um do outro: a etiqueta do 1º sobe pra não cobrir as vizinhas. */
+  .pin-tag[data-place='1'].is-visible {
+    transform: translateY(calc(-50% - 22px));
+  }
+
   .pin-tag-nick {
-    font-size: 10px;
-    max-width: 84px;
+    font-size: 9px;
+    max-width: 60px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .pin-tag-score {
-    font-size: 10px;
+    font-size: 9px;
+  }
+
+  .pin-tag-score small {
+    display: none;
   }
 
   .pin-tag-you {
-    font-size: 7px;
+    font-size: 6px;
   }
 }
 

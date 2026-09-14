@@ -1,0 +1,235 @@
+.geral-dialog {
+  width: min(560px, calc(100% - 32px));
+  max-height: min(760px, calc(100% - 48px));
+  /* O reset global zera a margem; sem o auto o <dialog> não centraliza. */
+  margin: auto;
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--navy-text, #eef6ff);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.geral-dialog::backdrop {
+  background: #030a14b8;
+  backdrop-filter: blur(4px);
+}
+
+.geral-dialog[open] {
+  display: flex;
+  animation: geral-in 0.22s ease-out;
+}
+
+@keyframes geral-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+.geral-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: inherit;
+  border-radius: 20px;
+  border: 1px solid #40cddd55;
+  background: linear-gradient(180deg, #0f2238f5, #0a1828f5);
+  box-shadow:
+    0 30px 70px #02070dcc,
+    0 0 40px #40cddd22;
+  overflow: hidden;
+}
+
+.geral-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 22px 14px;
+  border-bottom: 1px solid #789abe24;
+}
+
+.geral-header h2 {
+  margin: 0;
+  font-family: 'Arial Black', 'Segoe UI', sans-serif;
+  font-style: italic;
+  font-size: 24px;
+  color: var(--navy-cyan, #40cddd);
+}
+
+.geral-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--navy-text-muted, #92a9c0);
+}
+
+.geral-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #789abe40;
+  background: #0b1727;
+  color: var(--navy-text, #eef6ff);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.geral-close:hover {
+  border-color: #40cddd;
+}
+
+.geral-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px 14px;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  flex: 1;
+  min-height: 160px;
+  scrollbar-width: thin;
+  scrollbar-color: #2c4863 transparent;
+}
+
+.geral-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: #13283ecc;
+  border: 1px solid #26456380;
+}
+
+.geral-row.is-me {
+  border-color: #40cddd;
+  box-shadow: inset 4px 0 0 #40cddd;
+}
+
+.geral-position {
+  min-width: 40px;
+  font-family: 'Arial Black', 'Segoe UI', sans-serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--navy-text-muted, #92a9c0);
+}
+
+.geral-position-1 {
+  color: #ffc75a;
+}
+
+.geral-position-2 {
+  color: #d7e3ee;
+}
+
+.geral-position-3 {
+  color: #ffae70;
+}
+
+.geral-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.geral-nick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geral-you {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #40cddd26;
+  color: #40cddd;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.geral-score {
+  font-weight: 800;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--navy-accent, #3ee3ad);
+  white-space: nowrap;
+}
+
+.geral-score small {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.geral-empty,
+.geral-loading {
+  padding: 18px 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--navy-text-muted, #92a9c0);
+}
+
+.geral-retry {
+  border: none;
+  background: none;
+  color: #40cddd;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.geral-sentinel {
+  height: 1px;
+}
+
+.geral-footer {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid #789abe24;
+  background: #0a1726;
+  font-size: 13px;
+  color: var(--navy-text-muted, #92a9c0);
+}
+
+.geral-footer strong {
+  font-family: 'Arial Black', 'Segoe UI', sans-serif;
+  font-style: italic;
+  font-size: 18px;
+  color: #40cddd;
+}
+
+.geral-footer-score {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--navy-accent, #3ee3ad);
+  font-variant-numeric: tabular-nums;
+}
+
+.geral-dialog :focus-visible {
+  outline: 3px solid var(--navy-cyan, #40cddd);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geral-dialog[open] {
+    animation: none;
+  }
+}
