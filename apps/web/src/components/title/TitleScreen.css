@@ -203,11 +203,17 @@
 .title-hint kbd {
   display: grid;
   place-items: center;
-  width: 1.75em;
+  min-width: 1.75em;
   height: 1.75em;
-  border-radius: 50%;
+  padding: 0 0.5em;
+  border-radius: 999px;
   background: rgb(246 236 212 / 0.85);
   color: var(--title-ink);
+  font:
+    700 0.6em / 1 'Saira',
+    'Segoe UI',
+    sans-serif;
+  letter-spacing: 0.02em;
 }
 
 .title-hint svg {
@@ -280,6 +286,15 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Gêmeo do bloco acima pro override manual das Configurações (ver
+   lib/motionPreference.ts) — feito a partir desta própria tela. */
+:root[data-reduce-motion='true'] .title-screen,
+:root[data-reduce-motion='true'] .title-screen *,
+:root[data-reduce-motion='true'] .title-screen::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 @keyframes title-fade-in {
