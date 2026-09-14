@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { haversine, score, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
 import { db } from '../db/index.js';
 import { games, locations, rounds, Location, Round } from '../db/schema.js';
@@ -7,6 +7,11 @@ import { requireAuth } from '../auth/session.js';
 
 const MIN_LOCATIONS_PER_GAME = 5;
 const RECENT_GAMES_TO_AVOID = 2;
+// Cada busca no Street View Static API é cobrada. A imagem não pode ser guardada
+// no servidor (política do Google: só o pano_id pode), então o que protege a cota
+// é limitar quando e quantas vezes o proxy busca por rodada.
+export const MAX_IMAGE_FETCHES_PER_ROUND = 3;
+const IMAGE_FETCH_GRACE_MS = 10_000;
 
 function currentUserId(request: FastifyRequest): string {
   return request.authUser!.id;
@@ -54,6 +59,27 @@ async function pickLocationsForUser(userId: string, count: number): Promise<Loca
   }
 
   return shuffle(pool).slice(0, count);
+}
+
+// Reserva uma busca no Google pra rodada, de forma atômica: só conta se a rodada
+// já começou, ainda não tem palpite, não passou do tempo e não esgotou o limite.
+async function reserveImageFetch(round: Round): Promise<boolean> {
+  if (round.pontos !== null || round.started_at === null) return false;
+  if (Date.now() - round.started_at.getTime() > ROUND_DURATION_MS + IMAGE_FETCH_GRACE_MS) {
+    return false;
+  }
+  const [reserved] = await db
+    .update(rounds)
+    .set({ image_fetches: sql`${rounds.image_fetches} + 1` })
+    .where(
+      and(
+        eq(rounds.id, round.id),
+        isNull(rounds.pontos),
+        lt(rounds.image_fetches, MAX_IMAGE_FETCHES_PER_ROUND)
+      )
+    )
+    .returning({ id: rounds.id });
+  return Boolean(reserved);
 }
 
 // Ativa o cronômetro de uma rodada (define started_at = agora) na primeira vez
@@ -230,7 +256,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_STREET_VIEW_API_KEY;
 
-      if (apiKey) {
+      if (apiKey && (await reserveImageFetch(round))) {
         try {
           const usePano =
             loc.pano_id && !loc.pano_id.startsWith('mock-') && !loc.pano_id.startsWith('seed-');
@@ -256,9 +282,11 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           if (res.ok) {
             const contentType = res.headers.get('content-type') || 'image/jpeg';
             const buffer = Buffer.from(await res.arrayBuffer());
+            // `private` e curto: só o navegador do próprio jogador guarda, pelo
+            // tempo da rodada — nada de cache compartilhado com conteúdo do Google.
             return reply
               .type(contentType)
-              .header('Cache-Control', 'public, max-age=86400')
+              .header('Cache-Control', 'private, max-age=300')
               .send(buffer);
           }
         } catch {
@@ -289,9 +317,11 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   <text x="400" y="449" fill="#38bdf8" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="600" text-anchor="middle">Street View Placeholder • Rodada #${round.ordem}</text>
 </svg>`.trim();
 
+      // Com chave configurada, o placeholder significa limite, rodada fechada ou
+      // falha do Google: não pode ficar grudado no cache no lugar da foto.
       return reply
         .type('image/svg+xml')
-        .header('Cache-Control', 'public, max-age=3600')
+        .header('Cache-Control', apiKey ? 'no-store' : 'public, max-age=3600')
         .send(svgPlaceholder);
     }
   );

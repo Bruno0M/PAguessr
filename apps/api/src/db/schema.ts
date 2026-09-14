@@ -48,6 +48,8 @@ export const rounds = pgTable('rounds', {
   distancia: doublePrecision('distancia'),
   pontos: integer('pontos'),
   started_at: timestamp('started_at', { withTimezone: true }),
+  // Quantas vezes o proxy já buscou a imagem desta rodada no Google (cota paga).
+  image_fetches: integer('image_fetches').notNull().default(0),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

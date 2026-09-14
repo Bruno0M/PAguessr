@@ -1,0 +1,1 @@
+ALTER TABLE "rounds" ADD COLUMN "image_fetches" integer DEFAULT 0 NOT NULL;

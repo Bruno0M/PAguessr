@@ -1,10 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
 import { locations, rounds } from '../db/schema.js';
+import { MAX_IMAGE_FETCHES_PER_ROUND } from './gameRoutes.js';
 
 async function locationIdsOf(gameId: string): Promise<number[]> {
   const gameRounds = await db.select().from(rounds).where(eq(rounds.game_id, gameId));
@@ -106,6 +108,102 @@ describe('Game Routes Integration', () => {
       if (origKey !== undefined) process.env.GOOGLE_STREET_VIEW_API_KEY = origKey;
       if (origMapsKey !== undefined) process.env.GOOGLE_MAPS_API_KEY = origMapsKey;
     }
+  });
+
+  // Nenhuma chamada real ao Google: a chave é falsa e o fetch global é trocado
+  // por um JPEG mínimo, pra contar quantas vezes o proxy tentaria buscar.
+  describe('proxy de imagem com chave do Google configurada', () => {
+    let fetchSpy: MockInstance<typeof fetch>;
+    const origKey = process.env.GOOGLE_STREET_VIEW_API_KEY;
+
+    beforeEach(() => {
+      process.env.GOOGLE_STREET_VIEW_API_KEY = 'chave-falsa-de-teste';
+      fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+        async () =>
+          new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
+            status: 200,
+            headers: { 'content-type': 'image/jpeg' },
+          })
+      );
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+      if (origKey === undefined) delete process.env.GOOGLE_STREET_VIEW_API_KEY;
+      else process.env.GOOGLE_STREET_VIEW_API_KEY = origKey;
+    });
+
+    const getImage = (roundId: number) =>
+      app.inject({
+        method: 'GET',
+        url: `/api/rounds/${roundId}/image`,
+        headers: { cookie: authCookie },
+      });
+
+    it(`busca no Google no máximo ${MAX_IMAGE_FETCHES_PER_ROUND} vezes por rodada, depois só placeholder`, async () => {
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+
+      for (let i = 0; i < MAX_IMAGE_FETCHES_PER_ROUND; i++) {
+        const res = await getImage(roundId);
+        expect(res.headers['content-type']).toContain('image/jpeg');
+        expect(res.headers['cache-control']).toBe('private, max-age=300');
+      }
+      expect(fetchSpy).toHaveBeenCalledTimes(MAX_IMAGE_FETCHES_PER_ROUND);
+
+      const extra = await getImage(roundId);
+      expect(extra.headers['content-type']).toContain('image/svg+xml');
+      expect(extra.headers['cache-control']).toBe('no-store');
+      expect(fetchSpy).toHaveBeenCalledTimes(MAX_IMAGE_FETCHES_PER_ROUND);
+    });
+
+    it('não busca imagem de rodada ainda não iniciada', async () => {
+      const game = await createAuthenticatedGame(app, authCookie);
+      const res = await getImage(game.rounds[1].id);
+      expect(res.headers['content-type']).toContain('image/svg+xml');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('não busca imagem de rodada já respondida', async () => {
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/rounds/${roundId}/guess`,
+        headers: { cookie: authCookie },
+        payload: { lat: -9.4064, lng: -38.2147 },
+      });
+
+      const res = await getImage(roundId);
+      expect(res.headers['content-type']).toContain('image/svg+xml');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('não busca imagem de rodada com tempo esgotado', async () => {
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+      await db
+        .update(rounds)
+        .set({ started_at: new Date(Date.now() - 5 * 60 * 1000) })
+        .where(eq(rounds.id, roundId));
+
+      const res = await getImage(roundId);
+      expect(res.headers['content-type']).toContain('image/svg+xml');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('falha do Google consome a tentativa e cai no placeholder sem cache', async () => {
+      fetchSpy.mockImplementation(async () => new Response('erro', { status: 403 }));
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+
+      const res = await getImage(roundId);
+      expect(res.headers['content-type']).toContain('image/svg+xml');
+      expect(res.headers['cache-control']).toBe('no-store');
+
+      const [row] = await db.select().from(rounds).where(eq(rounds.id, roundId));
+      expect(row.image_fetches).toBe(1);
+    });
   });
 
   it('POST /api/rounds/:id/guess calcula distância, pontos, ativa a próxima rodada e rejeita segundo palpite', async () => {
