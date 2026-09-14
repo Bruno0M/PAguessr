@@ -1,0 +1,321 @@
+/* Tela de título (antes do login), no molde do menu do Stray: arte cheia, menu de
+   texto espaçado no pé da tela e item selecionado numa tarja creme — o tom do logo
+   pintado na capa. O verde-neon da identidade fica para as telas de dentro. */
+
+.title-screen {
+  --title-cream: #f6ecd4;
+  --title-ink: #10161d;
+  --title-night: #060b11;
+  --title-leave: 0.55s;
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--title-night);
+  color: var(--title-cream);
+  font-family: 'Saira', 'Segoe UI', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Na saída a capa escurece, desfoca e ganha o tom navy do login: a troca de tela vira continuação. */
+.title-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--navy-bg-glow), linear-gradient(#0e1b2d8c, #0e1b2dcc);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--title-leave) ease;
+}
+
+.title-screen.is-leaving::after {
+  opacity: 1;
+}
+
+.title-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Arte ---------- */
+
+.title-art {
+  position: absolute;
+  inset: 0;
+  transition: filter var(--title-leave) ease;
+}
+
+.title-art-image {
+  position: absolute;
+  inset: 0;
+  background: url('../../assets/capa-paulo-afonso.webp') 50% 14% / cover no-repeat;
+  transform-origin: 48% 30%;
+  animation:
+    title-fade-in 1.8s ease-out both,
+    title-ken-burns 40s ease-in-out infinite alternate both;
+}
+
+.title-screen.is-leaving .title-art {
+  filter: blur(6px) brightness(0.55);
+}
+
+/* Degradê escuro só no pé (onde fica o menu) + vinheta leve; céu e logo continuam vivos. */
+.title-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top,
+      rgb(5 9 14 / 0.95) 0%,
+      rgb(5 9 14 / 0.84) 20%,
+      rgb(5 9 14 / 0.52) 38%,
+      rgb(5 9 14 / 0.14) 54%,
+      transparent 64%
+    ),
+    radial-gradient(ellipse 85% 80% at 50% 40%, transparent 58%, rgb(3 6 10 / 0.5) 100%);
+}
+
+.title-dust {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  animation: title-fade-in 3s ease-out 0.5s both;
+}
+
+/* ---------- Menu ---------- */
+
+.title-menu {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(56px, 13vh, 132px);
+  transform: translateX(-50%);
+}
+
+.title-menu ul {
+  display: grid;
+  justify-items: center;
+  gap: clamp(4px, 0.8vh, 8px);
+  list-style: none;
+}
+
+.title-menu li {
+  animation: title-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(0.9s + var(--item-index) * 0.12s);
+}
+
+.title-menu-item {
+  position: relative;
+  border: 0;
+  border-radius: 1px;
+  background: transparent;
+  color: var(--title-cream);
+  font:
+    600 clamp(15px, 1.1vw + 6px, 21px) / 1 'Saira',
+    'Segoe UI',
+    sans-serif;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  /* O letter-spacing sobra depois da última letra; o padding esquerdo maior recentraliza. */
+  padding: 0.42em 0.5em 0.42em 0.76em;
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.6),
+    0 0 18px rgb(0 0 0 / 0.65);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.title-menu-item.is-selected:not(:disabled) {
+  background: var(--title-cream);
+  color: var(--title-ink);
+  text-shadow: none;
+  box-shadow: 0 0 28px rgb(246 236 212 / 0.22);
+}
+
+.title-menu-item:focus-visible {
+  outline: 2px solid var(--title-cream);
+  outline-offset: 4px;
+}
+
+.title-menu-item:disabled {
+  color: rgb(246 236 212 / 0.46);
+  cursor: not-allowed;
+}
+
+/* Fica fora do fluxo pra não descentralizar o rótulo. */
+.title-menu-soon {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 4px);
+  transform: translateY(-50%);
+  padding: 0.45em 0.6em 0.4em 0.76em;
+  border: 1px solid rgb(246 236 212 / 0.34);
+  border-radius: 999px;
+  color: rgb(246 236 212 / 0.72);
+  font-size: max(9px, 0.48em);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---------- Rodapé ---------- */
+
+.title-version {
+  position: absolute;
+  left: max(16px, 1.6vw);
+  bottom: max(12px, 1.6vh);
+  color: rgb(246 236 212 / 0.5);
+  font:
+    400 11px / 1 'Segoe UI',
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.04em;
+  animation: title-fade-in 1s ease-out 1.4s both;
+}
+
+.title-hint {
+  position: absolute;
+  right: max(20px, 3vw);
+  bottom: max(18px, 3.2vh);
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  color: rgb(246 236 212 / 0.85);
+  font:
+    400 clamp(15px, 0.5vw + 9px, 19px) / 1 'Saira',
+    'Segoe UI',
+    sans-serif;
+  letter-spacing: 0.06em;
+  animation: title-fade-in 1s ease-out 1.4s both;
+}
+
+.title-hint kbd {
+  display: grid;
+  place-items: center;
+  width: 1.75em;
+  height: 1.75em;
+  border-radius: 50%;
+  background: rgb(246 236 212 / 0.85);
+  color: var(--title-ink);
+}
+
+.title-hint svg {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sem teclado à vista no celular, a dica não faz sentido. */
+@media (hover: none) and (pointer: coarse) {
+  .title-hint {
+    display: none;
+  }
+}
+
+/* Saída: animações (não transições), porque o preenchimento das animações de entrada
+   venceria uma simples troca de opacidade. */
+.title-screen.is-leaving :is(.title-dust, .title-menu li, .title-version, .title-hint) {
+  animation: title-fade-out 0.3s ease-in forwards;
+}
+
+/* ---------- Celular em pé ----------
+   A arte 16:9 cobrindo uma tela vertical cortaria o logo. Aqui ela ocupa o topo,
+   enquadrada no logo, e se desfaz num fundo escuro onde fica o menu. */
+
+@media (max-aspect-ratio: 4/5) {
+  .title-art {
+    bottom: auto;
+    height: min(124vw, 80vh);
+    height: min(124vw, 80svh);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+  }
+
+  /* 220% de largura mostra ~45% da arte, o suficiente pro logo inteiro com folga. */
+  .title-art-image {
+    background-size: 220% auto;
+    background-position: 45% 0;
+    transform-origin: 46% 0;
+  }
+
+  .title-shade {
+    background: radial-gradient(
+      ellipse 95% 70% at 50% 32%,
+      transparent 60%,
+      rgb(3 6 10 / 0.45) 100%
+    );
+  }
+
+  .title-menu {
+    bottom: max(64px, 15vh);
+  }
+
+  /* Espaçamento menor pra "Configurações" + a etiqueta caberem até em telas de 320 px. */
+  .title-menu-item {
+    letter-spacing: 0.2em;
+    padding-left: 0.7em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-screen,
+  .title-screen *,
+  .title-screen::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes title-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes title-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes title-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes title-ken-burns {
+  from {
+    transform: scale(1.05);
+  }
+  to {
+    transform: scale(1.13) translate3d(-1.2%, 0.6%, 0);
+  }
+}

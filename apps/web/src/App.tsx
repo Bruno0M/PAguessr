@@ -5,6 +5,7 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { RegisterScreen } from './components/auth/RegisterScreen';
 import { RecoverPasswordScreen } from './components/auth/RecoverPasswordScreen';
 import { RecoveryCodeScreen } from './components/auth/RecoveryCodeScreen';
+import { TitleScreen } from './components/title/TitleScreen';
 import { haversine, score, PAULO_AFONSO_CENTER, ROUND_DURATION_MS } from '@paguessr/shared';
 import type { LatLng } from '@paguessr/shared';
 import { MOCK_LOCATIONS } from './data/mockLocations';
@@ -27,6 +28,7 @@ const RankingScreen = lazy(() =>
 type AuthView = 'login' | 'register' | 'recover';
 
 export function App() {
+  const [showTitle, setShowTitle] = useState(true);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [authView, setAuthView] = useState<AuthView>('login');
@@ -51,6 +53,7 @@ export function App() {
     setAuthUser(null);
     setAuthView('login');
     setShowRanking(false);
+    setShowTitle(true);
     returnHome();
   }, [returnHome]);
 
@@ -276,6 +279,12 @@ export function App() {
 
   const latestResult = results[results.length - 1];
   const isLastRound = currentRoundIndex === totalRounds - 1;
+
+  // Tela de título: abre o jogo pra todo mundo (com ou sem sessão) e é o destino
+  // do "Sair". O me() lá em cima confere a sessão enquanto ela está na tela.
+  if (showTitle) {
+    return <TitleScreen ready={authChecked} onStart={() => setShowTitle(false)} />;
+  }
 
   if (!authChecked) {
     return (
