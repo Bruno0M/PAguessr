@@ -1,4 +1,6 @@
 .auth-screen {
+  position: relative;
+  isolation: isolate;
   height: 100%;
   width: 100%;
   display: flex;
@@ -6,8 +8,29 @@
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
-  background: var(--navy-bg-glow), var(--navy-bg);
+  background: var(--navy-bg);
   color: var(--navy-text);
+}
+
+/* Mesma capa da tela de título, escurecida e desfocada: a conta continua "dentro do jogo"
+   (a saída da TitleScreen termina exatamente nesse visual). */
+.auth-screen::before,
+.auth-screen::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.auth-screen::before {
+  inset: -24px;
+  background: url('../../assets/capa-paulo-afonso.webp') 50% 14% / cover no-repeat;
+  filter: blur(6px) brightness(0.55);
+}
+
+.auth-screen::after {
+  inset: 0;
+  background: var(--navy-bg-glow), linear-gradient(#0e1b2d8c, #0e1b2dcc);
 }
 
 .auth-card {
@@ -18,6 +41,20 @@
   border-radius: 16px;
   padding: 32px 28px;
   box-shadow: 0 20px 60px #05101d80;
+  animation: auth-card-in 0.45s ease-out both;
+}
+
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-card {
+    animation: none;
+  }
 }
 
 .auth-brand {
