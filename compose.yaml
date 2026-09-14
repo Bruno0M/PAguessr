@@ -1,3 +1,5 @@
+name: paguessr
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,8 +9,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-paguessr}
-    ports:
-      - '${POSTGRES_PORT:-5434}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./apps/api/scripts/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
@@ -30,8 +30,6 @@ services:
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-paguessr}}
       NODE_ENV: ${NODE_ENV:-production}
       GOOGLE_STREET_VIEW_API_KEY: ${GOOGLE_STREET_VIEW_API_KEY:-}
-    ports:
-      - '${PORT:-3333}:3333'
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,8 +40,6 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     restart: unless-stopped
-    ports:
-      - '${WEB_PORT:-3000}:80'
     depends_on:
       - api
 

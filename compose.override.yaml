@@ -1,0 +1,18 @@
+# Portas publicadas no host, só para a máquina de dev. Este arquivo é carregado
+# sozinho pelo `docker compose up` pelado e não em produção: o Dokploy aponta
+# direto pro `compose.prod.yaml`, e isso desliga o override automático.
+#
+# É por isso que o compose.yaml não publica porta nenhuma — ver compose.prod.yaml.
+
+services:
+  postgres:
+    ports:
+      - '${POSTGRES_PORT:-5434}:5432'
+
+  api:
+    ports:
+      - '${PORT:-3333}:3333'
+
+  web:
+    ports:
+      - '${WEB_PORT:-3000}:80'

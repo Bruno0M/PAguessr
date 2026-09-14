@@ -1,0 +1,32 @@
+# Topologia de produção (Dokploy). Deriva de compose.yaml em vez de duplicá-lo:
+# serviços, imagens e volumes vêm de lá, aqui ficam só as diferenças do ambiente.
+#
+# Aponte o Compose Path da aplicação no Dokploy para este arquivo.
+#
+# Nada aqui pode depender de tag YAML (`!reset`, `!override`): o Dokploy reserializa
+# este arquivo para injetar as labels do Traefik e a tag se perde no caminho.
+
+include:
+  - compose.yaml
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  api:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-paguessr}
+      NODE_ENV: production
+
+  web:
+    expose:
+      - '80'
+    networks:
+      - default
+      - dokploy-network
+
+# api e postgres continuam só na rede interna (default).
+networks:
+  dokploy-network:
+    external: true
