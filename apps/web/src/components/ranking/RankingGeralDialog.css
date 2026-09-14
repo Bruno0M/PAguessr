@@ -233,3 +233,7 @@
     animation: none;
   }
 }
+
+:root[data-reduce-motion='true'] .geral-dialog[open] {
+  animation: none;
+}

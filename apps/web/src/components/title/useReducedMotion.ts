@@ -1,19 +1,8 @@
 import { useSyncExternalStore } from 'react';
+import { getEffectiveReduceMotion, subscribeReduceMotion } from '../../lib/motionPreference';
 
-const QUERY = '(prefers-reduced-motion: reduce)';
-
-function subscribe(onChange: () => void) {
-  const media = window.matchMedia(QUERY);
-  media.addEventListener('change', onChange);
-  return () => media.removeEventListener('change', onChange);
-}
-
-// Diferente do prefersReducedMotion() do ranking, acompanha a troca da
-// preferência com a tela aberta (a animação da capa roda sem parar).
+// Combina a preferência do sistema com o override manual de Configurações
+// (ver lib/motionPreference.ts) e acompanha os dois em tempo real.
 export function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia(QUERY).matches,
-    () => false
-  );
+  return useSyncExternalStore(subscribeReduceMotion, getEffectiveReduceMotion, () => false);
 }

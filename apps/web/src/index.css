@@ -527,6 +527,12 @@ body {
   }
 }
 
+/* Gêmeo do bloco acima pro override manual das Configurações (ver
+   lib/motionPreference.ts) — o sistema pode não pedir, mas a pessoa ligou. */
+:root[data-reduce-motion='true'] .new-record-banner {
+  animation: none;
+}
+
 .result-title {
   font-size: 1.75rem;
   font-weight: 800;
