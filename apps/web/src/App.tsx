@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
 import './styles/navyTheme.css';
 import { HomeScreen } from './components/HomeScreen';
 import { LoginScreen } from './components/auth/LoginScreen';
@@ -387,7 +389,11 @@ export function App() {
 
         {gameState === 'error' && (
           <div className="status-screen error">
-            <span className="screen-emoji">⚠️</span>
+            <FontAwesomeIcon
+              icon={faTriangleExclamation}
+              className="screen-emoji"
+              aria-hidden="true"
+            />
             <h2>Não foi possível iniciar a partida</h2>
             <p className="error-text">{errorMessage}</p>
             <div className="status-actions">
@@ -425,13 +431,17 @@ export function App() {
           <div className="game-stage">
             {submittingError && (
               <div className="submission-error-toast">
-                <span>⚠️ {submittingError}</span>
+                <span>
+                  <FontAwesomeIcon icon={faTriangleExclamation} aria-hidden="true" />{' '}
+                  {submittingError}
+                </span>
                 <button
                   type="button"
                   className="btn-toast-close"
                   onClick={() => setSubmittingError(null)}
+                  aria-label="Fechar aviso"
                 >
-                  ✕
+                  <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
                 </button>
               </div>
             )}

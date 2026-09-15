@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import type { PublicUser } from '../../api/auth';
 import { getRanking, type ApiRankingResponse, type RankingPeriod } from '../../api/ranking';
 import { AvatarSvg } from '../auth/avatars';
@@ -87,7 +89,7 @@ export function RankingScreen({
 
         <header className="ranking-hud">
           <button type="button" className="ranking-back" onClick={onBack}>
-            <span aria-hidden="true">←</span> Início
+            <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" /> Início
           </button>
 
           <div className="ranking-heading">
