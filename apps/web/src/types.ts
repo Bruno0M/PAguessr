@@ -23,6 +23,8 @@ export interface RoundResult {
     lng: number;
     name?: string;
     description?: string;
+    history?: string;
+    category?: string;
   };
   guess: LatLng | null;
   distanceMeters: number | null;

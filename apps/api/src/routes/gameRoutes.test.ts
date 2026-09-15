@@ -367,6 +367,54 @@ describe('Game Routes Integration', () => {
     expect(data.distancia).not.toBeNull();
   });
 
+  it('revela nome, história e categoria do ponto turístico somente depois do palpite', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+    const roundId = game.rounds[0].id;
+    const [selectedRound] = await db.select().from(rounds).where(eq(rounds.id, roundId));
+
+    await db
+      .update(locations)
+      .set({
+        name: 'Monumento de teste',
+        history: 'História turística exibida após a resposta.',
+        category: 'Monumento histórico',
+      })
+      .where(eq(locations.id, selectedRound.location_id));
+
+    const beforeGuess = await app.inject({
+      method: 'GET',
+      url: `/api/games/${game.id}`,
+      headers: { cookie: authCookie },
+    });
+    const beforeSummary = JSON.parse(beforeGuess.body);
+    expect(beforeSummary.rounds[0].location).toBeUndefined();
+
+    const guessRes = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${roundId}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+
+    expect(guessRes.statusCode).toBe(200);
+    expect(JSON.parse(guessRes.body).location).toMatchObject({
+      name: 'Monumento de teste',
+      history: 'História turística exibida após a resposta.',
+      category: 'Monumento histórico',
+    });
+
+    const afterGuess = await app.inject({
+      method: 'GET',
+      url: `/api/games/${game.id}`,
+      headers: { cookie: authCookie },
+    });
+    expect(JSON.parse(afterGuess.body).rounds[0].location).toMatchObject({
+      name: 'Monumento de teste',
+      history: 'História turística exibida após a resposta.',
+      category: 'Monumento histórico',
+    });
+  });
+
   it('dois palpites concorrentes na mesma rodada: só um vale, o outro é rejeitado', async () => {
     const game = await createAuthenticatedGame(app, authCookie);
     const roundId = game.rounds[0].id;

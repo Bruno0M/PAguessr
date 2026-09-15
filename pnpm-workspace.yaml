@@ -3,3 +3,7 @@ packages:
   - 'packages/*'
 allowBuilds:
   esbuild: true
+
+nodeLinker: hoisted
+packageImportMethod: copy
+storeDir: .pnpm-store

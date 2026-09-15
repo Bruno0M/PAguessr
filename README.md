@@ -60,7 +60,7 @@ pnpm db:migrate
 pnpm --filter @paguessr/api db:bootstrap
 ```
 
-Esse comando consulta até 80 pontos próximos ao centro e para quando o banco tem 10 locais. A partida precisa de pelo menos 5. O comando `db:seed` atual está vazio e não cadastra locais. A chave precisa ter acesso à Street View Static API. Nunca envie o `.env` ao GitHub.
+Esse comando garante os dois monumentos históricos versionados no `db:seed` e consulta até 80 pontos próximos ao centro para completar 12 locais no total. A partida precisa de pelo menos 5. A chave precisa ter acesso à Street View Static API. Nunca envie o `.env` ao GitHub.
 
 4. Inicie os serviços em modo de desenvolvimento:
 
