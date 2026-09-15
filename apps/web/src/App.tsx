@@ -170,6 +170,8 @@ export function App() {
             lng: res.location.lng,
             name: res.location.name,
             description: res.location.description,
+            history: res.location.history,
+            category: res.location.category,
           },
           guess,
           distanceMeters,

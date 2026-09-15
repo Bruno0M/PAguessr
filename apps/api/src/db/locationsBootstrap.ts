@@ -1,9 +1,10 @@
 import { db } from './index.js';
 import { locations } from './schema.js';
 import { evaluateMetadata, fetchStreetViewMetadata, generateGrid } from '../streetview.js';
+import { runSeed, SEED_LOCATIONS } from './seed.js';
 
 const CITY_CENTER = { lat: -9.4064, lng: -38.2147 };
-const DEFAULT_TARGET = 10;
+const DEFAULT_TARGET = 10 + SEED_LOCATIONS.length;
 const MINIMUM_VIABLE = 5;
 const GRID_SCAN_LIMIT = 80;
 
@@ -24,6 +25,7 @@ export interface EnsureLocationsResult {
 // POST /games em routes/gameRoutes.ts). A Metadata API é gratuita e sem
 // limite (docs/DECISIONS.md), então rodar isso a cada boot não gera custo.
 export async function ensureLocations(target = DEFAULT_TARGET): Promise<EnsureLocationsResult> {
+  await runSeed();
   const existing = await db.select({ pano_id: locations.pano_id }).from(locations);
   const seen = new Set(existing.map((location) => location.pano_id));
 

@@ -30,6 +30,8 @@ export interface ApiGuessResponse {
     lng: number;
     name?: string;
     description?: string;
+    history?: string;
+    category?: string;
   };
   nextRound?: ApiNextRound | null;
 }
@@ -50,6 +52,8 @@ export interface ApiRoundSummary {
     lng: number;
     name?: string;
     description?: string;
+    history?: string;
+    category?: string;
   };
 }
 

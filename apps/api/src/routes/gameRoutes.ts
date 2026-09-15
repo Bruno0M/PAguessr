@@ -182,6 +182,9 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           created_at: rounds.created_at,
           location_lat: locations.lat,
           location_lng: locations.lng,
+          location_name: locations.name,
+          location_history: locations.history,
+          location_category: locations.category,
         })
         .from(rounds)
         .innerJoin(locations, eq(rounds.location_id, locations.id))
@@ -207,7 +210,17 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           score: r.pontos,
           started_at: startedAt,
           startedAt,
-          ...(isAnswered ? { location: { lat: r.location_lat, lng: r.location_lng } } : {}),
+          ...(isAnswered
+            ? {
+                location: {
+                  lat: r.location_lat,
+                  lng: r.location_lng,
+                  ...(r.location_name ? { name: r.location_name } : {}),
+                  ...(r.location_history ? { history: r.location_history } : {}),
+                  ...(r.location_category ? { category: r.location_category } : {}),
+                },
+              }
+            : {}),
         };
       });
 
@@ -263,9 +276,9 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
           const params = new URLSearchParams({
             size: '800x600',
-            fov: '90',
-            heading: '0',
-            pitch: '0',
+            fov: String(loc.view_fov ?? 90),
+            heading: String(loc.view_heading ?? 0),
+            pitch: String(loc.view_pitch ?? 0),
             return_error_code: 'true',
             key: apiKey,
           });
@@ -445,6 +458,9 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         location: {
           lat: loc.lat,
           lng: loc.lng,
+          ...(loc.name ? { name: loc.name } : {}),
+          ...(loc.history ? { history: loc.history } : {}),
+          ...(loc.category ? { category: loc.category } : {}),
         },
         nextRound: nextRound
           ? { id: nextRound.id, started_at: nextRoundStartedAt, startedAt: nextRoundStartedAt }

@@ -29,6 +29,13 @@
       "when": 1789420515289,
       "tag": "0003_round_image_fetches",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789430142324,
+      "tag": "0004_naive_alex_power",
+      "breakpoints": true
     }
   ]
 }
