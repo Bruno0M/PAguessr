@@ -385,6 +385,12 @@
   }
 }
 
+/* Gêmeo do bloco acima pro override manual das Configurações (ver
+   lib/motionPreference.ts). */
+:root[data-reduce-motion='true'] .home-play {
+  transition: none;
+}
+
 /* Game menu: blue terrain, green actions, and a compact vertical menu. */
 .home-screen {
   --home-paper: #13283e;
@@ -709,6 +715,10 @@
   .menu-help {
     transition: none;
   }
+}
+
+:root[data-reduce-motion='true'] .menu-help {
+  transition: none;
 }
 /* Full-screen title menu. The map is scenery, not a separate card. */
 .home-screen {
@@ -1146,4 +1156,8 @@
   .terrain-beacon > svg {
     animation: none;
   }
+}
+
+:root[data-reduce-motion='true'] .terrain-beacon > svg {
+  animation: none;
 }

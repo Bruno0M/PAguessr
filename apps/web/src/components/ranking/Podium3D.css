@@ -142,3 +142,7 @@
     transition: none;
   }
 }
+
+:root[data-reduce-motion='true'] .pin-tag {
+  transition: none;
+}

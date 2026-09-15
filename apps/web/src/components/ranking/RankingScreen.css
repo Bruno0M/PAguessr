@@ -369,3 +369,7 @@
     animation: none;
   }
 }
+
+:root[data-reduce-motion='true'] .ranking-stage-spinner {
+  animation: none;
+}

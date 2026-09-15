@@ -57,6 +57,10 @@
   }
 }
 
+:root[data-reduce-motion='true'] .auth-card {
+  animation: none;
+}
+
 .auth-brand {
   font-family: 'Arial Black', 'Segoe UI', sans-serif;
   font-size: 24px;

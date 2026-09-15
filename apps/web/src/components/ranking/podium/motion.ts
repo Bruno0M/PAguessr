@@ -1,3 +1,5 @@
+import { getEffectiveReduceMotion } from '../../../lib/motionPreference';
+
 export function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
@@ -17,8 +19,8 @@ export function easeOutBounce(t: number): number {
   return n1 * (t -= 2.625 / d1) * t + 0.984375;
 }
 
+// Combina o sistema com o override manual das Configurações da tela de
+// título (ver lib/motionPreference.ts).
 export function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+  return getEffectiveReduceMotion();
 }
