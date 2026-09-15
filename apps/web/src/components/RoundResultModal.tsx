@@ -1,3 +1,5 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRight, faTrophy } from '@fortawesome/free-solid-svg-icons';
 import type { RoundResult } from '../types';
 
 interface RoundResultModalProps {
@@ -42,7 +44,15 @@ export function RoundResultModal({ result, isLastRound, onNext }: RoundResultMod
 
         <div className="result-banner-action">
           <button type="button" className="btn-next-round" onClick={onNext}>
-            {isLastRound ? 'Ver Resultado Final 🏆' : 'Próxima Rodada →'}
+            {isLastRound ? (
+              <>
+                Ver Resultado Final <FontAwesomeIcon icon={faTrophy} aria-hidden="true" />
+              </>
+            ) : (
+              <>
+                Próxima Rodada <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+              </>
+            )}
           </button>
         </div>
       </div>

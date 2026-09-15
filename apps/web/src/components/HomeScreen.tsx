@@ -1,4 +1,10 @@
 import { useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowRight,
+  faArrowUpRightFromSquare,
+  faTrophy,
+} from '@fortawesome/free-solid-svg-icons';
 import type { PublicUser } from '../api/auth';
 import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
@@ -80,14 +86,14 @@ export function HomeScreen({
               <span className="play-triangle" aria-hidden="true" />
               <span>TREINO</span>
               <span className="play-arrow" aria-hidden="true">
-                →
+                <FontAwesomeIcon icon={faArrowRight} />
               </span>
             </button>
             <button className="home-play home-play-ranked" onClick={onStartRanked}>
               <span className="play-triangle" aria-hidden="true" />
               <span>RANQUEADO</span>
               <span className="play-arrow" aria-hidden="true">
-                →
+                <FontAwesomeIcon icon={faArrowRight} />
               </span>
             </button>
             <button
@@ -98,13 +104,19 @@ export function HomeScreen({
               <span className="menu-help-icon" aria-hidden="true">
                 ?
               </span>{' '}
-              Como jogar <span aria-hidden="true">↗</span>
+              Como jogar{' '}
+              <span aria-hidden="true">
+                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              </span>
             </button>
             <button className="menu-help" onClick={onOpenRanking}>
               <span className="menu-help-icon" aria-hidden="true">
-                🏆
+                <FontAwesomeIcon icon={faTrophy} />
               </span>{' '}
-              Ranking <span aria-hidden="true">↗</span>
+              Ranking{' '}
+              <span aria-hidden="true">
+                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              </span>
             </button>
           </nav>
         </section>
@@ -254,7 +266,7 @@ export function HomeScreen({
           >
             Entendi, vamos jogar{' '}
             <span className="play-arrow" aria-hidden="true">
-              →
+              <FontAwesomeIcon icon={faArrowRight} />
             </span>
           </button>
         </div>

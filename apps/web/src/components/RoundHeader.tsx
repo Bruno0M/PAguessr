@@ -1,3 +1,6 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLocationDot } from '@fortawesome/free-solid-svg-icons';
+
 interface RoundHeaderProps {
   currentRound: number;
   totalRounds: number;
@@ -28,7 +31,7 @@ export function RoundHeader({
           title="Voltar ao início"
         >
           <span className="logo-pin" aria-hidden="true">
-            📍
+            <FontAwesomeIcon icon={faLocationDot} />
           </span>
           <span className="logo-title">PAguessr</span>
         </button>

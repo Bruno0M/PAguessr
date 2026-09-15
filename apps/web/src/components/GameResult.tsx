@@ -1,3 +1,13 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowRotateRight,
+  faCompass,
+  faMap,
+  faMedal,
+  faStar,
+  faTrophy,
+  type IconDefinition,
+} from '@fortawesome/free-solid-svg-icons';
 import type { RoundResult } from '../types';
 
 interface GameResultProps {
@@ -18,29 +28,33 @@ function formatDistance(meters: number): string {
 function getPerformanceTitle(
   totalScore: number,
   maxScore: number
-): { title: string; subtitle: string } {
+): { title: string; subtitle: string; icon: IconDefinition } {
   const percentage = (totalScore / maxScore) * 100;
   if (percentage >= 90) {
     return {
-      title: 'Mestre da Ilha! 🏆',
+      title: 'Mestre da Ilha!',
       subtitle: 'Você conhece cada palmo e cânion de Paulo Afonso como ninguém.',
+      icon: faTrophy,
     };
   }
   if (percentage >= 70) {
     return {
-      title: 'Quase um Pauloafonsino! 🌟',
+      title: 'Quase um Pauloafonsino!',
       subtitle: 'Excelente navegação! Você acertou com precisão os pontos da cidade.',
+      icon: faStar,
     };
   }
   if (percentage >= 45) {
     return {
-      title: 'Explorador do Velho Chico 🧭',
+      title: 'Explorador do Velho Chico',
       subtitle: 'Bom senso de direção! Com mais algumas rodadas você domina o mapa.',
+      icon: faCompass,
     };
   }
   return {
-    title: 'Turista Aprendiz 🗺️',
+    title: 'Turista Aprendiz',
     subtitle: 'Uma ótima oportunidade para desbravar mais a história e os pontos de Paulo Afonso.',
+    icon: faMap,
   };
 }
 
@@ -63,11 +77,15 @@ export function GameResult({
         <div className="result-header">
           {showCelebration && (
             <div className="new-record-banner">
-              <span aria-hidden="true">🏆</span> Novo recorde!
+              <FontAwesomeIcon icon={faTrophy} aria-hidden="true" /> Novo recorde!
             </div>
           )}
-          <span className="trophy-emoji">🏅</span>
-          <h2 className="result-title">{performance.title}</h2>
+          <span className="trophy-emoji">
+            <FontAwesomeIcon icon={faMedal} aria-hidden="true" />
+          </span>
+          <h2 className="result-title">
+            {performance.title} <FontAwesomeIcon icon={performance.icon} aria-hidden="true" />
+          </h2>
           <p className="result-subtitle">{performance.subtitle}</p>
 
           <div className="final-score-display">
@@ -110,11 +128,11 @@ export function GameResult({
 
         <div className="result-actions">
           <button type="button" className="btn-play-again" onClick={onPlayAgain}>
-            🔄 Jogar Novamente
+            <FontAwesomeIcon icon={faArrowRotateRight} aria-hidden="true" /> Jogar Novamente
           </button>
           {showCelebration && onViewRanking && (
             <button type="button" className="btn-secondary" onClick={onViewRanking}>
-              🏆 Ver Ranking
+              <FontAwesomeIcon icon={faTrophy} aria-hidden="true" /> Ver Ranking
             </button>
           )}
         </div>

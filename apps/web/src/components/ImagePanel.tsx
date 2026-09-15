@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCamera, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 
 interface ImagePanelProps {
   roundId?: string | number;
@@ -28,7 +30,7 @@ export function ImagePanel({
       <section className="image-panel" aria-label="Área de imagem da rodada">
         <div className="image-placeholder">
           <div className="placeholder-badge">
-            <span className="camera-icon">📷</span>
+            <FontAwesomeIcon icon={faCamera} className="camera-icon" aria-hidden="true" />
             <span>Modo Mock Offline</span>
           </div>
 
@@ -73,7 +75,7 @@ export function ImagePanel({
 
       {loadState === 'error' && (
         <div className="image-error-box">
-          <span className="error-icon">⚠️</span>
+          <FontAwesomeIcon icon={faTriangleExclamation} className="error-icon" aria-hidden="true" />
           <h4>Não foi possível carregar a imagem desta rodada</h4>
           <p>
             O serviço de imagem ou Street View não respondeu a tempo. Você ainda pode marcar seu
