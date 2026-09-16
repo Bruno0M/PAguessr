@@ -85,6 +85,26 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
   request.authUser = user;
 }
 
+export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  await requireAuth(request, reply);
+  if (reply.sent) {
+    return;
+  }
+
+  const rawAdmins = process.env.ADMIN_NICKS || '';
+  const adminNicks = rawAdmins
+    .split(',')
+    .map((n) => n.trim().toLowerCase())
+    .filter(Boolean);
+
+  const userNick = request.authUser?.nick.trim().toLowerCase();
+
+  if (!userNick || !adminNicks.includes(userNick)) {
+    reply.status(403).send({ error: 'Acesso restrito a administradores' });
+    return;
+  }
+}
+
 export async function deleteSessionByToken(token: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, token));
 }

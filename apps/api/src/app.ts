@@ -6,6 +6,7 @@ import { sql } from './db/index.js';
 import { gameRoutes } from './routes/gameRoutes.js';
 import { authRoutes } from './routes/authRoutes.js';
 import { rankingRoutes } from './routes/rankingRoutes.js';
+import { adminRoutes } from './routes/adminRoutes.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -74,6 +75,8 @@ export function buildApp(): FastifyInstance {
   app.register(authRoutes);
   app.register(rankingRoutes, { prefix: '/api' });
   app.register(rankingRoutes);
+  app.register(adminRoutes, { prefix: '/api' });
+  app.register(adminRoutes);
 
   return app;
 }
