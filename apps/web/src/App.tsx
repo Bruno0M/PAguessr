@@ -16,6 +16,7 @@ import { me, logout, type PublicUser } from './api/auth';
 import { getRanking } from './api/ranking';
 import { RoundHeader } from './components/RoundHeader';
 import { ImagePanel } from './components/ImagePanel';
+import { PanoramaPanel } from './components/PanoramaPanel';
 import { GuessMap } from './components/GuessMap';
 import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
@@ -120,6 +121,7 @@ export function App() {
           id: r.id,
           order: r.order ?? r.roundNumber ?? idx + 1,
           startedAt: r.startedAt ?? r.started_at ?? null,
+          streetview_mode: r.streetview_mode ?? 'static',
         })
       );
 
@@ -448,12 +450,21 @@ export function App() {
               </div>
             )}
 
-            <ImagePanel
-              roundId={isOfflineMode ? undefined : currentRound?.id}
-              placeholderText={currentMockLoc?.imagePlaceholderText}
-              category={currentMockLoc?.category}
-              isMockFallback={isOfflineMode}
-            />
+            {currentRound?.streetview_mode === 'panorama' ? (
+              <PanoramaPanel
+                roundId={isOfflineMode ? undefined : currentRound?.id}
+                placeholderText={currentMockLoc?.imagePlaceholderText}
+                category={currentMockLoc?.category}
+                isMockFallback={isOfflineMode}
+              />
+            ) : (
+              <ImagePanel
+                roundId={isOfflineMode ? undefined : currentRound?.id}
+                placeholderText={currentMockLoc?.imagePlaceholderText}
+                category={currentMockLoc?.category}
+                isMockFallback={isOfflineMode}
+              />
+            )}
 
             <GuessMap
               center={PAULO_AFONSO_CENTER}

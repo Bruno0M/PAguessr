@@ -7,6 +7,7 @@ export interface ApiRoundInitial {
   roundNumber?: number;
   startedAt?: string | null;
   started_at?: string | null;
+  streetview_mode?: 'static' | 'panorama';
 }
 
 export interface ApiGameCreated {
@@ -45,6 +46,7 @@ export interface ApiRoundSummary {
   guess?: LatLng | null;
   startedAt?: string | null;
   started_at?: string | null;
+  streetview_mode?: 'static' | 'panorama';
   location?: {
     lat: number;
     lng: number;
@@ -112,4 +114,39 @@ export async function getGameSummary(gameId: string): Promise<ApiGameSummary> {
 
 export function getRoundImageUrl(roundId: string | number): string {
   return `/api/rounds/${roundId}/image`;
+}
+
+export interface ApiConfig {
+  googleMapsBrowserKey: string;
+}
+
+let cachedConfigPromise: Promise<ApiConfig> | null = null;
+
+export function getAppConfig(): Promise<ApiConfig> {
+  if (!cachedConfigPromise) {
+    cachedConfigPromise = fetch('/api/config')
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Falha ao obter configurações (${res.status} ${res.statusText})`);
+        }
+        return res.json();
+      })
+      .catch((err) => {
+        cachedConfigPromise = null;
+        throw err;
+      });
+  }
+  return cachedConfigPromise;
+}
+
+export interface ApiRoundPanorama {
+  pano_id: string;
+}
+
+export async function getRoundPanorama(roundId: string | number): Promise<ApiRoundPanorama> {
+  const res = await fetch(`/api/rounds/${roundId}/panorama`);
+  if (!res.ok) {
+    throw new Error(`Falha ao obter panorama da rodada (${res.status} ${res.statusText})`);
+  }
+  return res.json();
 }

@@ -14,6 +14,7 @@ export interface RoundData {
   id: string | number;
   order: number;
   startedAt?: string | null;
+  streetview_mode?: 'static' | 'panorama';
 }
 
 export interface RoundResult {
