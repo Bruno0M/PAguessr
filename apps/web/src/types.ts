@@ -1,4 +1,4 @@
-import type { LatLng } from '@paguessr/shared';
+import type { LatLng, StreetviewMode } from '@paguessr/shared';
 
 export interface LocationPoint {
   id: string;
@@ -14,7 +14,7 @@ export interface RoundData {
   id: string | number;
   order: number;
   startedAt?: string | null;
-  streetview_mode?: 'static' | 'panorama';
+  streetview_mode?: StreetviewMode;
 }
 
 export interface RoundResult {

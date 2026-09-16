@@ -1,4 +1,4 @@
-import type { LatLng } from '@paguessr/shared';
+import type { LatLng, StreetviewMode } from '@paguessr/shared';
 
 export interface ApiRoundInitial {
   id: string | number;
@@ -7,7 +7,7 @@ export interface ApiRoundInitial {
   roundNumber?: number;
   startedAt?: string | null;
   started_at?: string | null;
-  streetview_mode?: 'static' | 'panorama';
+  streetview_mode?: StreetviewMode;
 }
 
 export interface ApiGameCreated {
@@ -19,7 +19,7 @@ export interface ApiNextRound {
   id: string | number;
   startedAt?: string | null;
   started_at?: string | null;
-  streetview_mode?: 'static' | 'panorama';
+  streetview_mode?: StreetviewMode;
 }
 
 export interface ApiGuessResponse {
@@ -47,7 +47,7 @@ export interface ApiRoundSummary {
   guess?: LatLng | null;
   startedAt?: string | null;
   started_at?: string | null;
-  streetview_mode?: 'static' | 'panorama';
+  streetview_mode?: StreetviewMode;
   location?: {
     lat: number;
     lng: number;
