@@ -185,7 +185,15 @@ export function App() {
         if (nextRound) {
           const nextStartedAt = nextRound.startedAt ?? nextRound.started_at ?? null;
           setRounds((prev) =>
-            prev.map((r) => (r.id === nextRound.id ? { ...r, startedAt: nextStartedAt } : r))
+            prev.map((r) =>
+              r.id === nextRound.id
+                ? {
+                    ...r,
+                    startedAt: nextStartedAt,
+                    ...(nextRound.streetview_mode ? { streetview_mode: nextRound.streetview_mode } : {}),
+                  }
+                : r
+            )
           );
         }
 

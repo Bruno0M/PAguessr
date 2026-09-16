@@ -19,6 +19,7 @@ export interface ApiNextRound {
   id: string | number;
   startedAt?: string | null;
   started_at?: string | null;
+  streetview_mode?: 'static' | 'panorama';
 }
 
 export interface ApiGuessResponse {
