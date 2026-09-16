@@ -20,6 +20,7 @@ import { PanoramaPanel } from './components/PanoramaPanel';
 import { GuessMap } from './components/GuessMap';
 import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
+import { AdminLocationsPage } from './components/AdminLocationsPage';
 
 // Carregado sob demanda: three.js/@react-three só entram no bundle de quem
 // realmente abre o ranking, não pesam no carregamento inicial do jogo.
@@ -31,10 +32,22 @@ type AuthView = 'login' | 'register' | 'recover';
 
 export function App() {
   const [showTitle, setShowTitle] = useState(true);
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [authView, setAuthView] = useState<AuthView>('login');
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onPopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = useCallback((path: string) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  }, []);
 
   useEffect(() => {
     me()
@@ -342,6 +355,17 @@ export function App() {
         onGoToRegister={() => setAuthView('register')}
         onGoToRecover={() => setAuthView('recover')}
         onGoToTitle={() => setShowTitle(true)}
+      />
+    );
+  }
+
+  if (currentPath === '/admin') {
+    return (
+      <AdminLocationsPage
+        user={authUser}
+        onLogout={handleLogout}
+        onUnauthorized={() => setAuthUser(null)}
+        onGoHome={() => navigate('/')}
       />
     );
   }

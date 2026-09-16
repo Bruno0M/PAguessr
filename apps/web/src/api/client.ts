@@ -151,3 +151,35 @@ export async function getRoundPanorama(roundId: string | number): Promise<ApiRou
   }
   return res.json();
 }
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export interface AdminLocation {
+  id: number;
+  lat: number;
+  lng: number;
+  source: string;
+  captured_at: string | null;
+  pano_id: string | null;
+}
+
+export async function getAdminLocations(): Promise<AdminLocation[]> {
+  const res = await fetch('/api/admin/locations');
+  if (res.status === 401) {
+    throw new ApiError('Sessão inválida ou expirada', 401);
+  }
+  if (res.status === 403) {
+    throw new ApiError('Sua conta não tem acesso de admin.', 403);
+  }
+  if (!res.ok) {
+    throw new ApiError(`Falha ao obter locais de administração (${res.status})`, res.status);
+  }
+  return res.json();
+}
