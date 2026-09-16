@@ -3,3 +3,9 @@
 // Injetadas pelo `define` do vite.config.ts; aparecem no rodapé da tela de título.
 declare const __APP_VERSION__: string;
 declare const __BUILD_DATE__: string;
+
+interface Window {
+  umami?: {
+    track: (event: string, data?: Record<string, unknown>) => void;
+  };
+}

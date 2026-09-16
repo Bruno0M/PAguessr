@@ -21,6 +21,7 @@ import { GuessMap } from './components/GuessMap';
 import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
 import { AdminLocationsPage } from './components/AdminLocationsPage';
+import { track } from './lib/analytics';
 
 // Carregado sob demanda: three.js/@react-three só entram no bundle de quem
 // realmente abre o ranking, não pesam no carregamento inicial do jogo.
@@ -96,7 +97,7 @@ export function App() {
     return () => window.removeEventListener('keydown', onEscape);
   }, [gameState]);
 
-  const startNewGame = useCallback(async (forceMock = false) => {
+  const startNewGame = useCallback(async (forceMock = false, source = 'unknown') => {
     const version = ++sessionVersion.current;
     setGameState('loading');
     setErrorMessage(null);
@@ -104,6 +105,7 @@ export function App() {
     setCurrentGuess(null);
     setResults([]);
     setCurrentRoundIndex(0);
+    track('game_start', { mode: forceMock ? 'offline' : 'ranked', source });
 
     if (forceMock) {
       setIsOfflineMode(true);
@@ -151,6 +153,7 @@ export function App() {
       const msg = err instanceof Error ? err.message : 'Erro ao conectar com a API.';
       setErrorMessage(msg);
       setGameState('error');
+      track('game_start_error', { source });
     }
   }, []);
 
@@ -223,6 +226,7 @@ export function App() {
 
   const handleConfirmGuess = async () => {
     if (gameState !== 'guessing' || !currentGuess) return;
+    track('guess_confirm', { roundIndex: currentRoundIndex, mode: isOfflineMode ? 'offline' : 'ranked' });
 
     if (isOfflineMode) {
       const distanceMeters = haversine(currentGuess, currentMockLoc.coords);
@@ -268,6 +272,7 @@ export function App() {
       setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
       if (remainingMs <= 0 && !timeoutFired) {
         timeoutFired = true;
+        track('guess_timeout', { roundIndex: currentRoundIndex, hadGuess: !!currentGuess });
         submitOnlineGuess(currentGuess);
       }
     };
@@ -294,11 +299,12 @@ export function App() {
       }
       if (version !== sessionVersion.current) return;
       setGameState('finished');
+      track('game_finished', { totalScore, mode: isOfflineMode ? 'offline' : 'ranked' });
     }
   };
 
   const handlePlayAgain = () => {
-    startNewGame(isOfflineMode);
+    startNewGame(isOfflineMode, 'play_again');
   };
 
   const latestResult = results[results.length - 1];
@@ -385,7 +391,7 @@ export function App() {
             onBack={() => setShowRanking(false)}
             onPlayRanked={() => {
               setShowRanking(false);
-              startNewGame(false);
+              startNewGame(false, 'ranking');
             }}
           />
         </Suspense>
@@ -395,7 +401,7 @@ export function App() {
       <HomeScreen
         user={authUser}
         onLogout={handleLogout}
-        onStartRanked={() => startNewGame(false)}
+        onStartRanked={() => startNewGame(false, 'home')}
         onOpenRanking={() => setShowRanking(true)}
       />
     );
@@ -435,10 +441,18 @@ export function App() {
               <button type="button" className="btn-secondary" onClick={returnHome}>
                 Voltar ao início
               </button>
-              <button type="button" className="btn-primary" onClick={() => startNewGame(false)}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => startNewGame(false, 'error_retry')}
+              >
                 Tentar Conectar Novamente
               </button>
-              <button type="button" className="btn-secondary" onClick={() => startNewGame(true)}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => startNewGame(true, 'error_offline')}
+              >
                 Jogar no Modo Offline (Mock)
               </button>
             </div>
@@ -454,6 +468,7 @@ export function App() {
               previousBestRef.current !== undefined && totalScore > previousBestRef.current
             }
             onViewRanking={() => {
+              track('view_ranking_from_result');
               returnHome();
               setShowRanking(true);
             }}

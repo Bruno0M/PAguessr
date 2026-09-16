@@ -3,6 +3,7 @@ import { NICK_MAX_LENGTH, NICK_MIN_LENGTH, isValidNickFormat } from '@paguessr/s
 import { register, type PublicUser } from '../../api/auth';
 import { AuthError, AuthLayout } from './AuthLayout';
 import { AvatarPicker } from './AvatarPicker';
+import { track } from '../../lib/analytics';
 
 const PASSWORD_MIN_LENGTH = 6;
 
@@ -42,8 +43,10 @@ export function RegisterScreen({
     setSubmitting(true);
     try {
       const { user, recoveryCode } = await register(nick, password, avatarId);
+      track('signup_success');
       onSuccess(user, recoveryCode);
     } catch (err) {
+      track('signup_error');
       setError(err instanceof Error ? err.message : 'Não foi possível criar a conta.');
     } finally {
       setSubmitting(false);

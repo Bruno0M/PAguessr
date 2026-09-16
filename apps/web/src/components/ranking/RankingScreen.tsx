@@ -4,6 +4,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import type { PublicUser } from '../../api/auth';
 import { getRanking, type ApiRankingResponse, type RankingPeriod } from '../../api/ranking';
 import { AvatarSvg } from '../auth/avatars';
+import { track } from '../../lib/analytics';
 import { Podium3D } from './Podium3D';
 import { RankingGeralDialog } from './RankingGeralDialog';
 import '../../styles/navyTheme.css';
@@ -34,7 +35,10 @@ export function RankingScreen({
   const [status, setStatus] = useState<Status>('loading');
   const [geralOpen, setGeralOpen] = useState(false);
   const requestId = useRef(0);
-  const openGeral = useCallback(() => setGeralOpen(true), []);
+  const openGeral = useCallback(() => {
+    track('ranking_geral_open');
+    setGeralOpen(true);
+  }, []);
 
   const load = useCallback((p: RankingPeriod) => {
     const id = ++requestId.current;
@@ -108,7 +112,10 @@ export function RankingScreen({
                 role="tab"
                 aria-selected={period === p}
                 className={`ranking-tab${period === p ? ' is-active' : ''}`}
-                onClick={() => setPeriod(p)}
+                onClick={() => {
+                  track('ranking_tab_switch', { period: p });
+                  setPeriod(p);
+                }}
               >
                 {p === 'semana' ? 'Semana' : 'Geral'}
               </button>

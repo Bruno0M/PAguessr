@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { PublicUser } from '../api/auth';
 import { getRanking } from '../api/ranking';
+import { track } from '../lib/analytics';
 import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
 
@@ -84,7 +85,10 @@ export function HomeScreen({
   const activate = (id: MenuId) => {
     if (id === 'ranqueado') onStartRanked();
     if (id === 'ranking') onOpenRanking();
-    if (id === 'como') instructionsRef.current?.showModal();
+    if (id === 'como') {
+      track('view_instructions');
+      instructionsRef.current?.showModal();
+    }
     if (id === 'sair') onLogout();
   };
 

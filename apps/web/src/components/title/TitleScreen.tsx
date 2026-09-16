@@ -4,6 +4,7 @@ import { createDust } from './titleDust';
 import { useReducedMotion } from './useReducedMotion';
 import { SettingsPanel } from './SettingsPanel';
 import { CreditsPanel } from './CreditsPanel';
+import { track } from '../../lib/analytics';
 import './TitleScreen.css';
 import './TitlePanel.css';
 
@@ -59,6 +60,7 @@ export function TitleScreen({
       const item = MENU_ITEMS[index];
       if (leaving || !item.available) return;
       if (item.id === 'play') {
+        track('play_click');
         setLeaving(true);
         return;
       }

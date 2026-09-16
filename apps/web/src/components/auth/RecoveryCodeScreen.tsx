@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthLayout } from './AuthLayout';
+import { track } from '../../lib/analytics';
 import './RecoveryCodeScreen.css';
 
 export function RecoveryCodeScreen({
@@ -15,6 +16,7 @@ export function RecoveryCodeScreen({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(recoveryCode);
+      track('recovery_code_copied');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

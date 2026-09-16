@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { login, type PublicUser } from '../../api/auth';
 import { AuthError, AuthLayout } from './AuthLayout';
+import { track } from '../../lib/analytics';
 
 export function LoginScreen({
   onSuccess,
@@ -24,8 +25,10 @@ export function LoginScreen({
     setSubmitting(true);
     try {
       const { user } = await login(nick, password);
+      track('login_success');
       onSuccess(user);
     } catch (err) {
+      track('login_error');
       setError(err instanceof Error ? err.message : 'Não foi possível entrar.');
     } finally {
       setSubmitting(false);
