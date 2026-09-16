@@ -156,14 +156,14 @@
   transition: transform 0.18s ease;
 }
 
-/* Verde-neon da identidade do app: aqui é um controle de UI, não a tarja do
-   menu principal, então não briga com a decisão de manter o menu em creme. */
+/* Ligado = cor de destaque (o dourado do sol), com o pino escuro pra ler bem. */
 .title-switch-control input:checked + .title-switch-track {
-  background: rgb(62 227 173 / 0.85);
+  background: var(--pa-accent);
 }
 
 .title-switch-control input:checked + .title-switch-track::before {
   transform: translateX(18px);
+  background: var(--pa-accent-ink);
 }
 
 .title-switch-control input:focus-visible + .title-switch-track {

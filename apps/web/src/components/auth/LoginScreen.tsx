@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { login, type PublicUser } from '../../api/auth';
-import { AuthLayout } from './AuthLayout';
+import { AuthError, AuthLayout } from './AuthLayout';
 
 export function LoginScreen({
   onSuccess,
   onGoToRegister,
   onGoToRecover,
+  onGoToTitle,
 }: {
   onSuccess: (user: PublicUser) => void;
   onGoToRegister: () => void;
   onGoToRecover: () => void;
+  onGoToTitle: () => void;
 }) {
   const [nick, setNick] = useState('');
   const [password, setPassword] = useState('');
@@ -31,9 +33,13 @@ export function LoginScreen({
   };
 
   return (
-    <AuthLayout title="Entrar" subtitle="Entre com sua conta pra jogar em Paulo Afonso.">
+    <AuthLayout
+      title="Entrar"
+      subtitle="Sua conta guarda seu recorde e sua posição no ranking."
+      onBack={onGoToTitle}
+    >
       <form className="auth-form" onSubmit={handleSubmit}>
-        {error && <div className="auth-error">{error}</div>}
+        {error && <AuthError>{error}</AuthError>}
         <div className="auth-field">
           <label htmlFor="login-nick">Nick</label>
           <input
@@ -64,6 +70,9 @@ export function LoginScreen({
           </button>
           <button type="button" onClick={onGoToRecover}>
             Esqueci minha senha
+          </button>
+          <button type="button" onClick={onGoToTitle}>
+            Voltar ao título
           </button>
         </div>
       </form>

@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent } from 'react';
-import '@fontsource/saira/400.css';
-import '@fontsource/saira/600.css';
 import { createDust } from './titleDust';
 import { useReducedMotion } from './useReducedMotion';
 import { SettingsPanel } from './SettingsPanel';
@@ -34,7 +32,17 @@ function nextAvailable(from: number, direction: 1 | -1): number {
   return from;
 }
 
-export function TitleScreen({ ready, onStart }: { ready: boolean; onStart: () => void }) {
+export function TitleScreen({
+  ready,
+  goesToAuth,
+  onStart,
+}: {
+  ready: boolean;
+  // Com sessão aberta o Jogar cai direto na Home; a saída só termina no visual
+  // das telas de conta quando o login é mesmo o próximo passo.
+  goesToAuth: boolean;
+  onStart: () => void;
+}) {
   const reducedMotion = useReducedMotion();
   const [selected, setSelected] = useState(0);
   const [view, setView] = useState<View>('title');
@@ -154,7 +162,9 @@ export function TitleScreen({ ready, onStart }: { ready: boolean; onStart: () =>
 
   return (
     <main
-      className={`title-screen${leaving ? ' is-leaving' : ''}`}
+      className={`title-screen${leaving ? ' is-leaving' : ''}${
+        leaving && !goesToAuth ? ' is-leaving-home' : ''
+      }`}
       onPointerMove={handlePointerMove}
       onPointerLeave={resetPointer}
     >
@@ -195,24 +205,24 @@ export function TitleScreen({ ready, onStart }: { ready: boolean; onStart: () =>
       {view === 'settings' && <SettingsPanel onBack={goBack} />}
       {view === 'credits' && <CreditsPanel onBack={goBack} />}
 
-      <p className="title-version">
+      <p className="game-version title-version">
         v{__APP_VERSION__} · {__BUILD_DATE__}
       </p>
-      <p className="title-hint" aria-hidden="true">
+      <p className="game-hint title-hint" aria-hidden="true">
         {view === 'title' ? (
-          <>
+          <span>
             <kbd>
               <svg viewBox="0 0 16 16">
                 <path d="M12.5 3.5v4.5H4.5M7.5 5 4.5 8l3 3" />
               </svg>
             </kbd>
             Selecionar
-          </>
+          </span>
         ) : (
-          <>
+          <span>
             <kbd>Esc</kbd>
             Voltar
-          </>
+          </span>
         )}
       </p>
     </main>

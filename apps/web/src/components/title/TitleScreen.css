@@ -1,11 +1,11 @@
 /* Tela de título (antes do login), no molde do menu do Stray: arte cheia, menu de
    texto espaçado no pé da tela e item selecionado numa tarja creme — o tom do logo
-   pintado na capa. O verde-neon da identidade fica para as telas de dentro. */
+   pintado na capa. É a referência da identidade do jogo todo (styles/tokens.css). */
 
 .title-screen {
-  --title-cream: #f6ecd4;
-  --title-ink: #10161d;
-  --title-night: #060b11;
+  --title-cream: var(--pa-cream);
+  --title-ink: var(--pa-ink);
+  --title-night: var(--pa-night);
   --title-leave: 0.55s;
 
   position: fixed;
@@ -13,17 +13,18 @@
   overflow: hidden;
   background: var(--title-night);
   color: var(--title-cream);
-  font-family: 'Saira', 'Segoe UI', sans-serif;
+  font-family: var(--pa-font);
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Na saída a capa escurece, desfoca e ganha o tom navy do login: a troca de tela vira continuação. */
+/* Na saída o menu some e a capa escurece como nas telas de conta, onde o cartão
+   do login aparece por cima: a troca de tela vira continuação. */
 .title-screen::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--navy-bg-glow), linear-gradient(#0e1b2d8c, #0e1b2dcc);
+  background: var(--pa-auth-veil);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--title-leave) ease;
@@ -31,6 +32,11 @@
 
 .title-screen.is-leaving::after {
   opacity: 1;
+}
+
+/* Quem já tem sessão vai pro menu do jogo, não pro login: a capa só escurece. */
+.title-screen.is-leaving-home::after {
+  background: rgb(var(--pa-shade-rgb) / 0.82);
 }
 
 .title-sr-only {
@@ -47,7 +53,6 @@
 .title-art {
   position: absolute;
   inset: 0;
-  transition: filter var(--title-leave) ease;
 }
 
 .title-art-image {
@@ -60,15 +65,13 @@
     title-ken-burns 40s ease-in-out infinite alternate both;
 }
 
-.title-screen.is-leaving .title-art {
-  filter: blur(6px) brightness(0.55);
-}
-
-/* Degradê escuro só no pé (onde fica o menu) + vinheta leve; céu e logo continuam vivos. */
+/* Degradê escuro só no pé (onde fica o menu) + vinheta leve; céu e logo continuam vivos.
+   Na saída ele some: as telas de conta não têm menu no pé. */
 .title-shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  transition: opacity var(--title-leave) ease;
   background:
     linear-gradient(
       to top,
@@ -79,6 +82,10 @@
       transparent 64%
     ),
     radial-gradient(ellipse 85% 80% at 50% 40%, transparent 58%, rgb(3 6 10 / 0.5) 100%);
+}
+
+.title-screen.is-leaving .title-shade {
+  opacity: 0;
 }
 
 .title-dust {
@@ -169,68 +176,13 @@
   white-space: nowrap;
 }
 
-/* ---------- Rodapé ---------- */
+/* ---------- Rodapé ----------
+   Visual das dicas de tecla e da versão em styles/gameUi.css (compartilhado com
+   as telas de conta); aqui só a entrada. */
 
-.title-version {
-  position: absolute;
-  left: max(16px, 1.6vw);
-  bottom: max(12px, 1.6vh);
-  color: rgb(246 236 212 / 0.5);
-  font:
-    400 11px / 1 'Segoe UI',
-    system-ui,
-    sans-serif;
-  letter-spacing: 0.04em;
-  animation: title-fade-in 1s ease-out 1.4s both;
-}
-
+.title-version,
 .title-hint {
-  position: absolute;
-  right: max(20px, 3vw);
-  bottom: max(18px, 3.2vh);
-  display: flex;
-  align-items: center;
-  gap: 0.7em;
-  color: rgb(246 236 212 / 0.85);
-  font:
-    400 clamp(15px, 0.5vw + 9px, 19px) / 1 'Saira',
-    'Segoe UI',
-    sans-serif;
-  letter-spacing: 0.06em;
   animation: title-fade-in 1s ease-out 1.4s both;
-}
-
-.title-hint kbd {
-  display: grid;
-  place-items: center;
-  min-width: 1.75em;
-  height: 1.75em;
-  padding: 0 0.5em;
-  border-radius: 999px;
-  background: rgb(246 236 212 / 0.85);
-  color: var(--title-ink);
-  font:
-    700 0.6em / 1 'Saira',
-    'Segoe UI',
-    sans-serif;
-  letter-spacing: 0.02em;
-}
-
-.title-hint svg {
-  width: 62%;
-  height: 62%;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* Sem teclado à vista no celular, a dica não faz sentido. */
-@media (hover: none) and (pointer: coarse) {
-  .title-hint {
-    display: none;
-  }
 }
 
 /* Saída: animações (não transições), porque o preenchimento das animações de entrada

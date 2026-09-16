@@ -1,47 +1,69 @@
 .recovery-code-box {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: var(--navy-input-bg);
-  border: 1px solid var(--navy-input-border);
-  border-radius: 10px;
-  padding: 16px;
-  margin: 4px 0 16px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+  padding: 16px 0;
+  border-block: 1px solid rgb(var(--pa-cream-rgb) / 0.18);
 }
 
 .recovery-code-value {
-  font-family: 'Courier New', monospace;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--navy-accent);
+  font:
+    600 22px / 1 var(--pa-font-mono),
+    monospace;
+  letter-spacing: 0.12em;
+  color: var(--pa-accent);
+  overflow-wrap: anywhere;
 }
 
 .recovery-copy-btn {
+  flex-shrink: 0;
+  padding: 9px 10px 8px 12px;
+  border: 0;
+  border-radius: 2px;
   background: transparent;
-  border: 1px solid var(--navy-input-border);
-  color: var(--navy-text);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.34);
+  color: var(--pa-cream);
+  font:
+    600 11px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
-.recovery-copy-btn:hover {
-  border-color: var(--navy-accent);
+.recovery-copy-btn:hover,
+.recovery-copy-btn:focus-visible {
+  background: var(--pa-cream);
+  color: var(--pa-ink);
+}
+
+.recovery-copy-btn:focus-visible {
+  outline: 2px solid var(--pa-cream);
+  outline-offset: 3px;
 }
 
 .recovery-confirm {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--navy-text-muted);
-  margin-bottom: 18px;
-  line-height: 1.4;
+  gap: 12px;
+  margin: 20px 0 22px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--pa-cream-soft);
+  cursor: pointer;
 }
 
 .recovery-confirm input {
-  margin-top: 2px;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--pa-accent);
+}
+
+/* Fora do <form>, o botão fica sozinho: ocupa a largura do painel. */
+.auth-panel > .auth-submit {
+  width: 100%;
 }

@@ -6,6 +6,7 @@ import { getRanking, type ApiRankingResponse, type RankingPeriod } from '../../a
 import { AvatarSvg } from '../auth/avatars';
 import { Podium3D } from './Podium3D';
 import { RankingGeralDialog } from './RankingGeralDialog';
+import '../../styles/navyTheme.css';
 import './RankingScreen.css';
 
 type Status = 'loading' | 'ready' | 'error';

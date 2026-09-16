@@ -4,16 +4,20 @@ export interface AvatarDef {
 }
 
 // 8 avatares abstratos gerados no próprio código (sem upload de foto, sem
-// asset externo baixado), na paleta navy + verde-neon do jogo.
+// asset externo baixado). Cada forma mantém a família de cor que já tinha,
+// agora tirada da arte da capa: caatinga, céu, sol, terracota, entardecer, rio,
+// bronze e creme. A cor também pinta o pino do jogador no pódio 3D.
+const AVATAR_BG: [string, string] = ['#1f2a36', '#0b1118'];
+
 const AVATAR_DEFS: AvatarDef[] = [
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#3ee3ad' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#40cddd' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#ffd166' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#ff8fa3' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#9d8cff' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#4fd1c5' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#f0a860' },
-  { bg: ['#1c4560', '#0c1c2e'], fg: '#9df57a' },
+  { bg: AVATAR_BG, fg: '#a9c07e' },
+  { bg: AVATAR_BG, fg: '#6fb0e3' },
+  { bg: AVATAR_BG, fg: '#eab25a' },
+  { bg: AVATAR_BG, fg: '#e0876a' },
+  { bg: AVATAR_BG, fg: '#a99bd6' },
+  { bg: AVATAR_BG, fg: '#7fc4bd' },
+  { bg: AVATAR_BG, fg: '#c49a6c' },
+  { bg: AVATAR_BG, fg: '#f6ecd4' },
 ];
 
 export function getAvatarDef(id: number): AvatarDef {

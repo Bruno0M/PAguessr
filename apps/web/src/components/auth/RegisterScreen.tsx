@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { NICK_MAX_LENGTH, NICK_MIN_LENGTH, isValidNickFormat } from '@paguessr/shared';
 import { register, type PublicUser } from '../../api/auth';
-import { AuthLayout } from './AuthLayout';
+import { AuthError, AuthLayout } from './AuthLayout';
 import { AvatarPicker } from './AvatarPicker';
 
 const PASSWORD_MIN_LENGTH = 6;
@@ -51,9 +51,14 @@ export function RegisterScreen({
   };
 
   return (
-    <AuthLayout title="Criar conta" subtitle="Escolha um nick e um avatar pra começar a jogar.">
+    <AuthLayout
+      eyebrow="Conta nova"
+      title="Criar conta"
+      subtitle="Escolha um nick e um avatar pra entrar no ranking."
+      onBack={onGoToLogin}
+    >
       <form className="auth-form" onSubmit={handleSubmit}>
-        {error && <div className="auth-error">{error}</div>}
+        {error && <AuthError>{error}</AuthError>}
         <div className="auth-field">
           <label htmlFor="register-nick">Nick</label>
           <input
@@ -63,8 +68,12 @@ export function RegisterScreen({
             minLength={NICK_MIN_LENGTH}
             maxLength={NICK_MAX_LENGTH}
             autoComplete="username"
+            aria-describedby="register-nick-help"
             required
           />
+          <p id="register-nick-help" className="auth-help">
+            {NICK_MIN_LENGTH} a {NICK_MAX_LENGTH} letras, números ou _
+          </p>
         </div>
         <div className="auth-field">
           <label htmlFor="register-password">Senha</label>
