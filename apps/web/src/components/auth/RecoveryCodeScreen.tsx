@@ -42,7 +42,12 @@ export function RecoveryCodeScreen({
         />
         Eu salvei meu código de recuperação em um lugar seguro.
       </label>
-      <button type="button" className="auth-submit" disabled={!confirmed} onClick={onContinue}>
+      <button
+        type="button"
+        className="game-cta auth-submit"
+        disabled={!confirmed}
+        onClick={onContinue}
+      >
         Continuar
       </button>
     </AuthLayout>

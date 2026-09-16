@@ -62,8 +62,3 @@
   margin-top: 1px;
   accent-color: var(--pa-accent);
 }
-
-/* Fora do <form>, o botão fica sozinho: ocupa a largura do painel. */
-.auth-panel > .auth-submit {
-  width: 100%;
-}

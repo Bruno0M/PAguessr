@@ -1,29 +1,59 @@
-import { useRef } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faArrowRight,
-  faArrowUpRightFromSquare,
-  faTrophy,
-} from '@fortawesome/free-solid-svg-icons';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { PublicUser } from '../api/auth';
+import { getRanking } from '../api/ranking';
 import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
 
-function Pin({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="24"
-      height="28"
-      viewBox="0 0 24 28"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path d="M22 11C22 19 12 26 12 26S2 19 2 11a10 10 0 1 1 20 0Z" fill="currentColor" />
-      <circle cx="12" cy="11" r="3.5" fill="var(--home-paper, #5e8797)" />
-    </svg>
-  );
-}
+type MenuId = 'treino' | 'ranqueado' | 'ranking' | 'como' | 'sair';
+
+type MenuItem = {
+  id: MenuId;
+  label: string;
+  eyebrow: string;
+  description: string;
+  facts: string[];
+};
+
+const MENU_ITEMS: MenuItem[] = [
+  {
+    id: 'treino',
+    label: 'Treino',
+    eyebrow: 'Modo',
+    description:
+      'Cinco pontos fixos de Paulo Afonso, sem cronômetro. Bom pra aprender a cidade, mas não conta pro ranking.',
+    facts: ['5 rodadas', 'Sem tempo', 'Fora do ranking'],
+  },
+  {
+    id: 'ranqueado',
+    label: 'Ranqueado',
+    eyebrow: 'Modo',
+    description:
+      'Cinco lugares sorteados, 60 segundos por rodada. Sua melhor partida vale posição no ranking da semana.',
+    facts: ['5 rodadas', '60 s por rodada', 'Até 25.000 pontos'],
+  },
+  {
+    id: 'ranking',
+    label: 'Ranking',
+    eyebrow: 'Menu',
+    description: 'O pódio da semana e o geral. A semana zera toda segunda, à meia-noite.',
+    facts: ['Semana', 'Geral'],
+  },
+  {
+    id: 'como',
+    label: 'Como jogar',
+    eyebrow: 'Menu',
+    description:
+      'Observe a foto, marque o palpite no mapa e confirme. Quanto mais perto, mais pontos: até 5.000 por rodada.',
+    facts: ['Foto', 'Mapa', 'Pontos'],
+  },
+  {
+    id: 'sair',
+    label: 'Sair',
+    eyebrow: 'Menu',
+    description: 'Volta pra tela de título. Seu recorde continua salvo na conta.',
+    facts: [],
+  },
+];
 
 export function HomeScreen({
   user,
@@ -38,238 +68,210 @@ export function HomeScreen({
   onStartRanked: () => void;
   onOpenRanking: () => void;
 }) {
+  const [selected, setSelected] = useState(0);
+  const [record, setRecord] = useState<{ position: number; score: number } | null>(null);
+  const [recordChecked, setRecordChecked] = useState(false);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const instructionsRef = useRef<HTMLDialogElement>(null);
+
+  // Recorde da semana pra prévia do Ranqueado. É enfeite: se a chamada falhar, a
+  // linha não aparece e o menu continua igual.
+  useEffect(() => {
+    let active = true;
+    getRanking('semana', 1)
+      .then((res) => {
+        if (active) setRecord(res.me);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setRecordChecked(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const activate = (id: MenuId) => {
+    if (id === 'treino') onStartTraining();
+    if (id === 'ranqueado') onStartRanked();
+    if (id === 'ranking') onOpenRanking();
+    if (id === 'como') instructionsRef.current?.showModal();
+    if (id === 'sair') onLogout();
+  };
+
+  // Mesma navegação da tela de título: setas ou W/S movem a seleção; o
+  // Enter/Espaço fica com o clique nativo do botão focado.
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    const up = event.key === 'ArrowUp' || event.code === 'KeyW';
+    const down = event.key === 'ArrowDown' || event.code === 'KeyS';
+    if (!up && !down) return;
+    event.preventDefault();
+    const next = (selected + (up ? -1 : 1) + MENU_ITEMS.length) % MENU_ITEMS.length;
+    setSelected(next);
+    itemRefs.current[next]?.focus();
+  };
+
+  const current = MENU_ITEMS[selected];
 
   return (
     <div className="home-screen">
-      <header className="home-header">
-        <div className="home-brand">
-          <span>
-            PA<span className="brand-light">guessr</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </div>
-        <div className="home-player">
-          <span>
+      <div className="home-map" aria-hidden="true" />
+      <div className="home-veil" aria-hidden="true" />
+
+      <header className="home-top">
+        <p className="home-mark">PAguessr</p>
+        <p className="home-player">
+          <span className="home-avatar">
             <AvatarSvg id={user.avatarId} />
           </span>
           {user.nick}
-          <button type="button" className="home-logout" onClick={onLogout}>
-            Sair
-          </button>
-        </div>
+        </p>
       </header>
-      <main className="home-main">
-        <section className="home-intro" aria-labelledby="home-title">
-          <div className="game-emblem" aria-hidden="true">
-            <span />
-            <Pin />
-            <span />
-          </div>
-          <h1 id="home-title" className="menu-logo">
-            <span>
-              PA<span>guessr</span>
-              <b>.</b>
-            </span>
-          </h1>
-          <p className="menu-location">PAULO AFONSO · BAHIA</p>
-          <div className="round-track" aria-label="Partida de 5 rodadas">
-            <span className="round-track-label">MODO CLÁSSICO</span>
-            <div aria-hidden="true">
-              {[1, 2, 3, 4, 5].map((round) => (
-                <span key={round}>{round}</span>
-              ))}
-            </div>
-          </div>
-          <nav className="game-menu" aria-label="Menu principal">
-            <button className="home-play" onClick={onStartTraining}>
-              <span className="play-triangle" aria-hidden="true" />
-              <span>TREINO</span>
-              <span className="play-arrow" aria-hidden="true">
-                <FontAwesomeIcon icon={faArrowRight} />
-              </span>
-            </button>
-            <button className="home-play home-play-ranked" onClick={onStartRanked}>
-              <span className="play-triangle" aria-hidden="true" />
-              <span>RANQUEADO</span>
-              <span className="play-arrow" aria-hidden="true">
-                <FontAwesomeIcon icon={faArrowRight} />
-              </span>
-            </button>
-            <button
-              className="menu-help"
-              onClick={() => instructionsRef.current?.showModal()}
-              aria-haspopup="dialog"
-            >
-              <span className="menu-help-icon" aria-hidden="true">
-                ?
-              </span>{' '}
-              Como jogar{' '}
-              <span aria-hidden="true">
-                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </span>
-            </button>
-            <button className="menu-help" onClick={onOpenRanking}>
-              <span className="menu-help-icon" aria-hidden="true">
-                <FontAwesomeIcon icon={faTrophy} />
-              </span>{' '}
-              Ranking{' '}
-              <span aria-hidden="true">
-                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </span>
-            </button>
-          </nav>
-        </section>
 
-        <div className="home-art" aria-hidden="true">
-          <div className="terrain-beacon beacon-one">
-            <Pin />
-            <span />
-          </div>
-          <div className="terrain-beacon beacon-two">
-            <Pin />
-            <span />
-          </div>
-          <svg
-            className="home-map"
-            viewBox="0 0 620 570"
-            preserveAspectRatio="xMidYMid slice"
-            fill="none"
-            aria-hidden="true"
-          >
-            <defs>
-              <pattern id="map-grid" width="34" height="34" patternUnits="userSpaceOnUse">
-                <path d="M34 0H0V34" stroke="#29445f" strokeWidth=".8" />
-              </pattern>
-            </defs>
-            <path fill="#122a40" d="M0 0h620v570H0z" />
-            <path fill="url(#map-grid)" d="M0 0h620v570H0z" />
-            <g stroke="#29455a" strokeWidth="1.3">
-              <path d="M-30 80Q100 5 233 107T651 64M-20 99Q100 23 233 125T651 82M-20 118Q100 42 233 144T651 101M-20 137Q100 61 233 163T651 120M-20 156Q100 80 233 182T651 139M-20 175Q100 99 233 201T651 158M-20 425Q100 350 233 452T651 409M-20 444Q100 369 233 471T651 428M-20 463Q100 388 233 490T651 447M-20 482Q100 407 233 509T651 466M-20 501Q100 426 233 528T651 485" />
-            </g>
-            <path
-              d="M455-30C310 65 570 105 426 213S334 363 413 401 438 539 300 610"
-              stroke="#194961"
-              strokeWidth="102"
-            />
-            <path
-              d="M455-30C310 65 570 105 426 213S334 363 413 401 438 539 300 610"
-              stroke="#20637a"
-              strokeWidth="71"
-            />
-            <g stroke="#476a7e" strokeWidth="9" strokeLinejoin="round">
-              <path d="M31 320 227 122 390 268 227 455 30 320ZM82 267 281 400M132 216 331 345M181 165 377 294M77 365 278 169M128 411 333 219M25 226 270 466" />
-            </g>
-            <path d="m315 317 138 21" stroke="#5e8797" strokeWidth="10" />
-            <path d="m315 317 138 21" stroke="#83b2c5" strokeWidth="2" strokeDasharray="5 4" />
-            <path
-              d="M124 337Q159 271 222 292T306 228"
-              stroke="#3ee3b0"
-              strokeWidth="3"
-              strokeDasharray="7 7"
-            />
-            <circle cx="124" cy="337" r="12" fill="#3ee3b0" fillOpacity=".15" />
-            <circle cx="124" cy="337" r="5" fill="#3ee3b0" />
-            <g transform="translate(287 176)">
-              <ellipse cx="20" cy="57" rx="19" ry="6" fill="#38cba1" fillOpacity=".2" />
-              <path
-                d="M42 23C42 39 21 56 21 56S0 39 0 23a21 21 0 1 1 42 0Z"
-                fill="#39e5a9"
-                stroke="#b0ffe8"
-                strokeWidth="4"
-              />
-              <circle cx="21" cy="22" r="7" fill="#12374a" />
-            </g>
-            <text
-              x="462"
-              y="388"
-              fill="#76b8c9"
-              fontSize="12"
-              letterSpacing="3"
-              transform="rotate(64 462 388)"
+      <main className="home-stage">
+        <nav className="home-menu" aria-label="Menu principal" onKeyDown={handleKeyDown}>
+          {MENU_ITEMS.map((item, index) => (
+            <button
+              key={item.id}
+              ref={(element) => {
+                itemRefs.current[index] = element;
+              }}
+              type="button"
+              className={`game-menu-item home-item${index === selected ? ' is-selected' : ''}`}
+              onPointerEnter={() => setSelected(index)}
+              onFocus={() => setSelected(index)}
+              onClick={() => activate(item.id)}
+              aria-haspopup={item.id === 'como' ? 'dialog' : undefined}
             >
-              RIO SÃO FRANCISCO
-            </text>
-            <g transform="translate(548 91)" stroke="#71a7bb">
-              <circle r="26" />
-              <path d="m0-19 6 25-6-5-6 5Z" fill="#71a7bb" />
-              <text x="-4" y="-36" fill="#71a7bb" stroke="none" fontSize="11">
-                N
-              </text>
-            </g>
-          </svg>
-        </div>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <section className="game-card home-preview" aria-live="polite">
+          <p className="home-eyebrow">{current.eyebrow}</p>
+          <h1 className="home-title">{current.label}</h1>
+          <p className="home-desc">{current.description}</p>
+          {current.facts.length > 0 && (
+            <ul className="home-facts">
+              {current.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
+              ))}
+            </ul>
+          )}
+          {current.id === 'ranqueado' && recordChecked && (
+            <div className="home-record">
+              {record ? (
+                <>
+                  <div>
+                    <p className="home-record-label">Seu recorde</p>
+                    <strong>{record.score.toLocaleString('pt-BR')}</strong>
+                  </div>
+                  <p className="home-record-note">{record.position}º na semana</p>
+                </>
+              ) : (
+                <p className="home-record-note">Nenhuma partida ranqueada esta semana.</p>
+              )}
+            </div>
+          )}
+        </section>
       </main>
+
+      <p className="game-hint" aria-hidden="true">
+        <span>
+          <kbd>
+            <svg viewBox="0 0 16 16">
+              <path d="M5.5 6.5 8 4l2.5 2.5M5.5 9.5 8 12l2.5-2.5" />
+            </svg>
+          </kbd>
+          Navegar
+        </span>
+        <span>
+          <kbd>
+            <svg viewBox="0 0 16 16">
+              <path d="M12.5 3.5v4.5H4.5M7.5 5 4.5 8l3 3" />
+            </svg>
+          </kbd>
+          Selecionar
+        </span>
+      </p>
+      <p className="game-version">
+        v{__APP_VERSION__} · {__BUILD_DATE__}
+      </p>
+
       <dialog
         ref={instructionsRef}
-        className="home-instructions"
+        className="game-card home-instructions"
         aria-labelledby="instructions-title"
         onClick={(event) => {
           if (event.target === event.currentTarget) instructionsRef.current?.close();
         }}
       >
-        <div className="instructions-content">
-          <div className="instructions-header">
-            <h2 id="instructions-title">Como jogar</h2>
-            <button
-              autoFocus
-              className="instructions-close"
-              aria-label="Fechar instruções"
-              onClick={() => instructionsRef.current?.close()}
-            >
-              ×
-            </button>
-          </div>
-          <ol className="instructions-steps">
-            <li>
-              <span className="instruction-icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" fill="none">
-                  <rect x="4" y="6" width="24" height="20" rx="3" />
-                  <circle cx="21" cy="12" r="2" />
-                  <path d="m5 23 8-9 7 8 4-4 4 5" />
-                </svg>
-              </span>
-              <div>
-                <h3>Observe a foto</h3>
-                <p>Procure pistas e reconheça o lugar.</p>
-              </div>
-            </li>
-            <li>
-              <span className="instruction-icon" aria-hidden="true">
-                <Pin />
-              </span>
-              <div>
-                <h3>Marque seu palpite</h3>
-                <p>Toque no mapa e confirme o ponto.</p>
-              </div>
-            </li>
-            <li>
-              <span className="instruction-icon" aria-hidden="true">
-                <svg viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="12" />
-                  <circle cx="16" cy="16" r="7" />
-                  <circle cx="16" cy="16" r="2" />
-                </svg>
-              </span>
-              <div>
-                <h3>Quanto mais perto, melhor</h3>
-                <p>Até 5.000 pontos em cada rodada.</p>
-              </div>
-            </li>
-          </ol>
+        <div className="instructions-head">
+          <h2 id="instructions-title">Como jogar</h2>
           <button
-            className="home-play instructions-play"
-            onClick={() => {
-              instructionsRef.current?.close();
-              onStartTraining();
-            }}
+            autoFocus
+            type="button"
+            className="instructions-close"
+            aria-label="Fechar instruções"
+            onClick={() => instructionsRef.current?.close()}
           >
-            Entendi, vamos jogar{' '}
-            <span className="play-arrow" aria-hidden="true">
-              <FontAwesomeIcon icon={faArrowRight} />
-            </span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
           </button>
         </div>
+        <ol className="instructions-steps">
+          <li>
+            <span className="instructions-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32">
+                <rect x="4" y="6" width="24" height="20" rx="3" />
+                <circle cx="21" cy="12" r="2" />
+                <path d="m5 23 8-9 7 8 4-4 4 5" />
+              </svg>
+            </span>
+            <div>
+              <h3>Observe a foto</h3>
+              <p>Procure pistas e reconheça o lugar.</p>
+            </div>
+          </li>
+          <li>
+            <span className="instructions-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 28">
+                <path d="M22 11C22 19 12 26 12 26S2 19 2 11a10 10 0 1 1 20 0Z" />
+                <circle cx="12" cy="11" r="3.5" />
+              </svg>
+            </span>
+            <div>
+              <h3>Marque seu palpite</h3>
+              <p>Toque no mapa e confirme o ponto.</p>
+            </div>
+          </li>
+          <li>
+            <span className="instructions-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32">
+                <circle cx="16" cy="16" r="12" />
+                <circle cx="16" cy="16" r="7" />
+                <circle cx="16" cy="16" r="2" />
+              </svg>
+            </span>
+            <div>
+              <h3>Quanto mais perto, melhor</h3>
+              <p>Até 5.000 pontos em cada rodada.</p>
+            </div>
+          </li>
+        </ol>
+        <button
+          type="button"
+          className="game-cta instructions-play"
+          onClick={() => {
+            instructionsRef.current?.close();
+            onStartTraining();
+          }}
+        >
+          Entendi, vamos jogar
+        </button>
       </dialog>
     </div>
   );
