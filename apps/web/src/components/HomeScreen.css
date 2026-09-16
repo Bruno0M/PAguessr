@@ -4,6 +4,9 @@
    volta quando a pessoa sai do jogo. */
 
 .home-screen {
+  /* Menu e cartão encostam nas laterais, cada um no seu canto, com o mapa
+     aparecendo inteiro no meio. */
+  --home-gutter: clamp(20px, 3.4vw, 60px);
   position: relative;
   isolation: isolate;
   display: flex;
@@ -47,7 +50,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 26px var(--pa-auth-gutter) 0;
+  padding: 26px var(--home-gutter) 0;
 }
 
 .home-mark {
@@ -88,13 +91,11 @@
 .home-stage {
   flex: 1;
   width: 100%;
-  max-width: 1120px;
-  margin-inline: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: clamp(32px, 6vw, 96px);
-  padding: clamp(28px, 5vh, 56px) var(--pa-auth-gutter) 96px;
+  padding: clamp(28px, 5vh, 56px) var(--home-gutter) 96px;
 }
 
 .home-menu {
@@ -109,8 +110,13 @@
     sans-serif;
 }
 
-.home-preview {
-  width: min(430px, 100%);
+/* Mais transparente que o cartão das telas de conta: aqui o fundo é escuro e
+   vale a pena deixar o mapa aparecer através dele. */
+.home-screen .home-preview {
+  width: min(420px, 100%);
+  background: rgb(var(--pa-shade-rgb) / 0.48);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
 }
 
 .home-eyebrow {
@@ -340,14 +346,6 @@
 }
 
 @media (max-width: 560px) {
-  .home-top {
-    padding-inline: 20px;
-  }
-
-  .home-stage {
-    padding-inline: 20px;
-  }
-
   .home-item {
     letter-spacing: 0.2em;
   }
