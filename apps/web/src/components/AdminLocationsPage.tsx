@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PAULO_AFONSO_CENTER } from '@paguessr/shared';
@@ -23,7 +23,6 @@ export function AdminLocationsPage({
   const [loading, setLoading] = useState(true);
   const [isForbidden, setIsForbidden] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'panorama' | 'static'>('all');
 
   const loadLocations = async () => {
     setLoading(true);
@@ -52,18 +51,6 @@ export function AdminLocationsPage({
     loadLocations();
   }, []);
 
-  const panoramaCount = useMemo(
-    () => locations.filter((loc) => Boolean(loc.pano_id)).length,
-    [locations]
-  );
-  const staticCount = locations.length - panoramaCount;
-
-  const filteredLocations = useMemo(() => {
-    if (filter === 'panorama') return locations.filter((l) => Boolean(l.pano_id));
-    if (filter === 'static') return locations.filter((l) => !l.pano_id);
-    return locations;
-  }, [locations, filter]);
-
   return (
     <div className="admin-page">
       <header className="admin-header">
@@ -77,36 +64,6 @@ export function AdminLocationsPage({
             <span className="admin-stat-pill">
               Total: <strong>{locations.length}</strong>
             </span>
-            <span className="admin-stat-pill">
-              360°: <strong>{panoramaCount}</strong>
-            </span>
-            <span className="admin-stat-pill">
-              Estáticos: <strong>{staticCount}</strong>
-            </span>
-
-            <div className="admin-filters">
-              <button
-                type="button"
-                className={`admin-filter-btn ${filter === 'all' ? 'active' : ''}`}
-                onClick={() => setFilter('all')}
-              >
-                Todos
-              </button>
-              <button
-                type="button"
-                className={`admin-filter-btn ${filter === 'panorama' ? 'active' : ''}`}
-                onClick={() => setFilter('panorama')}
-              >
-                360°
-              </button>
-              <button
-                type="button"
-                className={`admin-filter-btn ${filter === 'static' ? 'active' : ''}`}
-                onClick={() => setFilter('static')}
-              >
-                Estáticos
-              </button>
-            </div>
           </div>
         )}
 
@@ -178,13 +135,13 @@ export function AdminLocationsPage({
               maxZoom={19}
             />
 
-            {filteredLocations.map((loc) => (
+            {locations.map((loc) => (
               <CircleMarker
                 key={loc.id}
                 center={[loc.lat, loc.lng]}
                 radius={6}
                 pathOptions={{
-                  fillColor: loc.pano_id ? '#3b82f6' : '#10b981',
+                  fillColor: '#3b82f6',
                   fillOpacity: 0.85,
                   color: '#ffffff',
                   weight: 1.5,
@@ -217,6 +174,14 @@ export function AdminLocationsPage({
                           : <em>Não informada</em>}
                       </div>
                     </div>
+                    <a
+                      className="admin-popup-maps-link"
+                      href={`https://www.google.com/maps?q=${loc.lat},${loc.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Abrir no Google Maps
+                    </a>
                   </div>
                 </Popup>
               </CircleMarker>
