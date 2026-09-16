@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { recoverPassword, type PublicUser } from '../../api/auth';
-import { AuthLayout } from './AuthLayout';
+import { AuthError, AuthLayout } from './AuthLayout';
 
 const PASSWORD_MIN_LENGTH = 6;
 
@@ -46,9 +46,10 @@ export function RecoverPasswordScreen({
     <AuthLayout
       title="Recuperar senha"
       subtitle="Informe seu nick e o código de recuperação mostrado na criação da conta."
+      onBack={onGoToLogin}
     >
       <form className="auth-form" onSubmit={handleSubmit}>
-        {error && <div className="auth-error">{error}</div>}
+        {error && <AuthError>{error}</AuthError>}
         <div className="auth-field">
           <label htmlFor="recover-nick">Nick</label>
           <input
@@ -63,6 +64,7 @@ export function RecoverPasswordScreen({
           <label htmlFor="recover-code">Código de recuperação</label>
           <input
             id="recover-code"
+            className="auth-input-code"
             value={recoveryCode}
             onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
             placeholder="XXXX-XXXX-XXXX"

@@ -1,0 +1,30 @@
+/* Identidade visual do PAguessr, tirada da arte da capa (tela de título).
+   Regra de uso: creme marca foco e seleção (a tarja do menu); a cor de destaque,
+   o dourado do sol, fica só pro que confirma ou vale ponto. Todo par de texto e
+   fundo abaixo passa no contraste WCAG AA. */
+:root {
+  --pa-night: #060b11;
+  --pa-shade-rgb: 5 9 14;
+  --pa-cream: #f6ecd4;
+  --pa-cream-rgb: 246 236 212;
+  /* Creme suave pra rótulos e textos de apoio: continua AA mesmo sobre as partes
+     claras da arte cobertas pela sombra do painel. */
+  --pa-cream-soft: #c9c1ad;
+  --pa-ink: #10161d;
+  --pa-sun: #eab25a;
+  --pa-sun-rgb: 234 178 90;
+  --pa-sun-hover: #f1c577;
+  --pa-sun-ink: #1a1206;
+  --pa-sky: #6fb0e3;
+  --pa-danger: #ef8e73;
+  --pa-danger-rgb: 239 142 115;
+
+  --pa-accent: var(--pa-sun);
+  --pa-accent-rgb: var(--pa-sun-rgb);
+  --pa-accent-hover: var(--pa-sun-hover);
+  --pa-accent-ink: var(--pa-sun-ink);
+
+  --pa-font: 'Saira', 'Segoe UI', system-ui, sans-serif;
+  /* Só no código de recuperação, pra não confundir 0 com O. */
+  --pa-font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}

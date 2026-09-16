@@ -1,0 +1,86 @@
+/* Peças de interface de jogo repetidas entre telas, no molde do menu do Stray:
+   dicas de tecla no canto, versão no rodapé e a sombra das telas de conta. */
+
+:root {
+  --pa-auth-panel: 420px;
+  --pa-auth-gutter: clamp(24px, 4vw, 72px);
+  /* Fundo das telas de conta, também usado na saída da tela de título pra troca
+     de tela virar continuação: a capa inteira escurece por igual, com vinheta,
+     e o cartão do formulário entra por cima. Sem faixa, sem emenda. */
+  --pa-auth-veil:
+    linear-gradient(rgb(var(--pa-shade-rgb) / 0.52), rgb(var(--pa-shade-rgb) / 0.52)),
+    radial-gradient(ellipse 85% 80% at 50% 45%, transparent 42%, rgb(3 6 10 / 0.62) 100%);
+}
+
+/* Celular em pé: a arte fica no topo, enquadrada no logo, e o conteúdo vai pro
+   fundo escuro abaixo dela — não há o que escurecer. */
+@media (max-aspect-ratio: 4/5) {
+  :root {
+    --pa-auth-veil: none;
+  }
+}
+
+.game-version {
+  position: fixed;
+  left: max(16px, 1.6vw);
+  bottom: max(12px, 1.6vh);
+  color: rgb(var(--pa-cream-rgb) / 0.5);
+  font:
+    400 11px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+.game-hint {
+  position: fixed;
+  right: max(20px, 3vw);
+  bottom: max(18px, 3.2vh);
+  display: flex;
+  align-items: center;
+  gap: 1.6em;
+  color: rgb(var(--pa-cream-rgb) / 0.85);
+  font:
+    400 clamp(15px, 0.5vw + 9px, 19px) / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+.game-hint > span {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+
+.game-hint kbd {
+  display: grid;
+  place-items: center;
+  min-width: 1.75em;
+  height: 1.75em;
+  padding: 0 0.5em;
+  border-radius: 999px;
+  background: rgb(var(--pa-cream-rgb) / 0.85);
+  color: var(--pa-ink);
+  font:
+    700 0.6em / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.game-hint svg {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Sem teclado à vista no celular, a dica não faz sentido. */
+@media (hover: none) and (pointer: coarse) {
+  .game-hint {
+    display: none;
+  }
+}

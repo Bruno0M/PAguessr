@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
-import './styles/navyTheme.css';
 import { HomeScreen } from './components/HomeScreen';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { RegisterScreen } from './components/auth/RegisterScreen';
@@ -285,7 +284,9 @@ export function App() {
   // Tela de título: abre o jogo pra todo mundo (com ou sem sessão) e é o destino
   // do "Sair". O me() lá em cima confere a sessão enquanto ela está na tela.
   if (showTitle) {
-    return <TitleScreen ready={authChecked} onStart={() => setShowTitle(false)} />;
+    return (
+      <TitleScreen ready={authChecked} goesToAuth={!authUser} onStart={() => setShowTitle(false)} />
+    );
   }
 
   if (!authChecked) {
@@ -330,6 +331,7 @@ export function App() {
         onSuccess={(user) => setAuthUser(user)}
         onGoToRegister={() => setAuthView('register')}
         onGoToRecover={() => setAuthView('recover')}
+        onGoToTitle={() => setShowTitle(true)}
       />
     );
   }

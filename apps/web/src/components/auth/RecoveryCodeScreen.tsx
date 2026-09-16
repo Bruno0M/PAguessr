@@ -24,7 +24,8 @@ export function RecoveryCodeScreen({
 
   return (
     <AuthLayout
-      title="Guarde seu código de recuperação"
+      eyebrow="Conta criada"
+      title="Guarde seu código"
       subtitle="Esse código só aparece uma vez. Se você esquecer a senha, é ele que permite criar uma nova — sem ele, a única saída é criar outra conta."
     >
       <div className="recovery-code-box">

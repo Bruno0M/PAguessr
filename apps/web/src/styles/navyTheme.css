@@ -1,5 +1,5 @@
-/* Paleta navy + verde-neon da identidade visual do PAguessr (ver HomeScreen.css),
-   compartilhada pelas telas de conta pra não divergir do resto do jogo. */
+/* Paleta antiga (navy + verde-neon), hoje usada só pela tela de ranking. As telas
+   já redesenhadas usam as variáveis de styles/tokens.css. */
 :root {
   --navy-bg: #0e1b2d;
   --navy-bg-glow: radial-gradient(ellipse at 80% 42%, #16425b66, transparent 55%);
