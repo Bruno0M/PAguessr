@@ -28,6 +28,6 @@ export async function resetTestDatabase() {
     );
   }
 
-  await sql`TRUNCATE TABLE rounds, games, locations, sessions, users RESTART IDENTITY CASCADE`;
+  await sql`TRUNCATE TABLE rounds, games, locations, sessions, users, streetview_panorama_usage RESTART IDENTITY CASCADE`;
   await db.insert(locations).values(TEST_LOCATIONS);
 }

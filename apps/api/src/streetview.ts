@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { db } from './db/index.js';
+import { StreetviewMode } from '@paguessr/shared';
+import { db, sql } from './db/index.js';
 import { locations, NewLocation } from './db/schema.js';
 
 export interface GridPoint {
@@ -85,6 +86,27 @@ export function isValidMetadata(
   minDateCutoff = MINIMUM_YEAR_CUTOFF
 ): boolean {
   return evaluateMetadata(meta, seenPanoIds, minDateCutoff).valid;
+}
+
+export async function resolveStreetviewMode(): Promise<StreetviewMode> {
+  if (process.env.STREETVIEW_PANORAMA_ENABLED !== 'true') {
+    return 'static';
+  }
+
+  const budget = parseInt(process.env.STREETVIEW_PANORAMA_MONTHLY_BUDGET || '4500', 10);
+  const now = new Date();
+  const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  const rows = await sql<{ count: number }[]>`
+    INSERT INTO streetview_panorama_usage (year_month, count)
+    VALUES (${yearMonth}, 1)
+    ON CONFLICT (year_month)
+    DO UPDATE SET count = streetview_panorama_usage.count + 1
+    RETURNING count
+  `;
+
+  const count = rows[0]?.count ?? 0;
+  return count <= budget ? 'panorama' : 'static';
 }
 
 // A partir daqui o código sempre chama a API real do Google — de propósito

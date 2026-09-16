@@ -60,6 +60,7 @@ describe('Game Routes Integration', () => {
     for (const r of data.rounds) {
       expect(r).toHaveProperty('id');
       expect(r).toHaveProperty('ordem');
+      expect(r).toHaveProperty('streetview_mode', 'static');
       expect(r).not.toHaveProperty('lat');
       expect(r).not.toHaveProperty('lng');
       expect(r).not.toHaveProperty('location');
@@ -442,5 +443,89 @@ describe('Game Routes Integration', () => {
 
     const overlap = secondLocationIds.filter((id) => firstLocationIds.includes(id));
     expect(overlap).toHaveLength(0);
+  });
+
+  it('GET /api/rounds/:id/panorama sem sessão retorna 401', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/rounds/1/panorama' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('GET /api/rounds/:id/panorama retorna 404 para rodada de outro usuário ou inexistente', async () => {
+    const cookieA = await loginNewUser(app, 'panousera');
+    const cookieB = await loginNewUser(app, 'panouserb');
+
+    const gameA = await createAuthenticatedGame(app, cookieA);
+
+    const resOther = await app.inject({
+      method: 'GET',
+      url: `/api/rounds/${gameA.rounds[0].id}/panorama`,
+      headers: { cookie: cookieB },
+    });
+    expect(resOther.statusCode).toBe(404);
+
+    const resNonExistent = await app.inject({
+      method: 'GET',
+      url: '/api/rounds/999999/panorama',
+      headers: { cookie: cookieA },
+    });
+    expect(resNonExistent.statusCode).toBe(404);
+  });
+
+  it('GET /api/rounds/:id/panorama retorna 409 quando o modo é static', async () => {
+    const cookie = await loginNewUser(app, 'panouserstatic');
+    const game = await createAuthenticatedGame(app, cookie);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/rounds/${game.rounds[0].id}/panorama`,
+      headers: { cookie },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(JSON.parse(res.body).error).toContain('modo panorama');
+  });
+
+  it('cria partida com panorama e devolve pano_id apenas enquanto não respondida', async () => {
+    const origEnabled = process.env.STREETVIEW_PANORAMA_ENABLED;
+    const origBudget = process.env.STREETVIEW_PANORAMA_MONTHLY_BUDGET;
+    process.env.STREETVIEW_PANORAMA_ENABLED = 'true';
+    process.env.STREETVIEW_PANORAMA_MONTHLY_BUDGET = '2';
+
+    try {
+      const cookie = await loginNewUser(app, 'panouserbudget');
+      const game = await createAuthenticatedGame(app, cookie);
+
+      expect(game.rounds[0].streetview_mode).toBe('panorama');
+      expect(game.rounds[1].streetview_mode).toBe('panorama');
+      expect(game.rounds[2].streetview_mode).toBe('static');
+      expect(game.rounds[3].streetview_mode).toBe('static');
+      expect(game.rounds[4].streetview_mode).toBe('static');
+
+      const panoRes = await app.inject({
+        method: 'GET',
+        url: `/api/rounds/${game.rounds[0].id}/panorama`,
+        headers: { cookie },
+      });
+      expect(panoRes.statusCode).toBe(200);
+      const panoData = JSON.parse(panoRes.body);
+      expect(panoData).toHaveProperty('pano_id');
+      expect(typeof panoData.pano_id).toBe('string');
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/rounds/${game.rounds[0].id}/guess`,
+        headers: { cookie },
+        payload: { lat: -9.4, lng: -38.2 },
+      });
+
+      const afterGuessRes = await app.inject({
+        method: 'GET',
+        url: `/api/rounds/${game.rounds[0].id}/panorama`,
+        headers: { cookie },
+      });
+      expect(afterGuessRes.statusCode).toBe(409);
+    } finally {
+      process.env.STREETVIEW_PANORAMA_ENABLED = origEnabled;
+      process.env.STREETVIEW_PANORAMA_MONTHLY_BUDGET = origBudget;
+    }
   });
 });

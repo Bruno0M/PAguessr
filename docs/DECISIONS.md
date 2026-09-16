@@ -32,14 +32,19 @@ Registrado em 2026-09-10.
   1. script que percorre uma grade de pontos sobre a cidade (~200 m) para mapear a cobertura;
   2. montar a lista de locais descartando panoramas antigos, `pano_id` repetidos e imagens de interiores (`source=outdoor`);
   3. a `location` devolvida é a resposta certa da rodada, não o ponto da grade.
-- **Futuro, 360°:** Dynamic Street View (SKU Pro, 5.000 carregamentos grátis por mês, US$ 14 por 1.000 depois). Andar e girar dentro do panorama não gera cobrança extra.
+- **Dynamic Street View (360° interativo):** SKU Pro, 5.000 carregamentos grátis por mês (cota separada da Static), US$ 14 por 1.000 depois. Andar e girar dentro do panorama não gera cobrança extra.
+  - Controlado pela feature flag `STREETVIEW_PANORAMA_ENABLED` (`false` por padrão).
+  - Controle de orçamento: `STREETVIEW_PANORAMA_MONTHLY_BUDGET` (padrão `4500`, margem de segurança antes do teto de 5.000). A tabela `streetview_panorama_usage` registra atomicamente os carregamentos por mês (`YYYY-MM`). Se o consumo ultrapassar o teto estipulado, a criação da rodada faz fallback transparente para `'static'`.
+  - Chave do cliente: `GOOGLE_MAPS_BROWSER_KEY`, pública no frontend (via `GET /api/config`), restrita por HTTP referrer/domínio no GCP Console.
 - Sem panorama no local, usar fotos próprias.
 
 ### Anti-cola
 
-- A imagem passa por um **proxy na API** (`GET /api/rounds/:id/image`): a chave do Google fica só no servidor e o navegador nunca vê `location` nem `pano_id`.
+- No **modo estático**, a imagem passa por um **proxy na API** (`GET /api/rounds/:id/image`): a chave do Google fica só no servidor e o navegador nunca vê `location` nem `pano_id`.
+- No **modo panorama (360°)**, o `pano_id` é disponibilizado via `GET /api/rounds/:id/panorama` apenas enquanto a rodada não foi respondida.
+  - **Trade-off aceito conscientemente:** para a Maps JavaScript API renderizar a esfera 360° interativa, o navegador obrigatoriamente precisa conhecer o `pano_id` (não é viável fazer proxy de tiles dinâmicos como na imagem estática). Um jogador que abrir as ferramentas de desenvolvedor (DevTools) consegue inspecionar o `pano_id` e consultar o ponto exato no Google Maps antes do palpite. O GeoGuessr original possui esse mesmo trade-off, e assumimos essa limitação em prol da jogabilidade 360°.
 - A rodada só revela a localização correta na resposta do palpite; um segundo palpite na mesma rodada é recusado.
-- Com o proxy, URL signing deixa de ser necessário para esconder a chave.
+- Com o proxy estático e a chave de browser restrita por referrer, URL signing deixa de ser necessário.
 
 ### Custos e proteções no Google Cloud
 

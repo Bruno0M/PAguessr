@@ -3,6 +3,8 @@ export interface LatLng {
   lng: number;
 }
 
+export type StreetviewMode = 'static' | 'panorama';
+
 export const PAULO_AFONSO_CENTER: LatLng = {
   lat: -9.4064,
   lng: -38.2147,

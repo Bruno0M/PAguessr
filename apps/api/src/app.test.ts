@@ -45,4 +45,33 @@ describe('API App', () => {
     expect(response.statusCode).toBeGreaterThanOrEqual(400);
     await app.close();
   });
+
+  it('responde na rota pública /api/config com googleMapsBrowserKey', async () => {
+    process.env.GOOGLE_MAPS_BROWSER_KEY = 'test-browser-key';
+    const app = buildApp();
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/config',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body).toEqual({ googleMapsBrowserKey: 'test-browser-key' });
+    await app.close();
+    delete process.env.GOOGLE_MAPS_BROWSER_KEY;
+  });
+
+  it('responde na rota pública /config com googleMapsBrowserKey vazio por padrão', async () => {
+    delete process.env.GOOGLE_MAPS_BROWSER_KEY;
+    const app = buildApp();
+    const response = await app.inject({
+      method: 'GET',
+      url: '/config',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body).toEqual({ googleMapsBrowserKey: '' });
+    await app.close();
+  });
 });

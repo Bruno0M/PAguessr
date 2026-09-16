@@ -59,6 +59,15 @@ export function buildApp(): FastifyInstance {
   app.get('/health', healthHandler);
   app.get('/api/health', healthHandler);
 
+  const configHandler = async () => {
+    return {
+      googleMapsBrowserKey: process.env.GOOGLE_MAPS_BROWSER_KEY || '',
+    };
+  };
+
+  app.get('/config', configHandler);
+  app.get('/api/config', configHandler);
+
   app.register(gameRoutes, { prefix: '/api' });
   app.register(gameRoutes);
   app.register(authRoutes, { prefix: '/api' });

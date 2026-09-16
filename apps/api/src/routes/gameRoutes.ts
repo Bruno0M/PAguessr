@@ -4,6 +4,7 @@ import { haversine, score, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
 import { db } from '../db/index.js';
 import { games, locations, rounds, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
+import { resolveStreetviewMode } from '../streetview.js';
 
 const MIN_LOCATIONS_PER_GAME = 5;
 const RECENT_GAMES_TO_AVOID = 2;
@@ -121,15 +122,20 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       .values({ user_id: currentUserId(request) })
       .returning();
 
+    const roundsToInsert = [];
+    for (let idx = 0; idx < selected.length; idx++) {
+      const mode = await resolveStreetviewMode();
+      roundsToInsert.push({
+        game_id: newGame.id,
+        location_id: selected[idx].id,
+        ordem: idx + 1,
+        streetview_mode: mode,
+      });
+    }
+
     const createdRounds = await db
       .insert(rounds)
-      .values(
-        selected.map((loc, idx) => ({
-          game_id: newGame.id,
-          location_id: loc.id,
-          ordem: idx + 1,
-        }))
-      )
+      .values(roundsToInsert)
       .returning();
 
     createdRounds.sort((a, b) => a.ordem - b.ordem);
@@ -143,6 +149,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         id: r.id,
         ordem: r.ordem,
         order: r.ordem,
+        streetview_mode: r.streetview_mode,
         started_at: r.ordem === 1 ? firstRoundStartedAt : null,
         startedAt: r.ordem === 1 ? firstRoundStartedAt : null,
       })),
@@ -180,6 +187,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           pontos: rounds.pontos,
           started_at: rounds.started_at,
           created_at: rounds.created_at,
+          streetview_mode: rounds.streetview_mode,
           location_lat: locations.lat,
           location_lng: locations.lng,
         })
@@ -195,6 +203,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           id: r.id,
           ordem: r.ordem,
           order: r.ordem,
+          streetview_mode: r.streetview_mode,
           guess_lat: r.guess_lat,
           guess_lng: r.guess_lng,
           guess:
@@ -323,6 +332,51 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         .type('image/svg+xml')
         .header('Cache-Control', apiKey ? 'no-store' : 'public, max-age=3600')
         .send(svgPlaceholder);
+    }
+  );
+
+  app.get(
+    '/rounds/:id/panorama',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: number };
+
+      const [round] = await db.select().from(rounds).where(eq(rounds.id, id));
+      if (!round) {
+        return reply.status(404).send({ error: 'Rodada não encontrada' });
+      }
+
+      const [game] = await db.select().from(games).where(eq(games.id, round.game_id));
+      if (!game || game.user_id !== currentUserId(request)) {
+        return reply.status(404).send({ error: 'Rodada não encontrada' });
+      }
+
+      if (round.pontos !== null) {
+        return reply.status(409).send({ error: 'Palpite já registrado para esta rodada' });
+      }
+
+      if (round.streetview_mode !== 'panorama') {
+        return reply.status(409).send({ error: 'Rodada não utiliza o modo panorama' });
+      }
+
+      const [loc] = await db.select().from(locations).where(eq(locations.id, round.location_id));
+      if (!loc) {
+        return reply.status(404).send({ error: 'Local não encontrado' });
+      }
+
+      return reply.send({
+        pano_id: loc.pano_id,
+      });
     }
   );
 

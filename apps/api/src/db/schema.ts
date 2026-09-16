@@ -9,6 +9,7 @@ import {
   integer,
   index,
 } from 'drizzle-orm/pg-core';
+import { StreetviewMode } from '@paguessr/shared';
 
 export const locations = pgTable('locations', {
   id: serial('id').primaryKey(),
@@ -47,10 +48,16 @@ export const rounds = pgTable('rounds', {
   guess_lng: doublePrecision('guess_lng'),
   distancia: doublePrecision('distancia'),
   pontos: integer('pontos'),
+  streetview_mode: text('streetview_mode').$type<StreetviewMode>().notNull().default('static'),
   started_at: timestamp('started_at', { withTimezone: true }),
   // Quantas vezes o proxy já buscou a imagem desta rodada no Google (cota paga).
   image_fetches: integer('image_fetches').notNull().default(0),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const streetviewPanoramaUsage = pgTable('streetview_panorama_usage', {
+  year_month: text('year_month').primaryKey(),
+  count: integer('count').notNull().default(0),
 });
 
 export const users = pgTable('users', {
@@ -86,3 +93,5 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
+export type StreetviewPanoramaUsage = typeof streetviewPanoramaUsage.$inferSelect;
+export type NewStreetviewPanoramaUsage = typeof streetviewPanoramaUsage.$inferInsert;

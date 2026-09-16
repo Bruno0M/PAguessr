@@ -30,6 +30,9 @@ services:
       DATABASE_URL: ${DATABASE_URL_DOCKER:-postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-paguessr}}
       NODE_ENV: ${NODE_ENV:-production}
       GOOGLE_STREET_VIEW_API_KEY: ${GOOGLE_STREET_VIEW_API_KEY:-}
+      GOOGLE_MAPS_BROWSER_KEY: ${GOOGLE_MAPS_BROWSER_KEY:-}
+      STREETVIEW_PANORAMA_ENABLED: ${STREETVIEW_PANORAMA_ENABLED:-false}
+      STREETVIEW_PANORAMA_MONTHLY_BUDGET: ${STREETVIEW_PANORAMA_MONTHLY_BUDGET:-4500}
     depends_on:
       postgres:
         condition: service_healthy
