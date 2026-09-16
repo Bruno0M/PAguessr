@@ -35,7 +35,7 @@ export function AuthLayout({
 
   return (
     <div className="auth-screen">
-      <main className="auth-panel" ref={panelRef}>
+      <main className="game-card auth-panel" ref={panelRef}>
         <p className="auth-eyebrow">{eyebrow}</p>
         <h1 className="auth-title">{title}</h1>
         {subtitle && <p className="auth-subtitle">{subtitle}</p>}

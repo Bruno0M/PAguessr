@@ -61,7 +61,7 @@ export function LoginScreen({
             required
           />
         </div>
-        <button type="submit" className="auth-submit" disabled={submitting}>
+        <button type="submit" className="game-cta auth-submit" disabled={submitting}>
           {submitting ? 'Entrando...' : 'Entrar'}
         </button>
         <div className="auth-links">

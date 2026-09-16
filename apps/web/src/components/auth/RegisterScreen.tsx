@@ -101,7 +101,7 @@ export function RegisterScreen({
           <label>Avatar</label>
           <AvatarPicker value={avatarId} onChange={setAvatarId} />
         </div>
-        <button type="submit" className="auth-submit" disabled={submitting}>
+        <button type="submit" className="game-cta auth-submit" disabled={submitting}>
           {submitting ? 'Criando conta...' : 'Criar conta'}
         </button>
         <div className="auth-links">

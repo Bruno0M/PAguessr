@@ -93,7 +93,7 @@ export function RecoverPasswordScreen({
             required
           />
         </div>
-        <button type="submit" className="auth-submit" disabled={submitting}>
+        <button type="submit" className="game-cta auth-submit" disabled={submitting}>
           {submitting ? 'Recuperando...' : 'Trocar senha e entrar'}
         </button>
         <div className="auth-links">
