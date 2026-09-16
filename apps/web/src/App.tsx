@@ -395,7 +395,6 @@ export function App() {
       <HomeScreen
         user={authUser}
         onLogout={handleLogout}
-        onStartTraining={() => startNewGame(true)}
         onStartRanked={() => startNewGame(false)}
         onOpenRanking={() => setShowRanking(true)}
       />

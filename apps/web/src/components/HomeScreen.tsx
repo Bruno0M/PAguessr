@@ -4,7 +4,7 @@ import { getRanking } from '../api/ranking';
 import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
 
-type MenuId = 'treino' | 'ranqueado' | 'ranking' | 'como' | 'sair';
+type MenuId = 'ranqueado' | 'ranking' | 'como' | 'sair';
 
 type MenuItem = {
   id: MenuId;
@@ -15,14 +15,6 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
-  {
-    id: 'treino',
-    label: 'Treino',
-    eyebrow: 'Modo',
-    description:
-      'Cinco pontos fixos de Paulo Afonso, sem cronômetro. Bom pra aprender a cidade, mas não conta pro ranking.',
-    facts: ['5 rodadas', 'Sem tempo', 'Fora do ranking'],
-  },
   {
     id: 'ranqueado',
     label: 'Ranqueado',
@@ -58,13 +50,11 @@ const MENU_ITEMS: MenuItem[] = [
 export function HomeScreen({
   user,
   onLogout,
-  onStartTraining,
   onStartRanked,
   onOpenRanking,
 }: {
   user: PublicUser;
   onLogout: () => void;
-  onStartTraining: () => void;
   onStartRanked: () => void;
   onOpenRanking: () => void;
 }) {
@@ -92,7 +82,6 @@ export function HomeScreen({
   }, []);
 
   const activate = (id: MenuId) => {
-    if (id === 'treino') onStartTraining();
     if (id === 'ranqueado') onStartRanked();
     if (id === 'ranking') onOpenRanking();
     if (id === 'como') instructionsRef.current?.showModal();
@@ -265,12 +254,9 @@ export function HomeScreen({
         <button
           type="button"
           className="game-cta instructions-play"
-          onClick={() => {
-            instructionsRef.current?.close();
-            onStartTraining();
-          }}
+          onClick={() => instructionsRef.current?.close()}
         >
-          Entendi, vamos jogar
+          Entendi
         </button>
       </dialog>
     </div>
