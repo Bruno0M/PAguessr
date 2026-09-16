@@ -31,7 +31,7 @@ const RankingScreen = lazy(() =>
 type AuthView = 'login' | 'register' | 'recover';
 
 export function App() {
-  const [showTitle, setShowTitle] = useState(true);
+  const [showTitle, setShowTitle] = useState(() => window.location.pathname !== '/admin');
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
