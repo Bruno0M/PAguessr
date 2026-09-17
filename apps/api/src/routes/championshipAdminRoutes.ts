@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   CHAMPIONSHIP_SIZES,
   ROUND_DURATION_MIN_SECONDS,
@@ -22,6 +22,7 @@ import {
   championshipMatches,
 } from '../db/schema.js';
 import { requireAdmin } from '../auth/session.js';
+import { advanceChampionship } from '../championship/advance.js';
 
 interface CreateChampionshipBody {
   title: string;
@@ -298,14 +299,29 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
       });
     }
 
-    const [updated] = await db
-      .update(championships)
-      .set({
-        status: 'em_andamento',
-        started_at: new Date(),
-      })
-      .where(eq(championships.id, id))
-      .returning();
+    const now = new Date();
+    const [updated] = await db.transaction(async (tx) => {
+      const [u] = await tx
+        .update(championships)
+        .set({
+          status: 'em_andamento',
+          started_at: now,
+        })
+        .where(eq(championships.id, id))
+        .returning();
+
+      await tx
+        .update(championshipMatches)
+        .set({ opens_at: now })
+        .where(
+          and(
+            eq(championshipMatches.championship_id, id),
+            eq(championshipMatches.phase, 1)
+          )
+        );
+
+      return [u];
+    });
 
     return reply.send(updated);
   });
@@ -324,6 +340,7 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
       });
     }
 
-    return reply.send(champ);
+    const result = await advanceChampionship(id, { force: true });
+    return reply.send(result.championship);
   });
 };
