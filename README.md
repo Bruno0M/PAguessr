@@ -19,7 +19,7 @@ PAguessr é um Jogo de adivinhação geográfica (inspirado no GeoGuessr) focado
 
 <img src="imagem3.png" alt="Interface do Jogo">
 
-> Interface com o mapa da cidade onde o jogador deve selecionar no mapa a localização do mapa.
+> Interface com o mapa da cidade onde o jogador deve selecionar no mapa a localização da imagem.
 
 ### Ajustes e melhorias
 
