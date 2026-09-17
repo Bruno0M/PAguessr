@@ -61,6 +61,8 @@ describe('Game Routes Integration', () => {
       expect(r).toHaveProperty('id');
       expect(r).toHaveProperty('ordem');
       expect(r).toHaveProperty('streetview_mode', 'static');
+      expect(r).toHaveProperty('duration_seconds', 60);
+      expect(r).toHaveProperty('durationSeconds', 60);
       expect(r).not.toHaveProperty('lat');
       expect(r).not.toHaveProperty('lng');
       expect(r).not.toHaveProperty('location');
@@ -204,6 +206,54 @@ describe('Game Routes Integration', () => {
 
       const [row] = await db.select().from(rounds).where(eq(rounds.id, roundId));
       expect(row.image_fetches).toBe(1);
+    });
+
+    it('respeita a janela do proxy (duration + 10s) para rodada de 10s', async () => {
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+
+      await db
+        .update(rounds)
+        .set({ duration_seconds: 10, started_at: new Date(Date.now() - 19_000) })
+        .where(eq(rounds.id, roundId));
+
+      const resInside = await getImage(roundId);
+      expect(resInside.headers['content-type']).toContain('image/jpeg');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      await db
+        .update(rounds)
+        .set({ started_at: new Date(Date.now() - 21_000) })
+        .where(eq(rounds.id, roundId));
+
+      fetchSpy.mockClear();
+      const resOutside = await getImage(roundId);
+      expect(resOutside.headers['content-type']).toContain('image/svg+xml');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('respeita a janela do proxy (duration + 10s) para rodada de 300s', async () => {
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+
+      await db
+        .update(rounds)
+        .set({ duration_seconds: 300, started_at: new Date(Date.now() - 309_000) })
+        .where(eq(rounds.id, roundId));
+
+      const resInside = await getImage(roundId);
+      expect(resInside.headers['content-type']).toContain('image/jpeg');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      await db
+        .update(rounds)
+        .set({ started_at: new Date(Date.now() - 311_000) })
+        .where(eq(rounds.id, roundId));
+
+      fetchSpy.mockClear();
+      const resOutside = await getImage(roundId);
+      expect(resOutside.headers['content-type']).toContain('image/svg+xml');
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -368,6 +418,82 @@ describe('Game Routes Integration', () => {
     expect(data.distancia).not.toBeNull();
   });
 
+  it('isLate zera pontuação para rodada de 10s aos 11s, mas pontua aos 9s', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+    const round1Id = game.rounds[0].id;
+    const round2Id = game.rounds[1].id;
+
+    // 9s em rodada de 10s: pontua
+    await db
+      .update(rounds)
+      .set({ duration_seconds: 10, started_at: new Date(Date.now() - 9_000) })
+      .where(eq(rounds.id, round1Id));
+
+    const resValid = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${round1Id}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+    expect(resValid.statusCode).toBe(200);
+    const dataValid = JSON.parse(resValid.body);
+    expect(dataValid.pontos).toBeGreaterThan(0);
+
+    // 11s em rodada de 10s: zera
+    await db
+      .update(rounds)
+      .set({ duration_seconds: 10, started_at: new Date(Date.now() - 11_000) })
+      .where(eq(rounds.id, round2Id));
+
+    const resLate = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${round2Id}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+    expect(resLate.statusCode).toBe(200);
+    const dataLate = JSON.parse(resLate.body);
+    expect(dataLate.pontos).toBe(0);
+  });
+
+  it('isLate zera pontuação para rodada de 300s aos 301s, mas pontua aos 299s', async () => {
+    const game = await createAuthenticatedGame(app, authCookie);
+    const round1Id = game.rounds[0].id;
+    const round2Id = game.rounds[1].id;
+
+    // 299s em rodada de 300s: pontua
+    await db
+      .update(rounds)
+      .set({ duration_seconds: 300, started_at: new Date(Date.now() - 299_000) })
+      .where(eq(rounds.id, round1Id));
+
+    const resValid = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${round1Id}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+    expect(resValid.statusCode).toBe(200);
+    const dataValid = JSON.parse(resValid.body);
+    expect(dataValid.pontos).toBeGreaterThan(0);
+
+    // 301s em rodada de 300s: zera
+    await db
+      .update(rounds)
+      .set({ duration_seconds: 300, started_at: new Date(Date.now() - 301_000) })
+      .where(eq(rounds.id, round2Id));
+
+    const resLate = await app.inject({
+      method: 'POST',
+      url: `/api/rounds/${round2Id}/guess`,
+      headers: { cookie: authCookie },
+      payload: { lat: -9.4064, lng: -38.2147 },
+    });
+    expect(resLate.statusCode).toBe(200);
+    const dataLate = JSON.parse(resLate.body);
+    expect(dataLate.pontos).toBe(0);
+  });
+
   it('dois palpites concorrentes na mesma rodada: só um vale, o outro é rejeitado', async () => {
     const game = await createAuthenticatedGame(app, authCookie);
     const roundId = game.rounds[0].id;
@@ -415,6 +541,8 @@ describe('Game Routes Integration', () => {
     expect(summary.id).toBe(game.id);
     expect(summary.rounds).toHaveLength(5);
     expect(summary.rounds[0].distancia).not.toBeNull();
+    expect(summary.rounds[0].duration_seconds).toBe(60);
+    expect(summary.rounds[0].durationSeconds).toBe(60);
     expect(summary.rounds[0].location).toHaveProperty('lat');
     expect(summary.rounds[1].distancia).toBeNull();
     expect(summary.rounds[1].location).toBeUndefined();
