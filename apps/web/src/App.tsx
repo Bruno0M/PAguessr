@@ -23,6 +23,7 @@ import { GameResult } from './components/GameResult';
 import { AdminApp } from './components/admin/AdminApp';
 import { ChampionshipsPage } from './components/championships/ChampionshipsPage';
 import { ChampionshipDetailPage } from './components/championships/ChampionshipDetailPage';
+import { DuelScreen } from './components/duel';
 import { track } from './lib/analytics';
 
 // Carregado sob demanda: three.js/@react-three só entram no bundle de quem
@@ -42,6 +43,7 @@ export function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authView, setAuthView] = useState<AuthView>('login');
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
+  const [duelOpponentNick, setDuelOpponentNick] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname);
@@ -74,6 +76,7 @@ export function App() {
     setAuthView('login');
     setShowRanking(false);
     setShowTitle(true);
+    setDuelOpponentNick(undefined);
     returnHome();
   }, [returnHome]);
 
@@ -403,6 +406,22 @@ export function App() {
         </Suspense>
       );
     }
+    const duelMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/(?:duelo|matches)\/([^/]+)$/);
+    if (duelMatch) {
+      const [, champId, matchId] = duelMatch;
+      return (
+        <DuelScreen
+          championshipId={champId}
+          matchId={matchId}
+          user={authUser}
+          opponentNick={duelOpponentNick}
+          onBackToBracket={() => {
+            setDuelOpponentNick(undefined);
+            navigate(`/campeonatos/${champId}`);
+          }}
+        />
+      );
+    }
     if (currentPath.startsWith('/campeonatos/')) {
       const championshipId = currentPath.slice('/campeonatos/'.length);
       return (
@@ -410,6 +429,10 @@ export function App() {
           championshipId={championshipId}
           user={authUser}
           onBack={() => navigate('/campeonatos')}
+          onEnterMatch={(matchId, oppNick) => {
+            setDuelOpponentNick(oppNick);
+            navigate(`/campeonatos/${championshipId}/duelo/${matchId}`);
+          }}
         />
       );
     }
