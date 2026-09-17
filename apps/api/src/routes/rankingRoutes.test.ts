@@ -4,7 +4,7 @@ import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
-import { games, locations, rounds } from '../db/schema.js';
+import { championships, championshipMatches, games, locations, rounds, users } from '../db/schema.js';
 
 async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Promise<string> {
   const res = await registerUser(app, { nick });
@@ -217,5 +217,61 @@ describe('Ranking Routes Integration', () => {
     expect(first.score).toBe(second.score);
     expect(first.position).toBeLessThan(second.position);
     expect(second.position).toBe(first.position + 1);
+  });
+
+  it('partida de campeonato finalizada não entra no ranking geral nem no da semana', async () => {
+    const cookie = await loginNewUser(app, 'campeaonick');
+    const [user] = await db.select().from(users).where(eq(users.nick, 'campeaonick'));
+
+    const [champ] = await db
+      .insert(championships)
+      .values({
+        title: 'Torneio Teste',
+        max_participants: 4,
+        rounds_per_match: 5,
+        round_duration_seconds: 60,
+        phase_interval_seconds: 3600,
+        status: 'em_andamento',
+        created_by: user.id,
+      })
+      .returning();
+
+    const [match] = await db
+      .insert(championshipMatches)
+      .values({
+        championship_id: champ.id,
+        phase: 1,
+        slot: 0,
+        player_a_id: user.id,
+      })
+      .returning();
+
+    await finishGame(app, cookie, 1);
+
+    const champGame = await finishGame(app, cookie, 5);
+    await db
+      .update(games)
+      .set({ championship_match_id: match.id })
+      .where(eq(games.id, champGame.id));
+
+    const geralRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+    const geralBody = JSON.parse(geralRes.body);
+    expect(geralBody.me.score).toBe(5000);
+    const geralEntry = geralBody.entries.find((e: { nick: string }) => e.nick === 'campeaonick');
+    expect(geralEntry.score).toBe(5000);
+
+    const semanaRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=semana',
+      headers: { cookie },
+    });
+    const semanaBody = JSON.parse(semanaRes.body);
+    expect(semanaBody.me.score).toBe(5000);
+    const semanaEntry = semanaBody.entries.find((e: { nick: string }) => e.nick === 'campeaonick');
+    expect(semanaEntry.score).toBe(5000);
   });
 });

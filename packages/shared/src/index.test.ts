@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   AVATAR_COUNT,
+  CHAMPIONSHIP_SIZES,
   LatLng,
   NICK_MAX_LENGTH,
   NICK_MIN_LENGTH,
   PAULO_AFONSO_CENTER,
+  ROUND_DURATION_DEFAULT_SECONDS,
+  ROUND_DURATION_MAX_SECONDS,
+  ROUND_DURATION_MIN_SECONDS,
   haversine,
   isValidNickFormat,
+  phasesFor,
   score,
+  shuffle,
 } from './index.js';
 
 describe('@paguessr/shared', () => {
@@ -84,6 +90,44 @@ describe('@paguessr/shared', () => {
   describe('AVATAR_COUNT', () => {
     it('define 8 avatares disponíveis', () => {
       expect(AVATAR_COUNT).toBe(8);
+    });
+  });
+
+  describe('phasesFor', () => {
+    it('calcula o log2 do tamanho para potências de 2', () => {
+      expect(phasesFor(4)).toBe(2);
+      expect(phasesFor(8)).toBe(3);
+      expect(phasesFor(16)).toBe(4);
+      expect(phasesFor(32)).toBe(5);
+    });
+  });
+
+  describe('shuffle', () => {
+    it('retorna novo array com os mesmos elementos sem mutar o original', () => {
+      const original = [1, 2, 3, 4, 5];
+      const copy = [...original];
+      const shuffled = shuffle(original);
+
+      expect(original).toEqual(copy);
+      expect(shuffled).toHaveLength(original.length);
+      expect(shuffled.slice().sort()).toEqual(original.slice().sort());
+    });
+
+    it('lida com array vazio ou com um elemento', () => {
+      expect(shuffle([])).toEqual([]);
+      expect(shuffle([42])).toEqual([42]);
+    });
+  });
+
+  describe('championship constants', () => {
+    it('tamanhos válidos são potências de 2', () => {
+      expect(CHAMPIONSHIP_SIZES).toEqual([4, 8, 16, 32]);
+    });
+
+    it('duração padrão da rodada é 60 segundos', () => {
+      expect(ROUND_DURATION_DEFAULT_SECONDS).toBe(60);
+      expect(ROUND_DURATION_MIN_SECONDS).toBe(10);
+      expect(ROUND_DURATION_MAX_SECONDS).toBe(300);
     });
   });
 });

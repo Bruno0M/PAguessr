@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
-import { haversine, score, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
+import { haversine, score, shuffle, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
 import { db } from '../db/index.js';
 import { games, locations, rounds, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
@@ -16,15 +16,6 @@ const IMAGE_FETCH_GRACE_MS = 10_000;
 
 function currentUserId(request: FastifyRequest): string {
   return request.authUser!.id;
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const shuffled = [...items];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 }
 
 // Evita repetir, na medida do possível, locais já vistos pelo jogador nas
