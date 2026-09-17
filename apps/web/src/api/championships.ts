@@ -132,6 +132,8 @@ export interface LiveMatchResponse {
   current_round?: number;
   myScore: number;
   my_score?: number;
+  opponentScore?: number;
+  opponent_score?: number;
   opponentRoundsAnswered: number;
   opponent_rounds_answered?: number;
   resolvedAt: string | null;
