@@ -133,10 +133,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       });
     }
 
-    const createdRounds = await db
-      .insert(rounds)
-      .values(roundsToInsert)
-      .returning();
+    const createdRounds = await db.insert(rounds).values(roundsToInsert).returning();
 
     createdRounds.sort((a, b) => a.ordem - b.ordem);
 

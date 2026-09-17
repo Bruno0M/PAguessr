@@ -20,7 +20,7 @@ export function RoundResultModal({ result, isLastRound, onNext }: RoundResultMod
 
   return (
     <div className="result-banner">
-      <div className="result-banner-card">
+      <div className="game-card result-banner-card">
         <div className="result-main-metrics">
           <div className="metric-box">
             <span className="metric-label">Distância do alvo</span>
@@ -43,7 +43,7 @@ export function RoundResultModal({ result, isLastRound, onNext }: RoundResultMod
         </div>
 
         <div className="result-banner-action">
-          <button type="button" className="btn-next-round" onClick={onNext}>
+          <button type="button" className="game-cta" onClick={onNext}>
             {isLastRound ? (
               <>
                 Ver Resultado Final <FontAwesomeIcon icon={faTrophy} aria-hidden="true" />

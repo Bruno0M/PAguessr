@@ -110,7 +110,11 @@ export function AdminLocationsPage({
             <h2>Erro ao carregar locais</h2>
             <p style={{ color: '#f87171' }}>{errorMessage}</p>
             <div className="admin-forbidden-actions">
-              <button type="button" className="admin-btn admin-btn-secondary" onClick={loadLocations}>
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                onClick={loadLocations}
+              >
                 Tentar novamente
               </button>
               <button type="button" className="admin-btn admin-btn-secondary" onClick={onGoHome}>
@@ -169,9 +173,11 @@ export function AdminLocationsPage({
                     <div className="admin-popup-row">
                       <span>Data de Captura:</span>
                       <div>
-                        {loc.captured_at
-                          ? new Date(loc.captured_at).toLocaleDateString('pt-BR')
-                          : <em>Não informada</em>}
+                        {loc.captured_at ? (
+                          new Date(loc.captured_at).toLocaleDateString('pt-BR')
+                        ) : (
+                          <em>Não informada</em>
+                        )}
                       </div>
                     </div>
                     <a

@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import { faLocationDot, faPause } from '@fortawesome/free-solid-svg-icons';
 
 interface RoundHeaderProps {
   currentRound: number;
@@ -47,7 +47,8 @@ export function RoundHeader({
           aria-label="Pausar partida"
           title="Pausar (Esc)"
         >
-          Ⅱ <kbd>Esc</kbd>
+          <FontAwesomeIcon icon={faPause} aria-hidden="true" />
+          <span className="game-kbd">Esc</span>
         </button>
         <div className="stat-pill">
           <span className="stat-label">Rodada</span>
