@@ -3,6 +3,7 @@ import type { PublicUser } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { AdminLayout } from './AdminLayout';
 import { AdminLocationsPage } from './AdminLocationsPage';
+import { AdminChampionshipsPage } from './AdminChampionshipsPage';
 
 export function AdminApp(props: {
   user: PublicUser;
@@ -57,12 +58,7 @@ export function AdminApp(props: {
       </div>
     );
   } else if (path === '/admin/campeonatos' || path.startsWith('/admin/campeonatos')) {
-    content = (
-      <div className="admin-placeholder">
-        <h2>Campeonatos</h2>
-        <p>Campeonatos: em breve</p>
-      </div>
-    );
+    content = <AdminChampionshipsPage key={retryKey} onError={handleError} />;
   } else {
     content = <AdminLocationsPage key={retryKey} onError={handleError} />;
   }
