@@ -288,7 +288,19 @@ export function ChampionshipsPage({
 
               return (
                 <article key={item.id} className="game-card championship-card">
-                  <div className="championship-card-banner">
+                  <div
+                    className="championship-card-banner"
+                    onClick={() => onSelectChampionship?.(item.id)}
+                    role={onSelectChampionship ? 'button' : undefined}
+                    tabIndex={onSelectChampionship ? 0 : undefined}
+                    style={{ cursor: onSelectChampionship ? 'pointer' : undefined }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSelectChampionship?.(item.id);
+                      }
+                    }}
+                  >
                     <img
                       src={bannerSrc}
                       alt=""
@@ -309,7 +321,13 @@ export function ChampionshipsPage({
                   </div>
 
                   <div className="championship-card-body">
-                    <h2 className="championship-card-title">{item.title}</h2>
+                    <h2
+                      className="championship-card-title"
+                      onClick={() => onSelectChampionship?.(item.id)}
+                      style={{ cursor: onSelectChampionship ? 'pointer' : undefined }}
+                    >
+                      {item.title}
+                    </h2>
                     {item.description && (
                       <p className="championship-card-desc">{item.description}</p>
                     )}

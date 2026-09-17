@@ -22,6 +22,7 @@ import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
 import { AdminApp } from './components/admin/AdminApp';
 import { ChampionshipsPage } from './components/championships/ChampionshipsPage';
+import { ChampionshipDetailPage } from './components/championships/ChampionshipDetailPage';
 import { track } from './lib/analytics';
 
 // Carregado sob demanda: three.js/@react-three só entram no bundle de quem
@@ -402,11 +403,22 @@ export function App() {
         </Suspense>
       );
     }
+    if (currentPath.startsWith('/campeonatos/')) {
+      const championshipId = currentPath.slice('/campeonatos/'.length);
+      return (
+        <ChampionshipDetailPage
+          championshipId={championshipId}
+          user={authUser}
+          onBack={() => navigate('/campeonatos')}
+        />
+      );
+    }
     if (currentPath === '/campeonatos') {
       return (
         <ChampionshipsPage
           user={authUser}
           onBack={() => navigate('/')}
+          onSelectChampionship={(id) => navigate(`/campeonatos/${id}`)}
         />
       );
     }
