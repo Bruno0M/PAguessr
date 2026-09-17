@@ -15,6 +15,8 @@ export interface RoundData {
   order: number;
   startedAt?: string | null;
   streetview_mode?: StreetviewMode;
+  duration_seconds?: number;
+  durationSeconds?: number;
 }
 
 export interface RoundResult {

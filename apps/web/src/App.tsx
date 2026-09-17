@@ -144,6 +144,7 @@ export function App() {
           order: r.order ?? r.roundNumber ?? idx + 1,
           startedAt: r.startedAt ?? r.started_at ?? null,
           streetview_mode: r.streetview_mode ?? 'static',
+          durationSeconds: r.duration_seconds ?? r.durationSeconds,
         })
       );
 
@@ -207,6 +208,7 @@ export function App() {
         const nextRound = res.nextRound;
         if (nextRound) {
           const nextStartedAt = nextRound.startedAt ?? nextRound.started_at ?? null;
+          const nextDuration = nextRound.duration_seconds ?? nextRound.durationSeconds;
           setRounds((prev) =>
             prev.map((r) =>
               r.id === nextRound.id
@@ -214,6 +216,7 @@ export function App() {
                     ...r,
                     startedAt: nextStartedAt,
                     ...(nextRound.streetview_mode ? { streetview_mode: nextRound.streetview_mode } : {}),
+                    ...(nextDuration !== undefined ? { durationSeconds: nextDuration } : {}),
                   }
                 : r
             )
@@ -271,7 +274,14 @@ export function App() {
       return;
     }
 
-    const deadline = new Date(currentRound.startedAt).getTime() + ROUND_DURATION_MS;
+    const durationSeconds =
+      currentRound.durationSeconds ?? currentRound.duration_seconds;
+    const durationMs =
+      typeof durationSeconds === 'number'
+        ? durationSeconds * 1000
+        : ROUND_DURATION_MS;
+
+    const deadline = new Date(currentRound.startedAt).getTime() + durationMs;
     let timeoutFired = false;
 
     const tick = () => {
@@ -287,7 +297,16 @@ export function App() {
     tick();
     const interval = setInterval(tick, 250);
     return () => clearInterval(interval);
-  }, [isOfflineMode, gameState, currentRound?.startedAt, submitOnlineGuess, currentGuess]);
+  }, [
+    isOfflineMode,
+    gameState,
+    currentRound?.startedAt,
+    currentRound?.durationSeconds,
+    currentRound?.duration_seconds,
+    submitOnlineGuess,
+    currentGuess,
+    currentRoundIndex,
+  ]);
 
   const handleNextRound = async () => {
     const version = sessionVersion.current;

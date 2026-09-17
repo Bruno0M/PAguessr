@@ -8,6 +8,8 @@ export interface ApiRoundInitial {
   startedAt?: string | null;
   started_at?: string | null;
   streetview_mode?: StreetviewMode;
+  duration_seconds?: number;
+  durationSeconds?: number;
 }
 
 export interface ApiGameCreated {
@@ -20,6 +22,8 @@ export interface ApiNextRound {
   startedAt?: string | null;
   started_at?: string | null;
   streetview_mode?: StreetviewMode;
+  duration_seconds?: number;
+  durationSeconds?: number;
 }
 
 export interface ApiGuessResponse {
@@ -48,6 +52,8 @@ export interface ApiRoundSummary {
   startedAt?: string | null;
   started_at?: string | null;
   streetview_mode?: StreetviewMode;
+  duration_seconds?: number;
+  durationSeconds?: number;
   location?: {
     lat: number;
     lng: number;
