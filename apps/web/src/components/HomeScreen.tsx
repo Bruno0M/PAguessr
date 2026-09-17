@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { PublicUser } from '../api/auth';
 import { getRanking } from '../api/ranking';
+import { getChampionships } from '../api/championships';
 import { track } from '../lib/analytics';
 import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
 
-type MenuId = 'ranqueado' | 'ranking' | 'como' | 'sair';
+type MenuId = 'ranqueado' | 'campeonatos' | 'ranking' | 'como' | 'sair';
 
 type MenuItem = {
   id: MenuId;
@@ -23,6 +24,14 @@ const MENU_ITEMS: MenuItem[] = [
     description:
       'Cinco lugares sorteados, 60 segundos por rodada. Sua melhor partida vale posição no ranking da semana.',
     facts: ['5 rodadas', '60 s por rodada', 'Até 25.000 pontos'],
+  },
+  {
+    id: 'campeonatos',
+    label: 'Campeonatos',
+    eyebrow: 'Modo',
+    description:
+      'Torneios mata-mata 1v1 eliminatórios. Duelos simultâneos no mesmo relógio até a grande final.',
+    facts: ['Mata-mata 1v1', 'Duelos ao vivo', 'Chave perfeita'],
   },
   {
     id: 'ranking',
@@ -53,15 +62,18 @@ export function HomeScreen({
   onLogout,
   onStartRanked,
   onOpenRanking,
+  onOpenChampionships,
 }: {
   user: PublicUser;
   onLogout: () => void;
   onStartRanked: () => void;
   onOpenRanking: () => void;
+  onOpenChampionships: () => void;
 }) {
   const [selected, setSelected] = useState(0);
   const [record, setRecord] = useState<{ position: number; score: number } | null>(null);
   const [recordChecked, setRecordChecked] = useState(false);
+  const [openChampionshipsCount, setOpenChampionshipsCount] = useState<number | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const instructionsRef = useRef<HTMLDialogElement>(null);
 
@@ -82,8 +94,23 @@ export function HomeScreen({
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    getChampionships()
+      .then((list) => {
+        if (!active) return;
+        const count = list.filter((c) => c.status === 'inscricoes').length;
+        setOpenChampionshipsCount(count);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const activate = (id: MenuId) => {
     if (id === 'ranqueado') onStartRanked();
+    if (id === 'campeonatos') onOpenChampionships();
     if (id === 'ranking') onOpenRanking();
     if (id === 'como') {
       track('view_instructions');
@@ -166,6 +193,19 @@ export function HomeScreen({
               ) : (
                 <p className="home-record-note">Nenhuma partida ranqueada esta semana.</p>
               )}
+            </div>
+          )}
+          {current.id === 'campeonatos' && openChampionshipsCount !== null && (
+            <div className="home-record">
+              <div>
+                <p className="home-record-label">Inscrições</p>
+                <strong>{openChampionshipsCount}</strong>
+              </div>
+              <p className="home-record-note">
+                {openChampionshipsCount === 1
+                  ? '1 campeonato com inscrições abertas'
+                  : `${openChampionshipsCount} campeonatos com inscrições abertas`}
+              </p>
             </div>
           )}
         </section>

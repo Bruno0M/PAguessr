@@ -20,7 +20,8 @@ import { PanoramaPanel } from './components/PanoramaPanel';
 import { GuessMap } from './components/GuessMap';
 import { RoundResultModal } from './components/RoundResultModal';
 import { GameResult } from './components/GameResult';
-import { AdminLocationsPage } from './components/AdminLocationsPage';
+import { AdminApp } from './components/admin/AdminApp';
+import { ChampionshipsPage } from './components/championships/ChampionshipsPage';
 import { track } from './lib/analytics';
 
 // Carregado sob demanda: three.js/@react-three só entram no bundle de quem
@@ -32,7 +33,9 @@ const RankingScreen = lazy(() =>
 type AuthView = 'login' | 'register' | 'recover';
 
 export function App() {
-  const [showTitle, setShowTitle] = useState(() => window.location.pathname !== '/admin');
+  const [showTitle, setShowTitle] = useState(
+    () => !window.location.pathname.startsWith('/admin') && window.location.pathname !== '/campeonatos'
+  );
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -365,10 +368,12 @@ export function App() {
     );
   }
 
-  if (currentPath === '/admin') {
+  if (currentPath.startsWith('/admin')) {
     return (
-      <AdminLocationsPage
+      <AdminApp
         user={authUser}
+        path={currentPath}
+        onNavigate={navigate}
         onLogout={handleLogout}
         onUnauthorized={() => setAuthUser(null)}
         onGoHome={() => navigate('/')}
@@ -397,12 +402,21 @@ export function App() {
         </Suspense>
       );
     }
+    if (currentPath === '/campeonatos') {
+      return (
+        <ChampionshipsPage
+          user={authUser}
+          onBack={() => navigate('/')}
+        />
+      );
+    }
     return (
       <HomeScreen
         user={authUser}
         onLogout={handleLogout}
         onStartRanked={() => startNewGame(false, 'home')}
         onOpenRanking={() => setShowRanking(true)}
+        onOpenChampionships={() => navigate('/campeonatos')}
       />
     );
   }
