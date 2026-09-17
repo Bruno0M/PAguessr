@@ -8,6 +8,8 @@ import { authRoutes } from './routes/authRoutes.js';
 import { rankingRoutes } from './routes/rankingRoutes.js';
 import { adminRoutes } from './routes/adminRoutes.js';
 import { championshipAdminRoutes } from './routes/championshipAdminRoutes.js';
+import { championshipRoutes } from './routes/championshipRoutes.js';
+import { championshipRankingRoutes } from './routes/championshipRankingRoutes.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -80,6 +82,10 @@ export function buildApp(): FastifyInstance {
   app.register(adminRoutes);
   app.register(championshipAdminRoutes, { prefix: '/api' });
   app.register(championshipAdminRoutes);
+  app.register(championshipRoutes, { prefix: '/api' });
+  app.register(championshipRoutes);
+  app.register(championshipRankingRoutes, { prefix: '/api' });
+  app.register(championshipRankingRoutes);
 
   return app;
 }
