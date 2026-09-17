@@ -206,7 +206,9 @@ export function App() {
                 ? {
                     ...r,
                     startedAt: nextStartedAt,
-                    ...(nextRound.streetview_mode ? { streetview_mode: nextRound.streetview_mode } : {}),
+                    ...(nextRound.streetview_mode
+                      ? { streetview_mode: nextRound.streetview_mode }
+                      : {}),
                   }
                 : r
             )
@@ -226,7 +228,10 @@ export function App() {
 
   const handleConfirmGuess = async () => {
     if (gameState !== 'guessing' || !currentGuess) return;
-    track('guess_confirm', { roundIndex: currentRoundIndex, mode: isOfflineMode ? 'offline' : 'ranked' });
+    track('guess_confirm', {
+      roundIndex: currentRoundIndex,
+      mode: isOfflineMode ? 'offline' : 'ranked',
+    });
 
     if (isOfflineMode) {
       const distanceMeters = haversine(currentGuess, currentMockLoc.coords);
@@ -438,19 +443,19 @@ export function App() {
             <h2>Não foi possível iniciar a partida</h2>
             <p className="error-text">{errorMessage}</p>
             <div className="status-actions">
-              <button type="button" className="btn-secondary" onClick={returnHome}>
+              <button type="button" className="game-ghost" onClick={returnHome}>
                 Voltar ao início
               </button>
               <button
                 type="button"
-                className="btn-primary"
+                className="game-cta"
                 onClick={() => startNewGame(false, 'error_retry')}
               >
                 Tentar Conectar Novamente
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className="game-ghost"
                 onClick={() => startNewGame(true, 'error_offline')}
               >
                 Jogar no Modo Offline (Mock)
@@ -534,13 +539,18 @@ export function App() {
           </div>
         )}
       </main>
-      <dialog ref={pauseRef} className="pause-menu" aria-labelledby="pause-title">
+      <dialog ref={pauseRef} className="game-card pause-menu" aria-labelledby="pause-title">
         <span className="pause-kicker">PAGUESSR</span>
         <h2 id="pause-title">Pausa</h2>
-        <button autoFocus className="pause-continue" onClick={() => pauseRef.current?.close()}>
-          Continuar partida <kbd>Esc</kbd>
+        <button
+          autoFocus
+          type="button"
+          className="game-cta pause-continue"
+          onClick={() => pauseRef.current?.close()}
+        >
+          Continuar partida <span className="game-kbd">Esc</span>
         </button>
-        <button className="pause-home" onClick={returnHome}>
+        <button type="button" className="game-ghost pause-home" onClick={returnHome}>
           Voltar ao início
         </button>
         <p>Ao voltar, a próxima partida começa do zero.</p>

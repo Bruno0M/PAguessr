@@ -15,14 +15,17 @@ interface GuessMapProps {
   onConfirmGuess: () => void;
 }
 
+// Dourado = o local correto (a resposta, mesma cor de "confirmar" e "pontos");
+// azul do céu = o seu palpite. Mesma dupla de cores da capa, não mais o
+// vermelho/verde genérico de antes.
 const guessIcon = L.divIcon({
   className: 'custom-pin-wrap',
   html: `
     <div class="pin-marker guess-pin">
       <div class="pin-bubble">
         <svg width="28" height="38" viewBox="0 0 32 42" fill="none">
-          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
-          <circle cx="16" cy="16" r="6" fill="#ffffff"/>
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#6fb0e3" stroke="#f6ecd4" stroke-width="2"/>
+          <circle cx="16" cy="16" r="6" fill="#10161d"/>
         </svg>
       </div>
       <span class="pin-tag">Seu Palpite</span>
@@ -38,8 +41,8 @@ const correctIcon = L.divIcon({
     <div class="pin-marker correct-pin">
       <div class="pin-bubble">
         <svg width="28" height="38" viewBox="0 0 32 42" fill="none">
-          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#10b981" stroke="#ffffff" stroke-width="2"/>
-          <circle cx="16" cy="16" r="6" fill="#ffffff"/>
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#eab25a" stroke="#f6ecd4" stroke-width="2"/>
+          <circle cx="16" cy="16" r="6" fill="#1a1206"/>
         </svg>
       </div>
       <span class="pin-tag">Local Correto</span>
@@ -126,6 +129,8 @@ export function GuessMap({
         scrollWheelZoom={true}
         className="leaflet-container-custom"
       >
+        {/* Ladrilhos do OpenStreetMap, claros — testamos ladrilhos escuros
+            (CartoDB, depois Esri) e o Tiago preferiu o mapa como estava. */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -164,10 +169,10 @@ export function GuessMap({
           <Polyline
             positions={linePositions}
             pathOptions={{
-              color: '#ef4444',
+              color: '#f6ecd4',
               weight: 3,
               dashArray: '8, 8',
-              opacity: 0.9,
+              opacity: 0.6,
             }}
           />
         )}

@@ -111,14 +111,69 @@
   outline-offset: 4px;
 }
 
+/* Ação secundária: contorno fino, sem peso do dourado — voltar, cancelar,
+   tentar de novo. Largura própria (não herda o width:100% do .game-cta). */
+.game-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 44px;
+  padding: 0 1.2em;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.28);
+  color: var(--pa-cream);
+  font:
+    600 13px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.game-ghost:hover {
+  background: rgb(var(--pa-cream-rgb) / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.46);
+}
+
+.game-ghost:focus-visible {
+  outline: 2px solid var(--pa-cream);
+  outline-offset: 3px;
+}
+
+/* Tecla isolada: tamanho fixo, não relativo ao texto ao redor — usada dentro
+   das dicas de canto (.game-hint) e solta, no botão de pausa e no .game-cta
+   da pausa. */
+.game-kbd,
+.game-hint kbd {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(var(--pa-cream-rgb) / 0.85);
+  color: var(--pa-ink);
+  font:
+    700 10px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.02em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .game-cta,
-  .game-menu-item {
+  .game-menu-item,
+  .game-ghost {
     transition: none;
   }
 }
 
-:root[data-reduce-motion='true'] :is(.game-cta, .game-menu-item) {
+:root[data-reduce-motion='true'] :is(.game-cta, .game-menu-item, .game-ghost) {
   transition: none;
 }
 
@@ -153,21 +208,6 @@
   display: flex;
   align-items: center;
   gap: 0.7em;
-}
-
-.game-hint kbd {
-  display: grid;
-  place-items: center;
-  min-width: 1.75em;
-  height: 1.75em;
-  padding: 0 0.5em;
-  border-radius: 999px;
-  background: rgb(var(--pa-cream-rgb) / 0.85);
-  color: var(--pa-ink);
-  font:
-    700 0.6em / 1 var(--pa-font),
-    sans-serif;
-  letter-spacing: 0.02em;
 }
 
 .game-hint svg {

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { getAppConfig, getRoundPanorama } from '../api/client';
 import { ImagePanel } from './ImagePanel';
 
@@ -35,10 +37,7 @@ export function PanoramaPanel({
 
     async function setupPanorama() {
       try {
-        const [panoData, config] = await Promise.all([
-          getRoundPanorama(roundId!),
-          getAppConfig(),
-        ]);
+        const [panoData, config] = await Promise.all([getRoundPanorama(roundId!), getAppConfig()]);
 
         if (cancelled) return;
 
@@ -115,13 +114,13 @@ export function PanoramaPanel({
 
       {loadState === 'error' && (
         <div className="image-error-box">
-          <span className="error-icon">⚠️</span>
+          <FontAwesomeIcon icon={faTriangleExclamation} className="error-icon" aria-hidden="true" />
           <h4>Não foi possível carregar o panorama desta rodada</h4>
           <p>
-            O serviço de Street View não respondeu a tempo. Você ainda pode marcar seu
-            palpite no mapa ao lado.
+            O serviço de Street View não respondeu a tempo. Você ainda pode marcar seu palpite no
+            mapa ao lado.
           </p>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="image-error-actions">
             <button
               type="button"
               className="btn-retry-image"
