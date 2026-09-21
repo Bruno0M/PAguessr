@@ -8,7 +8,11 @@ import {
   championshipParticipants,
   users,
 } from '../db/schema.js';
-import { requireAuth } from '../auth/session.js';
+import { requireAuth, isAdminNick } from '../auth/session.js';
+import {
+  isChampionshipsVisible,
+  parseChampionshipsMode,
+} from '../championship/featureFlag.js';
 import { advanceChampionship } from '../championship/advance.js';
 
 export interface ChampionshipRankingEntry {
@@ -119,6 +123,13 @@ export async function getChampionshipRanking(championshipId: string): Promise<Ch
 
 export const championshipRankingRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   app.addHook('preHandler', requireAuth);
+  app.addHook('preHandler', async (request, reply) => {
+    const mode = parseChampionshipsMode(process.env.CHAMPIONSHIPS_MODE);
+    const isAdmin = request.authUser ? isAdminNick(request.authUser.nick) : false;
+    if (!isChampionshipsVisible(mode, isAdmin)) {
+      return reply.status(404).send({ error: 'Não encontrado' });
+    }
+  });
 
   app.get<{ Params: { id: string } }>(
     '/championships/:id/ranking',

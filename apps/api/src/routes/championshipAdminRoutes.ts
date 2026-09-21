@@ -22,6 +22,7 @@ import {
   championshipMatches,
 } from '../db/schema.js';
 import { requireAdmin } from '../auth/session.js';
+import { parseChampionshipsMode } from '../championship/featureFlag.js';
 import { advanceChampionship } from '../championship/advance.js';
 
 interface CreateChampionshipBody {
@@ -131,6 +132,12 @@ const updateChampionshipBodySchema = {
 } as const;
 
 export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
+  app.addHook('preHandler', async (request, reply) => {
+    const mode = parseChampionshipsMode(process.env.CHAMPIONSHIPS_MODE);
+    if (mode === 'off') {
+      return reply.status(404).send({ error: 'Não encontrado' });
+    }
+  });
   app.addHook('preHandler', requireAdmin);
 
   app.get('/admin/championships', async (_request, reply) => {

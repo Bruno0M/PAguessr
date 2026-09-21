@@ -15,7 +15,11 @@ import {
   users,
   type Location,
 } from '../db/schema.js';
-import { requireAuth } from '../auth/session.js';
+import { requireAuth, isAdminNick } from '../auth/session.js';
+import {
+  isChampionshipsVisible,
+  parseChampionshipsMode,
+} from '../championship/featureFlag.js';
 import {
   calculateRoundStartedAt,
   createInitialBracket,
@@ -59,6 +63,13 @@ async function pickLocationsForMatch(
 
 export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   app.addHook('preHandler', requireAuth);
+  app.addHook('preHandler', async (request, reply) => {
+    const mode = parseChampionshipsMode(process.env.CHAMPIONSHIPS_MODE);
+    const isAdmin = request.authUser ? isAdminNick(request.authUser.nick) : false;
+    if (!isChampionshipsVisible(mode, isAdmin)) {
+      return reply.status(404).send({ error: 'Não encontrado' });
+    }
+  });
 
   app.get('/championships', async (request, reply) => {
     const user = request.authUser!;

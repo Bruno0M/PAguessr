@@ -10,6 +10,8 @@ import { adminRoutes } from './routes/adminRoutes.js';
 import { championshipAdminRoutes } from './routes/championshipAdminRoutes.js';
 import { championshipRoutes } from './routes/championshipRoutes.js';
 import { championshipRankingRoutes } from './routes/championshipRankingRoutes.js';
+import { getSessionUser, isAdminNick } from './auth/session.js';
+import { parseChampionshipsMode, isChampionshipsVisible } from './championship/featureFlag.js';
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({
@@ -71,6 +73,18 @@ export function buildApp(): FastifyInstance {
 
   app.get('/config', configHandler);
   app.get('/api/config', configHandler);
+
+  const featuresHandler = async (request: FastifyRequest) => {
+    const mode = parseChampionshipsMode(process.env.CHAMPIONSHIPS_MODE);
+    const user = await getSessionUser(request);
+    const isAdmin = user ? isAdminNick(user.nick) : false;
+    return {
+      championships: isChampionshipsVisible(mode, isAdmin),
+    };
+  };
+
+  app.get('/features', featuresHandler);
+  app.get('/api/features', featuresHandler);
 
   app.register(gameRoutes, { prefix: '/api' });
   app.register(gameRoutes);
