@@ -14,6 +14,7 @@ import type { GameState, RoundResult, RoundData } from './types';
 import { createGame, submitGuess, getGameSummary, type ApiRoundInitial } from './api/client';
 import { me, logout, type PublicUser } from './api/auth';
 import { getRanking } from './api/ranking';
+import { getFeatures, type Features } from './api/features';
 import { RoundHeader } from './components/RoundHeader';
 import { ImagePanel } from './components/ImagePanel';
 import { PanoramaPanel } from './components/PanoramaPanel';
@@ -41,6 +42,7 @@ export function App() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [features, setFeatures] = useState<Features>({ championships: false });
   const [authView, setAuthView] = useState<AuthView>('login');
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
   const [duelOpponentNick, setDuelOpponentNick] = useState<string | undefined>(undefined);
@@ -61,6 +63,25 @@ export function App() {
       .then((res) => setAuthUser(res.user))
       .finally(() => setAuthChecked(true));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setFeatures({ championships: false });
+    getFeatures().then((data) => {
+      if (active) setFeatures(data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!features.championships) {
+      if (currentPath === '/campeonatos' || currentPath.startsWith('/campeonatos/')) {
+        navigate('/');
+      }
+    }
+  }, [features.championships, currentPath, navigate]);
 
   const sessionVersion = useRef(0);
   const pauseRef = useRef<HTMLDialogElement>(null);
@@ -400,6 +421,7 @@ export function App() {
         onLogout={handleLogout}
         onUnauthorized={() => setAuthUser(null)}
         onGoHome={() => navigate('/')}
+        championships={features.championships}
       />
     );
   }
@@ -425,48 +447,51 @@ export function App() {
         </Suspense>
       );
     }
-    const duelMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/(?:duelo|matches)\/([^/]+)$/);
-    if (duelMatch) {
-      const [, champId, matchId] = duelMatch;
-      return (
-        <DuelScreen
-          championshipId={champId}
-          matchId={matchId}
-          user={authUser}
-          opponentNick={duelOpponentNick}
-          onBackToBracket={() => {
-            setDuelOpponentNick(undefined);
-            navigate(`/campeonatos/${champId}`);
-          }}
-        />
-      );
-    }
-    if (currentPath.startsWith('/campeonatos/')) {
-      const championshipId = currentPath.slice('/campeonatos/'.length);
-      return (
-        <ChampionshipDetailPage
-          championshipId={championshipId}
-          user={authUser}
-          onBack={() => navigate('/campeonatos')}
-          onEnterMatch={(matchId, oppNick) => {
-            setDuelOpponentNick(oppNick);
-            navigate(`/campeonatos/${championshipId}/duelo/${matchId}`);
-          }}
-        />
-      );
-    }
-    if (currentPath === '/campeonatos') {
-      return (
-        <ChampionshipsPage
-          user={authUser}
-          onBack={() => navigate('/')}
-          onSelectChampionship={(id) => navigate(`/campeonatos/${id}`)}
-        />
-      );
+    if (features.championships) {
+      const duelMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/(?:duelo|matches)\/([^/]+)$/);
+      if (duelMatch) {
+        const [, champId, matchId] = duelMatch;
+        return (
+          <DuelScreen
+            championshipId={champId}
+            matchId={matchId}
+            user={authUser}
+            opponentNick={duelOpponentNick}
+            onBackToBracket={() => {
+              setDuelOpponentNick(undefined);
+              navigate(`/campeonatos/${champId}`);
+            }}
+          />
+        );
+      }
+      if (currentPath.startsWith('/campeonatos/')) {
+        const championshipId = currentPath.slice('/campeonatos/'.length);
+        return (
+          <ChampionshipDetailPage
+            championshipId={championshipId}
+            user={authUser}
+            onBack={() => navigate('/campeonatos')}
+            onEnterMatch={(matchId, oppNick) => {
+              setDuelOpponentNick(oppNick);
+              navigate(`/campeonatos/${championshipId}/duelo/${matchId}`);
+            }}
+          />
+        );
+      }
+      if (currentPath === '/campeonatos') {
+        return (
+          <ChampionshipsPage
+            user={authUser}
+            onBack={() => navigate('/')}
+            onSelectChampionship={(id) => navigate(`/campeonatos/${id}`)}
+          />
+        );
+      }
     }
     return (
       <HomeScreen
         user={authUser}
+        championships={features.championships}
         onLogout={handleLogout}
         onStartRanked={() => startNewGame(false, 'home')}
         onOpenRanking={() => setShowRanking(true)}

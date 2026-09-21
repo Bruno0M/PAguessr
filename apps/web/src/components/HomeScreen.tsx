@@ -59,12 +59,14 @@ const MENU_ITEMS: MenuItem[] = [
 
 export function HomeScreen({
   user,
+  championships = false,
   onLogout,
   onStartRanked,
   onOpenRanking,
   onOpenChampionships,
 }: {
   user: PublicUser;
+  championships?: boolean;
   onLogout: () => void;
   onStartRanked: () => void;
   onOpenRanking: () => void;
@@ -76,6 +78,10 @@ export function HomeScreen({
   const [openChampionshipsCount, setOpenChampionshipsCount] = useState<number | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const instructionsRef = useRef<HTMLDialogElement>(null);
+
+  const menuItems = championships
+    ? MENU_ITEMS
+    : MENU_ITEMS.filter((item) => item.id !== 'campeonatos');
 
   // Recorde da semana pra prévia do Ranqueado. É enfeite: se a chamada falhar, a
   // linha não aparece e o menu continua igual.
@@ -95,6 +101,7 @@ export function HomeScreen({
   }, []);
 
   useEffect(() => {
+    if (!championships) return;
     let active = true;
     getChampionships()
       .then((list) => {
@@ -106,7 +113,7 @@ export function HomeScreen({
     return () => {
       active = false;
     };
-  }, []);
+  }, [championships]);
 
   const activate = (id: MenuId) => {
     if (id === 'ranqueado') onStartRanked();
@@ -127,12 +134,14 @@ export function HomeScreen({
     const down = event.key === 'ArrowDown' || event.code === 'KeyS';
     if (!up && !down) return;
     event.preventDefault();
-    const next = (selected + (up ? -1 : 1) + MENU_ITEMS.length) % MENU_ITEMS.length;
+    const safeSelected = selected < menuItems.length ? selected : 0;
+    const next = (safeSelected + (up ? -1 : 1) + menuItems.length) % menuItems.length;
     setSelected(next);
     itemRefs.current[next]?.focus();
   };
 
-  const current = MENU_ITEMS[selected];
+  const selectedIndex = selected < menuItems.length ? selected : 0;
+  const current = menuItems[selectedIndex];
 
   return (
     <div className="home-screen">
@@ -151,14 +160,14 @@ export function HomeScreen({
 
       <main className="home-stage">
         <nav className="home-menu" aria-label="Menu principal" onKeyDown={handleKeyDown}>
-          {MENU_ITEMS.map((item, index) => (
+          {menuItems.map((item, index) => (
             <button
               key={item.id}
               ref={(element) => {
                 itemRefs.current[index] = element;
               }}
               type="button"
-              className={`game-menu-item home-item${index === selected ? ' is-selected' : ''}`}
+              className={`game-menu-item home-item${index === selectedIndex ? ' is-selected' : ''}`}
               onPointerEnter={() => setSelected(index)}
               onFocus={() => setSelected(index)}
               onClick={() => activate(item.id)}

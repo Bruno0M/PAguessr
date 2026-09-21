@@ -12,8 +12,9 @@ export function AdminApp(props: {
   onLogout: () => void;
   onUnauthorized: () => void;
   onGoHome: () => void;
+  championships?: boolean;
 }) {
-  const { user, path, onNavigate, onLogout, onUnauthorized, onGoHome } = props;
+  const { user, path, onNavigate, onLogout, onUnauthorized, onGoHome, championships } = props;
   const [isForbidden, setIsForbidden] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -73,6 +74,7 @@ export function AdminApp(props: {
       isForbidden={isForbidden}
       errorMessage={errorMessage}
       onRetry={handleRetry}
+      championships={championships}
     >
       {content}
     </AdminLayout>

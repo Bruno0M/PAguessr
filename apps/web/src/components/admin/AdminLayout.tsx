@@ -11,6 +11,7 @@ export interface AdminLayoutProps {
   isForbidden?: boolean;
   errorMessage?: string | null;
   onRetry?: () => void;
+  championships?: boolean;
   children: ReactNode;
 }
 
@@ -23,6 +24,7 @@ export function AdminLayout({
   isForbidden = false,
   errorMessage = null,
   onRetry,
+  championships = false,
   children,
 }: AdminLayoutProps) {
   return (
@@ -44,14 +46,16 @@ export function AdminLayout({
             <span className="admin-nav-bullet">▸</span>
             <span>Locais</span>
           </button>
-          <button
-            type="button"
-            className={`admin-nav-item ${currentPath.startsWith('/admin/campeonatos') ? 'active' : ''}`}
-            onClick={() => onNavigate('/admin/campeonatos')}
-          >
-            <span className="admin-nav-bullet">▸</span>
-            <span>Campeonatos</span>
-          </button>
+          {championships && (
+            <button
+              type="button"
+              className={`admin-nav-item ${currentPath.startsWith('/admin/campeonatos') ? 'active' : ''}`}
+              onClick={() => onNavigate('/admin/campeonatos')}
+            >
+              <span className="admin-nav-bullet">▸</span>
+              <span>Campeonatos</span>
+            </button>
+          )}
         </nav>
 
         <div className="admin-sidebar-footer">
