@@ -16,6 +16,7 @@
     "db:migrate:test": "NODE_ENV=test tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:bootstrap": "tsx scripts/bootstrap-locations.ts",
+    "db:backfill-antifraude": "tsx scripts/backfill-antifraude.ts",
     "coverage": "tsx scripts/coverage.ts"
   },
   "dependencies": {

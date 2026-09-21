@@ -19,7 +19,8 @@ async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Pro
 async function finishGame(
   app: ReturnType<typeof buildApp>,
   cookie: string,
-  exactRounds: number
+  exactRounds: number,
+  flaggedReason?: string | null
 ): Promise<{ id: string }> {
   const gameRes = await app.inject({ method: 'POST', url: '/api/games', headers: { cookie } });
   const game = JSON.parse(gameRes.body);
@@ -38,6 +39,12 @@ async function finishGame(
     });
     const data = JSON.parse(res.body);
     if (data.nextRound) roundId = data.nextRound.id;
+  }
+
+  if (flaggedReason !== undefined) {
+    await db.update(games).set({ flagged_reason: flaggedReason }).where(eq(games.id, game.id));
+  } else {
+    await db.update(games).set({ flagged_reason: null }).where(eq(games.id, game.id));
   }
 
   return { id: game.id };
@@ -217,5 +224,23 @@ describe('Ranking Routes Integration', () => {
     expect(first.score).toBe(second.score);
     expect(first.position).toBeLessThan(second.position);
     expect(second.position).toBe(first.position + 1);
+  });
+
+  it('partida com flagged_reason não entra no ranking, prevalecendo a melhor válida', async () => {
+    const cookie = await loginNewUser(app, 'partidamarcada');
+    await finishGame(app, cookie, 2);
+    await finishGame(app, cookie, 5, 'offset_constante');
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.me.score).toBe(10000);
+    const entry = body.entries.find((e: { nick: string }) => e.nick === 'partidamarcada');
+    expect(entry.score).toBe(10000);
   });
 });

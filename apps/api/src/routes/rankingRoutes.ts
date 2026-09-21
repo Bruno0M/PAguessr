@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { and, asc, desc, eq, gte, isNotNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { games, users } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
@@ -54,6 +54,7 @@ export const rankingRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
         .where(
           and(
             isNotNull(games.finished_at),
+            isNull(games.flagged_reason),
             period === 'semana' ? gte(games.finished_at, getWeekStartBRT()) : undefined
           )
         )
