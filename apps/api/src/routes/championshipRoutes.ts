@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { type ChampionshipSize, shuffle } from '@paguessr/shared';
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import {
   championships,
   championshipParticipants,
@@ -19,7 +19,7 @@ import { advanceChampionship } from '../championship/advance.js';
 import { resolveStreetviewMode } from '../streetview.js';
 
 async function pickLocationsForMatch(
-  tx: any,
+  tx: Tx,
   championshipId: string,
   count: number
 ): Promise<Location[]> {
@@ -35,8 +35,8 @@ async function pickLocationsForMatch(
     .innerJoin(championshipMatches, eq(games.championship_match_id, championshipMatches.id))
     .where(eq(championshipMatches.championship_id, championshipId));
 
-  const usedLocationIds = new Set(usedRounds.map((r: any) => r.location_id));
-  const available = allLocations.filter((l: any) => !usedLocationIds.has(l.id));
+  const usedLocationIds = new Set(usedRounds.map((r) => r.location_id));
+  const available = allLocations.filter((l) => !usedLocationIds.has(l.id));
 
   const pool = available.length >= count ? available : allLocations;
   const shuffled = shuffle(pool);

@@ -508,7 +508,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         headers: { cookie: playerA.cookie },
       });
       expect(res1.statusCode).toBe(200);
-      const data1 = JSON.parse(res1.body);
+      const data1 = JSON.parse(res1.body) as { gameId: string; rounds: { id: string }[] };
       expect(data1.gameId).toBeDefined();
       expect(data1.rounds).toHaveLength(3);
 
@@ -518,9 +518,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         headers: { cookie: playerA.cookie },
       });
       expect(res2.statusCode).toBe(200);
-      const data2 = JSON.parse(res2.body);
+      const data2 = JSON.parse(res2.body) as { gameId: string; rounds: { id: string }[] };
       expect(data2.gameId).toBe(data1.gameId);
-      expect(data2.rounds.map((r: any) => r.id)).toEqual(data1.rounds.map((r: any) => r.id));
+      expect(data2.rounds.map((r) => r.id)).toEqual(data1.rounds.map((r) => r.id));
 
       const allUserGames = await db
         .select()
@@ -775,11 +775,15 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         headers: { cookie: p0.cookie },
       });
       expect(res.statusCode).toBe(200);
-      const list = JSON.parse(res.body);
-      const found = list.find((c: any) => c.id === champ.id);
+      const list = JSON.parse(res.body) as {
+        id: string;
+        joined: boolean;
+        participants: number;
+      }[];
+      const found = list.find((c) => c.id === champ.id);
       expect(found).toBeDefined();
-      expect(found.joined).toBe(true);
-      expect(found.participants).toBe(4);
+      expect(found?.joined).toBe(true);
+      expect(found?.participants).toBe(4);
     });
 
     it('GET /api/championships/:id retorna detalhe completo com chave, participantes e myStatus', async () => {

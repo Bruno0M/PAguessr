@@ -230,10 +230,10 @@ describe('Championship Ranking Routes (GET /api/championships/:id/ranking)', () 
     });
 
     expect(res.statusCode).toBe(200);
-    const ranking = JSON.parse(res.body);
+    const ranking = JSON.parse(res.body) as { userId: string }[];
 
-    const posP1 = ranking.findIndex((r: any) => r.userId === p1);
-    const posP3 = ranking.findIndex((r: any) => r.userId === p3);
+    const posP1 = ranking.findIndex((r) => r.userId === p1);
+    const posP3 = ranking.findIndex((r) => r.userId === p3);
 
     // p1 tem seed 1 e p3 tem seed 3 -> p1 deve vir antes de p3!
     expect(posP1).toBeLessThan(posP3);

@@ -50,7 +50,7 @@ export function AdminApp(props: {
     setRetryKey((k) => k + 1);
   }, []);
 
-  let content: React.ReactNode = null;
+  let content: React.ReactNode;
 
   if (path === '/admin' || path === '/admin/') {
     content = (

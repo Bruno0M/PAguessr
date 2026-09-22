@@ -11,3 +11,5 @@ export const sql = postgres(connectionString, {
 });
 
 export const db = drizzle(sql, { schema });
+
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];

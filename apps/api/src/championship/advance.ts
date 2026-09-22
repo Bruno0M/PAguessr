@@ -1,6 +1,6 @@
 import { phasesFor, type ChampionshipSize, type ChampionshipStatus } from '@paguessr/shared';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import {
   championships,
   championshipMatches,
@@ -27,7 +27,7 @@ export interface AdvanceResult {
 }
 
 async function getPlayerDuelStats(
-  tx: any,
+  tx: Tx,
   gameId: string | null,
   userId: string | null,
   seed: number
@@ -60,14 +60,13 @@ async function getPlayerDuelStats(
   const gameRounds = await tx.select().from(rounds).where(eq(rounds.game_id, gameId));
 
   const validGuesses = gameRounds.filter(
-    (r: any) => r.pontos !== null || r.guess_lat !== null || r.distancia !== null
+    (r) => r.pontos !== null || r.guess_lat !== null || r.distancia !== null
   );
 
   const hasGuessed = validGuesses.length > 0;
-  const totalScore =
-    game?.total_score ?? validGuesses.reduce((sum: number, r: any) => sum + (r.pontos ?? 0), 0);
+  const totalScore = game?.total_score ?? validGuesses.reduce((sum, r) => sum + (r.pontos ?? 0), 0);
   const totalDistance = hasGuessed
-    ? validGuesses.reduce((sum: number, r: any) => sum + (r.distancia ?? 0), 0)
+    ? validGuesses.reduce((sum, r) => sum + (r.distancia ?? 0), 0)
     : Infinity;
 
   return {
@@ -82,7 +81,7 @@ async function getPlayerDuelStats(
 }
 
 async function resolveSingleMatch(
-  tx: any,
+  tx: Tx,
   champ: Championship,
   match: ChampionshipMatch,
   totalPhases: number,
@@ -102,9 +101,7 @@ async function resolveSingleMatch(
           )
       : [];
 
-  const partMap = new Map<string, { seed: number | null }>(
-    participants.map((p: any) => [p.user_id, p])
-  );
+  const partMap = new Map<string, { seed: number | null }>(participants.map((p) => [p.user_id, p]));
 
   const statsA = await getPlayerDuelStats(
     tx,
