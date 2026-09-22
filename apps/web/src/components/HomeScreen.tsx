@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { PublicUser } from '../api/auth';
 import { getRanking } from '../api/ranking';
+import { getChampionships } from '../api/championships';
 import { track } from '../lib/analytics';
 import { AvatarSvg } from './auth/avatars';
 import './HomeScreen.css';
 
-type MenuId = 'ranqueado' | 'ranking' | 'como' | 'sair';
+type MenuId = 'ranqueado' | 'campeonatos' | 'ranking' | 'como' | 'sair';
 
 type MenuItem = {
   id: MenuId;
@@ -23,6 +24,14 @@ const MENU_ITEMS: MenuItem[] = [
     description:
       'Cinco lugares sorteados, 60 segundos por rodada. Sua melhor partida vale posição no ranking da semana.',
     facts: ['5 rodadas', '60 s por rodada', 'Até 25.000 pontos'],
+  },
+  {
+    id: 'campeonatos',
+    label: 'Campeonatos',
+    eyebrow: 'Modo',
+    description:
+      'Torneios mata-mata 1v1 eliminatórios. Duelos simultâneos no mesmo relógio até a grande final.',
+    facts: ['Mata-mata 1v1', 'Duelos ao vivo', 'Chave perfeita'],
   },
   {
     id: 'ranking',
@@ -50,20 +59,29 @@ const MENU_ITEMS: MenuItem[] = [
 
 export function HomeScreen({
   user,
+  championships = false,
   onLogout,
   onStartRanked,
   onOpenRanking,
+  onOpenChampionships,
 }: {
   user: PublicUser;
+  championships?: boolean;
   onLogout: () => void;
   onStartRanked: () => void;
   onOpenRanking: () => void;
+  onOpenChampionships: () => void;
 }) {
   const [selected, setSelected] = useState(0);
   const [record, setRecord] = useState<{ position: number; score: number } | null>(null);
   const [recordChecked, setRecordChecked] = useState(false);
+  const [openChampionshipsCount, setOpenChampionshipsCount] = useState<number | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const instructionsRef = useRef<HTMLDialogElement>(null);
+
+  const menuItems = championships
+    ? MENU_ITEMS
+    : MENU_ITEMS.filter((item) => item.id !== 'campeonatos');
 
   // Recorde da semana pra prévia do Ranqueado. É enfeite: se a chamada falhar, a
   // linha não aparece e o menu continua igual.
@@ -82,8 +100,24 @@ export function HomeScreen({
     };
   }, []);
 
+  useEffect(() => {
+    if (!championships) return;
+    let active = true;
+    getChampionships()
+      .then((list) => {
+        if (!active) return;
+        const count = list.filter((c) => c.status === 'inscricoes').length;
+        setOpenChampionshipsCount(count);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [championships]);
+
   const activate = (id: MenuId) => {
     if (id === 'ranqueado') onStartRanked();
+    if (id === 'campeonatos') onOpenChampionships();
     if (id === 'ranking') onOpenRanking();
     if (id === 'como') {
       track('view_instructions');
@@ -100,12 +134,14 @@ export function HomeScreen({
     const down = event.key === 'ArrowDown' || event.code === 'KeyS';
     if (!up && !down) return;
     event.preventDefault();
-    const next = (selected + (up ? -1 : 1) + MENU_ITEMS.length) % MENU_ITEMS.length;
+    const safeSelected = selected < menuItems.length ? selected : 0;
+    const next = (safeSelected + (up ? -1 : 1) + menuItems.length) % menuItems.length;
     setSelected(next);
     itemRefs.current[next]?.focus();
   };
 
-  const current = MENU_ITEMS[selected];
+  const selectedIndex = selected < menuItems.length ? selected : 0;
+  const current = menuItems[selectedIndex];
 
   return (
     <div className="home-screen">
@@ -124,14 +160,14 @@ export function HomeScreen({
 
       <main className="home-stage">
         <nav className="home-menu" aria-label="Menu principal" onKeyDown={handleKeyDown}>
-          {MENU_ITEMS.map((item, index) => (
+          {menuItems.map((item, index) => (
             <button
               key={item.id}
               ref={(element) => {
                 itemRefs.current[index] = element;
               }}
               type="button"
-              className={`game-menu-item home-item${index === selected ? ' is-selected' : ''}`}
+              className={`game-menu-item home-item${index === selectedIndex ? ' is-selected' : ''}`}
               onPointerEnter={() => setSelected(index)}
               onFocus={() => setSelected(index)}
               onClick={() => activate(item.id)}
@@ -166,6 +202,19 @@ export function HomeScreen({
               ) : (
                 <p className="home-record-note">Nenhuma partida ranqueada esta semana.</p>
               )}
+            </div>
+          )}
+          {current.id === 'campeonatos' && openChampionshipsCount !== null && (
+            <div className="home-record">
+              <div>
+                <p className="home-record-label">Inscrições</p>
+                <strong>{openChampionshipsCount}</strong>
+              </div>
+              <p className="home-record-note">
+                {openChampionshipsCount === 1
+                  ? '1 campeonato com inscrições abertas'
+                  : `${openChampionshipsCount} campeonatos com inscrições abertas`}
+              </p>
             </div>
           )}
         </section>
