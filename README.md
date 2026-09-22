@@ -7,8 +7,6 @@ Este projeto foi desenvolvido para a matéria de Jogos Digitais do curso de Sist
 
 PAguessr é um Jogo de adivinhação geográfica (inspirado no GeoGuessr) focado exclusivamente na cidade de Paulo Afonso-BA.
 
-
-
 <img src="imagem.png" alt="Tela Inicial">
 
 > Tela Inicial do jogo com características e pontos turísticos importantes da cidade.
@@ -29,7 +27,6 @@ O jogo ainda está em desenvolvimento e as próximas atualizações serão volta
 - [x] Modo de Jogo - Casual
 - [ ] Modo de Jogo - Hardcore
 - [ ] Modo de Jogo - Multiplayer
-
 
 ## 💻 Pré-requisitos
 
@@ -144,7 +141,6 @@ pnpm typecheck
 pnpm format
 ```
 
-
 ## 🤝 Colaboradores
 
 Este projeto foi desenvolvido para a matéria de Jogos Digitais do curso de Sistemas de Informação do Centro Universitário do Rio São Francisco - UniRios, ministrada pelo Professor Dr. Erick Barros:
@@ -201,4 +197,3 @@ Este projeto foi desenvolvido para a matéria de Jogos Digitais do curso de Sist
     </td>
   </tr>
 </table>
-
