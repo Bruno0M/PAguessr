@@ -73,7 +73,7 @@ export function GameResult({
 
   return (
     <div className="game-result-container">
-      <div className="game-result-card">
+      <div className="game-card game-result-card">
         <div className="result-header">
           {showCelebration && (
             <div className="new-record-banner">
@@ -127,11 +127,11 @@ export function GameResult({
         </div>
 
         <div className="result-actions">
-          <button type="button" className="btn-play-again" onClick={onPlayAgain}>
+          <button type="button" className="game-cta" onClick={onPlayAgain}>
             <FontAwesomeIcon icon={faArrowRotateRight} aria-hidden="true" /> Jogar Novamente
           </button>
           {showCelebration && onViewRanking && (
-            <button type="button" className="btn-secondary" onClick={onViewRanking}>
+            <button type="button" className="game-ghost" onClick={onViewRanking}>
               <FontAwesomeIcon icon={faTrophy} aria-hidden="true" /> Ver Ranking
             </button>
           )}
