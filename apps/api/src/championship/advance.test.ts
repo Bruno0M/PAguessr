@@ -44,7 +44,12 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
     await sql.end();
   });
 
-  async function createTestChampionship(size: 4 | 8 = 4, intervalSeconds = 120, roundDuration = 60, roundsCount = 5) {
+  async function createTestChampionship(
+    size: 4 | 8 = 4,
+    intervalSeconds = 120,
+    roundDuration = 60,
+    roundsCount = 5
+  ) {
     const creatorId = userIds[0];
     const [champ] = await db
       .insert(championships)
@@ -164,10 +169,7 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
       .select()
       .from(championshipMatches)
       .where(
-        and(
-          eq(championshipMatches.championship_id, champ.id),
-          eq(championshipMatches.phase, 1)
-        )
+        and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
       );
 
     const match0 = phase1Matches.find((m) => m.slot === 0)!;
@@ -188,16 +190,10 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
       );
 
     const updatedMatch0 = (
-      await db
-        .select()
-        .from(championshipMatches)
-        .where(eq(championshipMatches.id, match0.id))
+      await db.select().from(championshipMatches).where(eq(championshipMatches.id, match0.id))
     )[0];
     const updatedMatch1 = (
-      await db
-        .select()
-        .from(championshipMatches)
-        .where(eq(championshipMatches.id, match1.id))
+      await db.select().from(championshipMatches).where(eq(championshipMatches.id, match1.id))
     )[0];
 
     // slot 0 vai para player_a, slot 1 vai para player_b
@@ -216,10 +212,7 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
       .select()
       .from(championshipMatches)
       .where(
-        and(
-          eq(championshipMatches.championship_id, champ.id),
-          eq(championshipMatches.phase, 1)
-        )
+        and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
       );
 
     const maxResolvedAtMs = Math.max(
@@ -385,10 +378,7 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
       .select()
       .from(championshipMatches)
       .where(
-        and(
-          eq(championshipMatches.championship_id, champ.id),
-          eq(championshipMatches.phase, 1)
-        )
+        and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
       );
 
     expect(phase1Matches.every((m) => m.resolved_at === null)).toBe(true);
@@ -440,10 +430,7 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
       .select()
       .from(championshipMatches)
       .where(
-        and(
-          eq(championshipMatches.championship_id, champ.id),
-          eq(championshipMatches.phase, 1)
-        )
+        and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
       );
 
     expect(phase1Matches.every((m) => m.resolved_at !== null)).toBe(true);

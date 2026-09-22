@@ -37,9 +37,7 @@ export function DuelResult({
       <div className="game-result-card duel-result-card">
         <div className="result-header">
           <span className="trophy-emoji">{isWinner ? '🏆' : isDraw ? '🤝' : '⚔️'}</span>
-          <h2 className="result-title">
-            {isWinner ? 'Vitória!' : isDraw ? 'Empate!' : 'Derrota'}
-          </h2>
+          <h2 className="result-title">{isWinner ? 'Vitória!' : isDraw ? 'Empate!' : 'Derrota'}</h2>
           <p className="result-subtitle">
             {isWinner
               ? `Você superou ${opponentNick} e avançou no chaveamento.`
@@ -61,9 +59,7 @@ export function DuelResult({
             <div className={`duel-result-box ${!isWinner && !isDraw ? 'winner' : ''}`}>
               <span className="duel-result-box-label">Adversário</span>
               <span className="duel-result-box-nick">{opponentNick}</span>
-              <span className="duel-result-box-score">
-                {opponentScore.toLocaleString('pt-BR')}
-              </span>
+              <span className="duel-result-box-score">{opponentScore.toLocaleString('pt-BR')}</span>
               <span className="duel-result-box-unit">pontos</span>
             </div>
           </div>

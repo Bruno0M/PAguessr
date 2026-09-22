@@ -1,8 +1,4 @@
-import {
-  phasesFor,
-  shuffle,
-  type ChampionshipSize,
-} from '@paguessr/shared';
+import { phasesFor, shuffle, type ChampionshipSize } from '@paguessr/shared';
 
 export interface ParticipantSeedInput {
   userId: string;
@@ -37,12 +33,7 @@ export interface DuelPlayerInput {
 }
 
 export type DuelResolutionReason =
-  | 'points'
-  | 'distance'
-  | 'time'
-  | 'seed'
-  | 'wo_single'
-  | 'wo_both';
+  'points' | 'distance' | 'time' | 'seed' | 'wo_single' | 'wo_both';
 
 export interface DuelResolutionResult {
   winnerId: string;

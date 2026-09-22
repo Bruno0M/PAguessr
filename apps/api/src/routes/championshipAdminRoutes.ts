@@ -16,11 +16,7 @@ import {
   type ChampionshipSize,
 } from '@paguessr/shared';
 import { db } from '../db/index.js';
-import {
-  championships,
-  championshipParticipants,
-  championshipMatches,
-} from '../db/schema.js';
+import { championships, championshipParticipants, championshipMatches } from '../db/schema.js';
 import { requireAdmin } from '../auth/session.js';
 import { parseChampionshipsMode } from '../championship/featureFlag.js';
 import { advanceChampionship } from '../championship/advance.js';
@@ -259,10 +255,16 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
         .update(championships)
         .set({
           ...(body.title !== undefined ? { title: body.title.trim() } : {}),
-          ...(body.description !== undefined ? { description: body.description?.trim() || null } : {}),
+          ...(body.description !== undefined
+            ? { description: body.description?.trim() || null }
+            : {}),
           ...(body.banner_url !== undefined ? { banner_url: body.banner_url?.trim() || null } : {}),
-          ...(body.max_participants !== undefined ? { max_participants: body.max_participants } : {}),
-          ...(body.rounds_per_match !== undefined ? { rounds_per_match: body.rounds_per_match } : {}),
+          ...(body.max_participants !== undefined
+            ? { max_participants: body.max_participants }
+            : {}),
+          ...(body.rounds_per_match !== undefined
+            ? { rounds_per_match: body.rounds_per_match }
+            : {}),
           ...(body.round_duration_seconds !== undefined
             ? { round_duration_seconds: body.round_duration_seconds }
             : {}),
@@ -320,12 +322,7 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
       await tx
         .update(championshipMatches)
         .set({ opens_at: now })
-        .where(
-          and(
-            eq(championshipMatches.championship_id, id),
-            eq(championshipMatches.phase, 1)
-          )
-        );
+        .where(and(eq(championshipMatches.championship_id, id), eq(championshipMatches.phase, 1)));
 
       return [u];
     });
@@ -333,21 +330,24 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
     return reply.send(updated);
   });
 
-  app.post<{ Params: { id: string } }>('/admin/championships/:id/advance', async (request, reply) => {
-    const { id } = request.params;
+  app.post<{ Params: { id: string } }>(
+    '/admin/championships/:id/advance',
+    async (request, reply) => {
+      const { id } = request.params;
 
-    const [champ] = await db.select().from(championships).where(eq(championships.id, id));
-    if (!champ) {
-      return reply.status(404).send({ error: 'Campeonato não encontrado' });
+      const [champ] = await db.select().from(championships).where(eq(championships.id, id));
+      if (!champ) {
+        return reply.status(404).send({ error: 'Campeonato não encontrado' });
+      }
+
+      if (champ.status !== 'em_andamento') {
+        return reply.status(409).send({
+          error: `Campeonato em estado '${champ.status}' não pode ser avançado (esperado: 'em_andamento').`,
+        });
+      }
+
+      const result = await advanceChampionship(id, { force: true });
+      return reply.send(result.championship);
     }
-
-    if (champ.status !== 'em_andamento') {
-      return reply.status(409).send({
-        error: `Campeonato em estado '${champ.status}' não pode ser avançado (esperado: 'em_andamento').`,
-      });
-    }
-
-    const result = await advanceChampionship(id, { force: true });
-    return reply.send(result.championship);
-  });
+  );
 };

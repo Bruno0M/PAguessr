@@ -148,9 +148,7 @@ export const championshipMatches = pgTable(
     opens_at: timestamp('opens_at', { withTimezone: true }),
     resolved_at: timestamp('resolved_at', { withTimezone: true }),
   },
-  (table) => [
-    unique().on(table.championship_id, table.phase, table.slot),
-  ]
+  (table) => [unique().on(table.championship_id, table.phase, table.slot)]
 );
 
 export type Location = typeof locations.$inferSelect;

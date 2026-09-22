@@ -88,8 +88,4 @@ export const CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS = 60;
 export const CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS = 604800;
 
 export type ChampionshipStatus =
-  | 'inscricoes'
-  | 'chaveado'
-  | 'em_andamento'
-  | 'finalizado'
-  | 'cancelado';
+  'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';

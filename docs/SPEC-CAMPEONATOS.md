@@ -7,14 +7,14 @@ Registrado em 2026-09-17. Complementa [DECISIONS.md](DECISIONS.md).
 
 ## 1. Decisões que fecham o escopo
 
-| Pergunta | Decisão |
-| --- | --- |
-| Formato | Mata-mata de eliminatória simples, 1v1. Sem repescagem. |
-| Vagas | Só potências de 2: **4, 8, 16 ou 32**. Chave perfeita, sem bye. |
-| "Quantidade de rodadas" | Quantos **locais** cada duelo tem (igual às 5 do Ranqueado). |
-| "Tempo entre cada rodada" | Intervalo entre **fases** do chaveamento (ex.: 24 h da fase 1 para a semi). |
-| Duelo | **Ao vivo, simultâneo**: os dois adversários jogam os mesmos locais no mesmo relógio. |
-| Tempo por local | **Configurável por campeonato**, 10 a 300 s. Padrão 60 s, o `ROUND_DURATION_MS` do Ranqueado. |
+| Pergunta                  | Decisão                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| Formato                   | Mata-mata de eliminatória simples, 1v1. Sem repescagem.                                       |
+| Vagas                     | Só potências de 2: **4, 8, 16 ou 32**. Chave perfeita, sem bye.                               |
+| "Quantidade de rodadas"   | Quantos **locais** cada duelo tem (igual às 5 do Ranqueado).                                  |
+| "Tempo entre cada rodada" | Intervalo entre **fases** do chaveamento (ex.: 24 h da fase 1 para a semi).                   |
+| Duelo                     | **Ao vivo, simultâneo**: os dois adversários jogam os mesmos locais no mesmo relógio.         |
+| Tempo por local           | **Configurável por campeonato**, 10 a 300 s. Padrão 60 s, o `ROUND_DURATION_MS` do Ranqueado. |
 
 ### 1.1. Ao vivo sem WebSocket
 
@@ -51,49 +51,49 @@ Migration nova: `0005_championships.sql`. Três tabelas novas e uma coluna em `g
 
 ### 2.1. `championships`
 
-| Coluna | Tipo | Notas |
-| --- | --- | --- |
-| `id` | `uuid` PK | `defaultRandom()` |
-| `title` | `varchar(80)` not null | |
-| `description` | `text` | opcional |
-| `banner_url` | `text` | opcional, URL externa (ver §9) |
-| `max_participants` | `integer` not null | 4, 8, 16 ou 32 |
-| `rounds_per_match` | `integer` not null | 1 a 10 |
-| `round_duration_seconds` | `integer` not null | 10 a 300, default 60 |
-| `phase_interval_seconds` | `integer` not null | intervalo entre fases |
-| `status` | `text` not null | ver §2.6 |
-| `created_by` | `uuid` not null → `users.id` | |
-| `created_at` | `timestamptz` not null | `defaultNow()` |
-| `seeded_at` | `timestamptz` | quando o chaveamento foi sorteado |
-| `started_at` | `timestamptz` | quando o admin deu a largada |
-| `finished_at` | `timestamptz` | |
+| Coluna                   | Tipo                         | Notas                             |
+| ------------------------ | ---------------------------- | --------------------------------- |
+| `id`                     | `uuid` PK                    | `defaultRandom()`                 |
+| `title`                  | `varchar(80)` not null       |                                   |
+| `description`            | `text`                       | opcional                          |
+| `banner_url`             | `text`                       | opcional, URL externa (ver §9)    |
+| `max_participants`       | `integer` not null           | 4, 8, 16 ou 32                    |
+| `rounds_per_match`       | `integer` not null           | 1 a 10                            |
+| `round_duration_seconds` | `integer` not null           | 10 a 300, default 60              |
+| `phase_interval_seconds` | `integer` not null           | intervalo entre fases             |
+| `status`                 | `text` not null              | ver §2.6                          |
+| `created_by`             | `uuid` not null → `users.id` |                                   |
+| `created_at`             | `timestamptz` not null       | `defaultNow()`                    |
+| `seeded_at`              | `timestamptz`                | quando o chaveamento foi sorteado |
+| `started_at`             | `timestamptz`                | quando o admin deu a largada      |
+| `finished_at`            | `timestamptz`                |                                   |
 
 ### 2.2. `championship_participants`
 
-| Coluna | Tipo | Notas |
-| --- | --- | --- |
-| `championship_id` | `uuid` not null → `championships.id` `on delete cascade` | |
-| `user_id` | `uuid` not null → `users.id` `on delete cascade` | |
-| `seed` | `integer` | posição sorteada, 0..N-1. Null até o sorteio |
-| `joined_at` | `timestamptz` not null | `defaultNow()` |
-| `eliminated_in_phase` | `integer` | null enquanto vivo |
+| Coluna                | Tipo                                                     | Notas                                        |
+| --------------------- | -------------------------------------------------------- | -------------------------------------------- |
+| `championship_id`     | `uuid` not null → `championships.id` `on delete cascade` |                                              |
+| `user_id`             | `uuid` not null → `users.id` `on delete cascade`         |                                              |
+| `seed`                | `integer`                                                | posição sorteada, 0..N-1. Null até o sorteio |
+| `joined_at`           | `timestamptz` not null                                   | `defaultNow()`                               |
+| `eliminated_in_phase` | `integer`                                                | null enquanto vivo                           |
 
 PK composta `(championship_id, user_id)`. Índice em `championship_id`.
 
 ### 2.3. `championship_matches`
 
-| Coluna | Tipo | Notas |
-| --- | --- | --- |
-| `id` | `uuid` PK | |
-| `championship_id` | `uuid` not null → cascade | |
-| `phase` | `integer` not null | 1 = primeira fase; a final é a última |
-| `slot` | `integer` not null | posição do confronto dentro da fase, 0-indexado |
-| `player_a_id` / `player_b_id` | `uuid` → `users.id` | null nas fases ainda não preenchidas |
-| `game_a_id` / `game_b_id` | `uuid` → `games.id` | a partida de cada lado |
-| `score_a` / `score_b` | `integer` | consolidado ao fim do duelo |
-| `winner_id` | `uuid` → `users.id` | |
-| `opens_at` | `timestamptz` | âncora do relógio (§1.1) |
-| `resolved_at` | `timestamptz` | |
+| Coluna                        | Tipo                      | Notas                                           |
+| ----------------------------- | ------------------------- | ----------------------------------------------- |
+| `id`                          | `uuid` PK                 |                                                 |
+| `championship_id`             | `uuid` not null → cascade |                                                 |
+| `phase`                       | `integer` not null        | 1 = primeira fase; a final é a última           |
+| `slot`                        | `integer` not null        | posição do confronto dentro da fase, 0-indexado |
+| `player_a_id` / `player_b_id` | `uuid` → `users.id`       | null nas fases ainda não preenchidas            |
+| `game_a_id` / `game_b_id`     | `uuid` → `games.id`       | a partida de cada lado                          |
+| `score_a` / `score_b`         | `integer`                 | consolidado ao fim do duelo                     |
+| `winner_id`                   | `uuid` → `users.id`       |                                                 |
+| `opens_at`                    | `timestamptz`             | âncora do relógio (§1.1)                        |
+| `resolved_at`                 | `timestamptz`             |                                                 |
 
 Unique `(championship_id, phase, slot)`.
 
@@ -103,7 +103,7 @@ Coluna `uuid` nullable em `games`, referenciando `championship_matches.id`. Reap
 toda a máquina de partida existente (rodadas, proxy de imagem, palpite, pontuação) em vez
 de duplicá-la.
 
-> **Atenção — regressão silenciosa.** `rankingRoutes.ts` hoje soma *todas* as partidas
+> **Atenção — regressão silenciosa.** `rankingRoutes.ts` hoje soma _todas_ as partidas
 > finalizadas. Sem filtro, partida de campeonato entra no ranking geral e no da semana.
 > A query precisa ganhar `isNull(games.championship_match_id)`. Isto é obrigatório, não
 > opcional, e merece teste próprio.
@@ -114,11 +114,11 @@ Coluna `integer not null default 60` em `rounds`. **É ela, e não a constante, 
 
 `ROUND_DURATION_MS` hoje é lido em três lugares, e todos decidem coisas diferentes:
 
-| Onde | Linha | O que decide |
-| --- | --- | --- |
-| `reserveImageFetch` | `gameRoutes.ts:69` | se o proxy ainda pode buscar a imagem no Google (cota paga) |
-| handler do palpite | `gameRoutes.ts:442` | `isLate`, que zera a pontuação da rodada |
-| cronômetro do front | `App.tsx` (`useEffect` de `secondsLeft`) | a contagem regressiva e o envio automático no zero |
+| Onde                | Linha                                    | O que decide                                                |
+| ------------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| `reserveImageFetch` | `gameRoutes.ts:69`                       | se o proxy ainda pode buscar a imagem no Google (cota paga) |
+| handler do palpite  | `gameRoutes.ts:442`                      | `isLate`, que zera a pontuação da rodada                    |
+| cronômetro do front | `App.tsx` (`useEffect` de `secondsLeft`) | a contagem regressiva e o envio automático no zero          |
 
 Os três passam a ler `round.duration_seconds`. Guardar a duração **na rodada**, e não só no
 campeonato, é o que mantém isso simples: o proxy de imagem e o handler de palpite recebem
@@ -213,15 +213,15 @@ Tudo sob sessão (`requireAuth`); a seção de admin usa `requireAdmin` (`ADMIN_
 
 ### 5.1. Jogador
 
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| `GET` | `/api/championships` | Lista. Campos: id, título, banner, status, `participants`/`max_participants`, `joined` (se eu estou dentro). |
-| `GET` | `/api/championships/:id` | Detalhe: dados, chave completa, meu confronto atual, meu estado. Dispara o avanço preguiçoso (§4). |
-| `POST` | `/api/championships/:id/join` | Entra. 409 se lotado, já inscrito ou fora de `inscricoes`. Dispara o sorteio ao lotar. |
-| `DELETE` | `/api/championships/:id/join` | Sai. Só em `inscricoes`. |
-| `GET` | `/api/championships/:id/ranking` | Ranking do campeonato (§6). |
-| `POST` | `/api/championships/:id/matches/:matchId/enter` | Entra no duelo. Devolve `gameId` + rodadas com `started_at` já calculado. Idempotente: chamar de novo devolve a mesma partida. |
-| `GET` | `/api/championships/:id/matches/:matchId/live` | Alvo do polling: rodada atual, meu placar parcial, quantas rodadas o adversário já respondeu, `resolved_at`. |
+| Método   | Rota                                            | Descrição                                                                                                                      |
+| -------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/championships`                            | Lista. Campos: id, título, banner, status, `participants`/`max_participants`, `joined` (se eu estou dentro).                   |
+| `GET`    | `/api/championships/:id`                        | Detalhe: dados, chave completa, meu confronto atual, meu estado. Dispara o avanço preguiçoso (§4).                             |
+| `POST`   | `/api/championships/:id/join`                   | Entra. 409 se lotado, já inscrito ou fora de `inscricoes`. Dispara o sorteio ao lotar.                                         |
+| `DELETE` | `/api/championships/:id/join`                   | Sai. Só em `inscricoes`.                                                                                                       |
+| `GET`    | `/api/championships/:id/ranking`                | Ranking do campeonato (§6).                                                                                                    |
+| `POST`   | `/api/championships/:id/matches/:matchId/enter` | Entra no duelo. Devolve `gameId` + rodadas com `started_at` já calculado. Idempotente: chamar de novo devolve a mesma partida. |
+| `GET`    | `/api/championships/:id/matches/:matchId/live`  | Alvo do polling: rodada atual, meu placar parcial, quantas rodadas o adversário já respondeu, `resolved_at`.                   |
 
 Palpite continua em `POST /api/rounds/:id/guess`. Nada muda ali.
 
@@ -235,22 +235,22 @@ rodada fechar — só o total parcial e o progresso. Sem isso o adversário vira
 
 ### 5.2. Admin
 
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| `GET` | `/api/admin/championships` | Lista com contadores. |
-| `POST` | `/api/admin/championships` | Cria. |
-| `PATCH` | `/api/admin/championships/:id` | Edita (§5.3). |
-| `DELETE` | `/api/admin/championships/:id` | Exclui (cascade). |
-| `POST` | `/api/admin/championships/:id/start` | Largada. Só de `chaveado`. Abre a fase 1 com `opens_at = now()`. |
-| `POST` | `/api/admin/championships/:id/advance` | Força a avaliação de avanço. |
+| Método   | Rota                                   | Descrição                                                        |
+| -------- | -------------------------------------- | ---------------------------------------------------------------- |
+| `GET`    | `/api/admin/championships`             | Lista com contadores.                                            |
+| `POST`   | `/api/admin/championships`             | Cria.                                                            |
+| `PATCH`  | `/api/admin/championships/:id`         | Edita (§5.3).                                                    |
+| `DELETE` | `/api/admin/championships/:id`         | Exclui (cascade).                                                |
+| `POST`   | `/api/admin/championships/:id/start`   | Largada. Só de `chaveado`. Abre a fase 1 com `opens_at = now()`. |
+| `POST`   | `/api/admin/championships/:id/advance` | Força a avaliação de avanço.                                     |
 
 ### 5.3. O que dá para editar, e quando
 
-| Campo | `inscricoes` | `chaveado` / `em_andamento` | `finalizado` |
-| --- | --- | --- | --- |
-| Título, descrição, banner | ✅ | ✅ | ❌ |
-| `rounds_per_match`, `phase_interval_seconds`, `round_duration_seconds` | ✅ | ❌ | ❌ |
-| `max_participants` | ✅, desde que ≥ inscritos | ❌ | ❌ |
+| Campo                                                                  | `inscricoes`              | `chaveado` / `em_andamento` | `finalizado` |
+| ---------------------------------------------------------------------- | ------------------------- | --------------------------- | ------------ |
+| Título, descrição, banner                                              | ✅                        | ✅                          | ❌           |
+| `rounds_per_match`, `phase_interval_seconds`, `round_duration_seconds` | ✅                        | ❌                          | ❌           |
+| `max_participants`                                                     | ✅, desde que ≥ inscritos | ❌                          | ❌           |
 
 Mudar `max_participants` depois do sorteio significaria refazer a chave com gente já
 eliminada — a API recusa com 409.

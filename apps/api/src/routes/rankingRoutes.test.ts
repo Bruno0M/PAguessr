@@ -4,7 +4,14 @@ import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
-import { championships, championshipMatches, games, locations, rounds, users } from '../db/schema.js';
+import {
+  championships,
+  championshipMatches,
+  games,
+  locations,
+  rounds,
+  users,
+} from '../db/schema.js';
 
 async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Promise<string> {
   const res = await registerUser(app, { nick });

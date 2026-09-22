@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  isChampionshipsVisible,
-  parseChampionshipsMode,
-} from './featureFlag.js';
+import { isChampionshipsVisible, parseChampionshipsMode } from './featureFlag.js';
 
 describe('featureFlag - parseChampionshipsMode', () => {
   it('retorna "off" para valor ausente (undefined)', () => {

@@ -254,26 +254,20 @@ describe('Módulo de Chaveamento (bracket.ts)', () => {
 
       expect(resolveDuel(baseA, baseB).winnerId).toBe('user-b'); // empate até seed: 2 < 4 -> B
 
-      expect(
-        resolveDuel(
-          { ...baseA, lastGuessAt: 900 },
-          baseB
-        )
-      ).toEqual({ winnerId: 'user-a', reason: 'time' });
+      expect(resolveDuel({ ...baseA, lastGuessAt: 900 }, baseB)).toEqual({
+        winnerId: 'user-a',
+        reason: 'time',
+      });
 
-      expect(
-        resolveDuel(
-          { ...baseA, totalDistanceMeters: 50 },
-          baseB
-        )
-      ).toEqual({ winnerId: 'user-a', reason: 'distance' });
+      expect(resolveDuel({ ...baseA, totalDistanceMeters: 50 }, baseB)).toEqual({
+        winnerId: 'user-a',
+        reason: 'distance',
+      });
 
-      expect(
-        resolveDuel(
-          baseA,
-          { ...baseB, totalScore: 5001 }
-        )
-      ).toEqual({ winnerId: 'user-b', reason: 'points' });
+      expect(resolveDuel(baseA, { ...baseB, totalScore: 5001 })).toEqual({
+        winnerId: 'user-b',
+        reason: 'points',
+      });
     });
   });
 

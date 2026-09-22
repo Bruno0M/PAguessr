@@ -14,7 +14,10 @@ import {
   users,
 } from '../db/schema.js';
 
-async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Promise<{ cookie: string; userId: string }> {
+async function loginNewUser(
+  app: ReturnType<typeof buildApp>,
+  nick: string
+): Promise<{ cookie: string; userId: string }> {
   const res = await registerUser(app, { nick });
   if (res.statusCode !== 201) {
     throw new Error(`Failed to register user ${nick}: ${res.statusCode} ${res.body}`);
@@ -420,10 +423,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         .update(championshipMatches)
         .set({ opens_at: now })
         .where(
-          and(
-            eq(championshipMatches.championship_id, champ.id),
-            eq(championshipMatches.phase, 1)
-          )
+          and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
         );
 
       const matches = await db
@@ -525,12 +525,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       const allUserGames = await db
         .select()
         .from(games)
-        .where(
-          and(
-            eq(games.championship_match_id, match.id),
-            eq(games.user_id, playerA.userId)
-          )
-        );
+        .where(and(eq(games.championship_match_id, match.id), eq(games.user_id, playerA.userId)));
       expect(allUserGames).toHaveLength(1);
     });
 
@@ -669,8 +664,14 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       const dataA = JSON.parse(resA.body);
       const dataB = JSON.parse(resB.body);
 
-      await db.update(rounds).set({ pontos: 4000, distancia: 100 }).where(eq(rounds.id, dataA.rounds[0].id));
-      await db.update(rounds).set({ pontos: 1000, distancia: 5000 }).where(eq(rounds.id, dataB.rounds[0].id));
+      await db
+        .update(rounds)
+        .set({ pontos: 4000, distancia: 100 })
+        .where(eq(rounds.id, dataA.rounds[0].id));
+      await db
+        .update(rounds)
+        .set({ pontos: 1000, distancia: 5000 })
+        .where(eq(rounds.id, dataB.rounds[0].id));
 
       const liveRes = await app.inject({
         method: 'GET',
@@ -726,7 +727,10 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       });
       const dataA = JSON.parse(resA.body);
 
-      await db.update(rounds).set({ pontos: 2500, distancia: 300 }).where(eq(rounds.id, dataA.rounds[0].id));
+      await db
+        .update(rounds)
+        .set({ pontos: 2500, distancia: 300 })
+        .where(eq(rounds.id, dataA.rounds[0].id));
 
       const liveRes = await app.inject({
         method: 'GET',

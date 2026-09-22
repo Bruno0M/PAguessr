@@ -27,6 +27,7 @@ Metodologia: Exercício do fluxo completo via HTTP com `curl`, confrontando resp
 ## 2. Divergências front x API
 
 ### Divergência 1: Placar Parcial do Adversário no Polling do Duelo
+
 - **Endpoint**: `GET /api/championships/:id/matches/:matchId/live`
 - **O que a API devolve**:
   Campos devolvidos:
@@ -55,6 +56,7 @@ Metodologia: Exercício do fluxo completo via HTTP com `curl`, confrontando resp
 ---
 
 ### Divergência 2: Informações do Campeão na Lista de Campeonatos
+
 - **Endpoint**: `GET /api/championships`
 - **O que a API devolve**:
   Array de objetos contendo apenas:
@@ -88,6 +90,7 @@ Metodologia: Exercício do fluxo completo via HTTP com `curl`, confrontando resp
 ---
 
 ### Divergência 3: Duplicação de Chaves camelCase e snake_case nos Payloads da API
+
 - **Endpoints**:
   - `GET /api/championships/:id`
   - `POST /api/championships/:id/matches/:matchId/enter`
@@ -127,6 +130,7 @@ Metodologia: Exercício do fluxo completo via HTTP com `curl`, confrontando resp
 ---
 
 ### Divergência 4: Nomenclatura do Campo de Senha no Registro e Login
+
 - **Endpoints**: `POST /api/auth/register` e `POST /api/auth/login`
 - **O que a API devolve / espera**:
   - A API espera `password` (`string`).
@@ -139,6 +143,7 @@ Metodologia: Exercício do fluxo completo via HTTP com `curl`, confrontando resp
 ---
 
 ### Divergência 5: Bloqueio de Substring "admin" no Nickname Durante Registro
+
 - **Endpoint**: `POST /api/auth/register`
 - **O que a API devolve**:
   `400 Bad Request` com `{"error":"Esse nick não é permitido"}` ao tentar cadastrar nicks como `adminteste`.

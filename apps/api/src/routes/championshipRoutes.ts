@@ -1,9 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import {
-  type ChampionshipSize,
-  shuffle,
-} from '@paguessr/shared';
+import { type ChampionshipSize, shuffle } from '@paguessr/shared';
 import { db } from '../db/index.js';
 import {
   championships,
@@ -16,14 +13,8 @@ import {
   type Location,
 } from '../db/schema.js';
 import { requireAuth, isAdminNick } from '../auth/session.js';
-import {
-  isChampionshipsVisible,
-  parseChampionshipsMode,
-} from '../championship/featureFlag.js';
-import {
-  calculateRoundStartedAt,
-  createInitialBracket,
-} from '../championship/bracket.js';
+import { isChampionshipsVisible, parseChampionshipsMode } from '../championship/featureFlag.js';
+import { calculateRoundStartedAt, createInitialBracket } from '../championship/bracket.js';
 import { advanceChampionship } from '../championship/advance.js';
 import { resolveStreetviewMode } from '../streetview.js';
 
@@ -41,10 +32,7 @@ async function pickLocationsForMatch(
     .select({ location_id: rounds.location_id })
     .from(rounds)
     .innerJoin(games, eq(rounds.game_id, games.id))
-    .innerJoin(
-      championshipMatches,
-      eq(games.championship_match_id, championshipMatches.id)
-    )
+    .innerJoin(championshipMatches, eq(games.championship_match_id, championshipMatches.id))
     .where(eq(championshipMatches.championship_id, championshipId));
 
   const usedLocationIds = new Set(usedRounds.map((r: any) => r.location_id));
@@ -125,10 +113,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
       const user = request.authUser!;
       const { id } = request.params;
 
-      const [champ] = await db
-        .select()
-        .from(championships)
-        .where(eq(championships.id, id));
+      const [champ] = await db.select().from(championships).where(eq(championships.id, id));
 
       if (!champ) {
         return reply.status(404).send({ error: 'Campeonato não encontrado' });
@@ -142,10 +127,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         }
       }
 
-      const [latestChamp] = await db
-        .select()
-        .from(championships)
-        .where(eq(championships.id, id));
+      const [latestChamp] = await db.select().from(championships).where(eq(championships.id, id));
 
       const participants = await db
         .select({
@@ -232,17 +214,14 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         myStatus = 'waiting';
         myMatch =
           matches.find(
-            (m) =>
-              m.phase === 1 &&
-              (m.playerAId === user.id || m.playerBId === user.id)
+            (m) => m.phase === 1 && (m.playerAId === user.id || m.playerBId === user.id)
           ) ?? null;
       } else if (latestChamp.status === 'em_andamento') {
         const userMatches = matches.filter(
           (m) => m.playerAId === user.id || m.playerBId === user.id
         );
         const currentMatch =
-          userMatches.find((m) => m.resolvedAt === null) ??
-          userMatches[userMatches.length - 1];
+          userMatches.find((m) => m.resolvedAt === null) ?? userMatches[userMatches.length - 1];
         myMatch = currentMatch ?? null;
 
         if (currentMatch && currentMatch.opensAt) {
@@ -417,10 +396,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
       const user = request.authUser!;
       const { id } = request.params;
 
-      const [champ] = await db
-        .select()
-        .from(championships)
-        .where(eq(championships.id, id));
+      const [champ] = await db.select().from(championships).where(eq(championships.id, id));
 
       if (!champ) {
         return reply.status(404).send({ error: 'Campeonato não encontrado' });
@@ -490,10 +466,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
           .select()
           .from(championshipMatches)
           .where(
-            and(
-              eq(championshipMatches.id, matchId),
-              eq(championshipMatches.championship_id, id)
-            )
+            and(eq(championshipMatches.id, matchId), eq(championshipMatches.championship_id, id))
           )
           .for('update');
 
@@ -515,15 +488,9 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         let gameBId = match.game_b_id;
 
         if (!gameAId && !gameBId) {
-          const selectedLocations = await pickLocationsForMatch(
-            tx,
-            id,
-            champ.rounds_per_match
-          );
+          const selectedLocations = await pickLocationsForMatch(tx, id, champ.rounds_per_match);
 
-          const modes = await Promise.all(
-            selectedLocations.map(() => resolveStreetviewMode())
-          );
+          const modes = await Promise.all(selectedLocations.map(() => resolveStreetviewMode()));
 
           if (match.player_a_id) {
             const [gameA] = await tx
@@ -640,10 +607,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
       const user = request.authUser!;
       const { id, matchId } = request.params;
 
-      const [champ] = await db
-        .select()
-        .from(championships)
-        .where(eq(championships.id, id));
+      const [champ] = await db.select().from(championships).where(eq(championships.id, id));
 
       if (!champ) {
         return reply.status(404).send({ error: 'Campeonato não encontrado' });
@@ -661,10 +625,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         .select()
         .from(championshipMatches)
         .where(
-          and(
-            eq(championshipMatches.id, matchId),
-            eq(championshipMatches.championship_id, id)
-          )
+          and(eq(championshipMatches.id, matchId), eq(championshipMatches.championship_id, id))
         );
 
       if (!match) {

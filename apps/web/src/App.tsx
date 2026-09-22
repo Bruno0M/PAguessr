@@ -37,7 +37,8 @@ type AuthView = 'login' | 'register' | 'recover';
 
 export function App() {
   const [showTitle, setShowTitle] = useState(
-    () => !window.location.pathname.startsWith('/admin') && window.location.pathname !== '/campeonatos'
+    () =>
+      !window.location.pathname.startsWith('/admin') && window.location.pathname !== '/campeonatos'
   );
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
@@ -300,12 +301,9 @@ export function App() {
       return;
     }
 
-    const durationSeconds =
-      currentRound.durationSeconds ?? currentRound.duration_seconds;
+    const durationSeconds = currentRound.durationSeconds ?? currentRound.duration_seconds;
     const durationMs =
-      typeof durationSeconds === 'number'
-        ? durationSeconds * 1000
-        : ROUND_DURATION_MS;
+      typeof durationSeconds === 'number' ? durationSeconds * 1000 : ROUND_DURATION_MS;
 
     const deadline = new Date(currentRound.startedAt).getTime() + durationMs;
     let timeoutFired = false;

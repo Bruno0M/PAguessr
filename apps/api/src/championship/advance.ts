@@ -10,11 +10,7 @@ import {
   type Championship,
   type ChampionshipMatch,
 } from '../db/schema.js';
-import {
-  resolveDuel,
-  getNextMatchDestination,
-  type DuelPlayerInput,
-} from './bracket.js';
+import { resolveDuel, getNextMatchDestination, type DuelPlayerInput } from './bracket.js';
 
 export interface AdvanceOptions {
   force?: boolean;
@@ -69,8 +65,7 @@ async function getPlayerDuelStats(
 
   const hasGuessed = validGuesses.length > 0;
   const totalScore =
-    game?.total_score ??
-    validGuesses.reduce((sum: number, r: any) => sum + (r.pontos ?? 0), 0);
+    game?.total_score ?? validGuesses.reduce((sum: number, r: any) => sum + (r.pontos ?? 0), 0);
   const totalDistance = hasGuessed
     ? validGuesses.reduce((sum: number, r: any) => sum + (r.distancia ?? 0), 0)
     : Infinity;
@@ -164,11 +159,7 @@ async function resolveSingleMatch(
     const dest = getNextMatchDestination(match.phase, match.slot);
     await tx
       .update(championshipMatches)
-      .set(
-        dest.side === 'player_a'
-          ? { player_a_id: winnerId }
-          : { player_b_id: winnerId }
-      )
+      .set(dest.side === 'player_a' ? { player_a_id: winnerId } : { player_b_id: winnerId })
       .where(
         and(
           eq(championshipMatches.championship_id, champ.id),
@@ -279,13 +270,7 @@ export async function advanceChampionship(
         const resolvedAtTimestamp =
           options?.force && now.getTime() < matchEndTime.getTime() ? now : matchEndTime;
 
-        await resolveSingleMatch(
-          tx,
-          champ,
-          match,
-          totalPhases,
-          resolvedAtTimestamp
-        );
+        await resolveSingleMatch(tx, champ, match, totalPhases, resolvedAtTimestamp);
 
         resolvedMatchesCount++;
         promotedCount++;
@@ -303,8 +288,7 @@ export async function advanceChampionship(
         );
 
       const allResolved =
-        updatedPhaseMatches.length > 0 &&
-        updatedPhaseMatches.every((m) => m.resolved_at !== null);
+        updatedPhaseMatches.length > 0 && updatedPhaseMatches.every((m) => m.resolved_at !== null);
 
       if (!allResolved) {
         break;

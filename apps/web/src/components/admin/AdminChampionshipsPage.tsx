@@ -217,8 +217,7 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
       }
     }
 
-    const participantsCount =
-      selectedChamp?.participant_count ?? selectedChamp?.participants ?? 0;
+    const participantsCount = selectedChamp?.participant_count ?? selectedChamp?.participants ?? 0;
 
     if (dialogMode === 'create' || selectedChamp?.status === 'inscricoes') {
       if (!CHAMPIONSHIP_SIZES.includes(maxParticipants)) {
@@ -340,20 +339,12 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
             Gerencie torneios mata-mata 1v1, configurações e chaveamentos.
           </p>
         </div>
-        <button
-          type="button"
-          className="admin-btn admin-btn-secondary"
-          onClick={openCreateDialog}
-        >
+        <button type="button" className="admin-btn admin-btn-secondary" onClick={openCreateDialog}>
           + Novo Campeonato
         </button>
       </div>
 
-      {pageError && (
-        <div className="admin-dialog-alert admin-dialog-alert-danger">
-          {pageError}
-        </div>
-      )}
+      {pageError && <div className="admin-dialog-alert admin-dialog-alert-danger">{pageError}</div>}
 
       {loading ? (
         <div className="admin-status">
@@ -508,9 +499,7 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
           <form onSubmit={handleSubmitForm}>
             <div className="admin-dialog-body">
               {formError && (
-                <div className="admin-dialog-alert admin-dialog-alert-danger">
-                  {formError}
-                </div>
+                <div className="admin-dialog-alert admin-dialog-alert-danger">{formError}</div>
               )}
 
               {isEditing && currentStatus !== 'inscricoes' && (
@@ -573,9 +562,7 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                     id="champ-vagas"
                     disabled={isConfigFieldsDisabled || isFinalizado}
                     value={maxParticipants}
-                    onChange={(e) =>
-                      setMaxParticipants(Number(e.target.value) as ChampionshipSize)
-                    }
+                    onChange={(e) => setMaxParticipants(Number(e.target.value) as ChampionshipSize)}
                   >
                     {CHAMPIONSHIP_SIZES.map((size) => (
                       <option
@@ -608,7 +595,8 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                     onChange={(e) => setRoundsPerMatch(Number(e.target.value))}
                   />
                   <span className="admin-form-hint">
-                    {CHAMPIONSHIP_ROUNDS_PER_MATCH_MIN} a {CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX} rodadas
+                    {CHAMPIONSHIP_ROUNDS_PER_MATCH_MIN} a {CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX}{' '}
+                    rodadas
                   </span>
                 </div>
               </div>
@@ -626,7 +614,8 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                     onChange={(e) => setRoundDurationSeconds(Number(e.target.value))}
                   />
                   <span className="admin-form-hint">
-                    {ROUND_DURATION_MIN_SECONDS}s a {ROUND_DURATION_MAX_SECONDS}s (padrão {ROUND_DURATION_DEFAULT_SECONDS}s)
+                    {ROUND_DURATION_MIN_SECONDS}s a {ROUND_DURATION_MAX_SECONDS}s (padrão{' '}
+                    {ROUND_DURATION_DEFAULT_SECONDS}s)
                   </span>
                 </div>
 
@@ -642,7 +631,8 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                     onChange={(e) => setPhaseIntervalSeconds(Number(e.target.value))}
                   />
                   <span className="admin-form-hint">
-                    {Math.round(phaseIntervalSeconds / 60)} min ({Math.round((phaseIntervalSeconds / 3600) * 10) / 10}h)
+                    {Math.round(phaseIntervalSeconds / 60)} min (
+                    {Math.round((phaseIntervalSeconds / 3600) * 10) / 10}h)
                   </span>
                 </div>
               </div>
@@ -662,7 +652,11 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                 className="admin-btn admin-btn-secondary"
                 disabled={isFinalizado || isSubmitting}
               >
-                {isSubmitting ? 'Salvando...' : dialogMode === 'create' ? 'Criar Campeonato' : 'Salvar'}
+                {isSubmitting
+                  ? 'Salvando...'
+                  : dialogMode === 'create'
+                    ? 'Criar Campeonato'
+                    : 'Salvar'}
               </button>
             </div>
           </form>
@@ -693,9 +687,7 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
 
           <div className="admin-dialog-body">
             {deleteError && (
-              <div className="admin-dialog-alert admin-dialog-alert-danger">
-                {deleteError}
-              </div>
+              <div className="admin-dialog-alert admin-dialog-alert-danger">{deleteError}</div>
             )}
 
             {champToDelete && (
@@ -746,8 +738,7 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
               className="admin-btn admin-btn-danger"
               disabled={
                 isDeleting ||
-                (champToDelete?.status !== 'inscricoes' &&
-                  confirmTitle !== champToDelete?.title)
+                (champToDelete?.status !== 'inscricoes' && confirmTitle !== champToDelete?.title)
               }
               onClick={handleDelete}
             >

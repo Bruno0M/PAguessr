@@ -58,9 +58,7 @@ export function ChampionshipsPage({
       })
       .catch((err: unknown) => {
         const msg =
-          err instanceof Error
-            ? err.message
-            : 'Não foi possível carregar a lista de campeonatos.';
+          err instanceof Error ? err.message : 'Não foi possível carregar a lista de campeonatos.';
         setErrorMessage(msg);
         setPageStatus('error');
       });
@@ -257,7 +255,11 @@ export function ChampionshipsPage({
                 Voltar ao início
               </button>
               <button type="button" className="game-cta" onClick={loadData}>
-                <FontAwesomeIcon icon={faRotateRight} aria-hidden="true" style={{ marginRight: 8 }} />
+                <FontAwesomeIcon
+                  icon={faRotateRight}
+                  aria-hidden="true"
+                  style={{ marginRight: 8 }}
+                />
                 Tentar novamente
               </button>
             </div>
@@ -266,7 +268,11 @@ export function ChampionshipsPage({
 
         {pageStatus === 'ready' && items.length === 0 && (
           <div className="game-card championships-empty-card">
-            <FontAwesomeIcon icon={faTrophy} className="championships-empty-icon" aria-hidden="true" />
+            <FontAwesomeIcon
+              icon={faTrophy}
+              className="championships-empty-icon"
+              aria-hidden="true"
+            />
             <h2>Nenhum campeonato no momento</h2>
             <p className="championships-empty-desc">
               Não há campeonatos abertos agora. Fique de olho para as próximas edições mata-mata em
@@ -308,9 +314,7 @@ export function ChampionshipsPage({
                       loading="lazy"
                     />
                     <div className="championship-card-banner-veil" />
-                    <span
-                      className={`championship-badge championship-badge-${item.status}`}
-                    >
+                    <span className={`championship-badge championship-badge-${item.status}`}>
                       {STATUS_LABELS[item.status]}
                     </span>
                     {item.joined && (

@@ -86,9 +86,7 @@ export function ChampionshipDetailPage({
       })
       .catch((err: unknown) => {
         const msg =
-          err instanceof Error
-            ? err.message
-            : 'Não foi possível carregar os dados do campeonato.';
+          err instanceof Error ? err.message : 'Não foi possível carregar os dados do campeonato.';
         setErrorMessage(msg);
         setLoading(false);
       });
@@ -125,9 +123,7 @@ export function ChampionshipDetailPage({
   const isJoined = useMemo(() => {
     if (!detail) return false;
     if (typeof detail.joined === 'boolean') return detail.joined;
-    return detail.participants?.some(
-      (p) => (p.userId || p.user_id) === user.id
-    );
+    return detail.participants?.some((p) => (p.userId || p.user_id) === user.id);
   }, [detail, user.id]);
 
   const myParticipant = useMemo(() => {
@@ -178,23 +174,18 @@ export function ChampionshipDetailPage({
     }
   };
 
-  const renderPlayerRow = (
-    match: ChampionshipMatch | undefined,
-    playerKey: 'a' | 'b'
-  ) => {
+  const renderPlayerRow = (match: ChampionshipMatch | undefined, playerKey: 'a' | 'b') => {
     const isPlayerA = playerKey === 'a';
     const playerId = isPlayerA
       ? match?.playerAId || match?.player_a_id
       : match?.playerBId || match?.player_b_id;
-    const playerObj = isPlayerA
-      ? match?.playerA
-      : match?.playerB;
+    const playerObj = isPlayerA ? match?.playerA : match?.playerB;
     const pData = playerId ? participantsMap.get(playerId) : null;
     const nick = playerObj?.nick || pData?.nick || (playerId ? 'Jogador' : 'A definir');
     const avatarId = playerObj?.avatarId ?? pData?.avatarId ?? pData?.avatar_id ?? 0;
     const scoreVal = isPlayerA
-      ? match?.scoreA ?? match?.score_a
-      : match?.scoreB ?? match?.score_b;
+      ? (match?.scoreA ?? match?.score_a)
+      : (match?.scoreB ?? match?.score_b);
     const winnerId = match?.winnerId || match?.winner_id;
     const isWinner = Boolean(playerId && winnerId && winnerId === playerId);
     const isMe = Boolean(playerId && playerId === user.id);
@@ -307,10 +298,10 @@ export function ChampionshipDetailPage({
       const match = currentMatch;
       const isEliminated = Boolean(
         myParticipant?.eliminatedInPhase ||
-          (match &&
-            (match.resolvedAt || match.resolved_at) &&
-            (match.winnerId || match.winner_id) &&
-            (match.winnerId || match.winner_id) !== user.id)
+        (match &&
+          (match.resolvedAt || match.resolved_at) &&
+          (match.winnerId || match.winner_id) &&
+          (match.winnerId || match.winner_id) !== user.id)
       );
 
       if (isEliminated) {
@@ -348,7 +339,9 @@ export function ChampionshipDetailPage({
               <div className="status-card-content">
                 <span className="status-badge-inline live-pulse">Sua vez de jogar</span>
                 <h3>Duelo da {getPhaseName(match.phase, totalPhases)} aberto</h3>
-                <p>O relógio está correndo no servidor! Entre na partida para enviar seus palpites.</p>
+                <p>
+                  O relógio está correndo no servidor! Entre na partida para enviar seus palpites.
+                </p>
               </div>
               <button
                 type="button"
@@ -416,13 +409,11 @@ export function ChampionshipDetailPage({
                 <h3 className="bracket-column-title">{phaseName}</h3>
                 <div className="bracket-matches">
                   {slotsArray.map((slot) => {
-                    const match = detail.matches?.find(
-                      (m) => m.phase === phase && m.slot === slot
-                    );
+                    const match = detail.matches?.find((m) => m.phase === phase && m.slot === slot);
                     const isMyMatch = Boolean(
                       match &&
-                        ((match.playerAId || match.player_a_id) === user.id ||
-                          (match.playerBId || match.player_b_id) === user.id)
+                      ((match.playerAId || match.player_a_id) === user.id ||
+                        (match.playerBId || match.player_b_id) === user.id)
                     );
 
                     return (
@@ -618,7 +609,11 @@ export function ChampionshipDetailPage({
                 Voltar à lista
               </button>
               <button type="button" className="game-cta" onClick={loadData}>
-                <FontAwesomeIcon icon={faRotateRight} aria-hidden="true" style={{ marginRight: 8 }} />
+                <FontAwesomeIcon
+                  icon={faRotateRight}
+                  aria-hidden="true"
+                  style={{ marginRight: 8 }}
+                />
                 Tentar novamente
               </button>
             </div>
@@ -647,7 +642,10 @@ export function ChampionshipDetailPage({
                 <div className="hero-meta">
                   <span>
                     <FontAwesomeIcon icon={faUsers} aria-hidden="true" />
-                    <strong>{detail.participants?.length ?? 0}/{detail.max_participants}</strong> vagas
+                    <strong>
+                      {detail.participants?.length ?? 0}/{detail.max_participants}
+                    </strong>{' '}
+                    vagas
                   </span>
                   <span>
                     <FontAwesomeIcon icon={faClock} aria-hidden="true" />

@@ -97,9 +97,11 @@ export function AdminLocationsPage({ onError }: AdminLocationsPageProps = {}) {
                   <div className="admin-popup-row">
                     <span>Data de Captura:</span>
                     <div>
-                      {loc.captured_at
-                        ? new Date(loc.captured_at).toLocaleDateString('pt-BR')
-                        : <em>Não informada</em>}
+                      {loc.captured_at ? (
+                        new Date(loc.captured_at).toLocaleDateString('pt-BR')
+                      ) : (
+                        <em>Não informada</em>
+                      )}
                     </div>
                   </div>
                   <a

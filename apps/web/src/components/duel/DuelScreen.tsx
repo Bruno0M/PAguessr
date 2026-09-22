@@ -257,18 +257,10 @@ export function DuelScreen({
         <h2>Não foi possível iniciar o duelo</h2>
         <p className="error-text">{loadError}</p>
         <div className="status-actions" style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            type="button"
-            className="admin-btn admin-btn-secondary"
-            onClick={onBackToBracket}
-          >
+          <button type="button" className="admin-btn admin-btn-secondary" onClick={onBackToBracket}>
             Voltar para a Chave
           </button>
-          <button
-            type="button"
-            className="admin-btn admin-btn-secondary"
-            onClick={initMatch}
-          >
+          <button type="button" className="admin-btn admin-btn-secondary" onClick={initMatch}>
             Tentar Novamente
           </button>
         </div>

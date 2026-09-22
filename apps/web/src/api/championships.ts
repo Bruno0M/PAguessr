@@ -1,9 +1,5 @@
 export type ChampionshipStatus =
-  | 'inscricoes'
-  | 'chaveado'
-  | 'em_andamento'
-  | 'finalizado'
-  | 'cancelado';
+  'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';
 
 export interface ChampionshipListItem {
   id: string;
@@ -89,12 +85,7 @@ export interface ChampionshipDetail {
   joined?: boolean;
   myMatch?: ChampionshipMatch | null;
   myStatus?:
-    | 'not_joined'
-    | 'waiting'
-    | 'ready_to_play'
-    | 'waiting_next_phase'
-    | 'eliminated'
-    | 'spectator';
+    'not_joined' | 'waiting' | 'ready_to_play' | 'waiting_next_phase' | 'eliminated' | 'spectator';
 }
 
 export interface ChampionshipRankingEntry {
@@ -171,14 +162,18 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 export async function getChampionships(): Promise<ChampionshipListItem[]> {
   const res = await fetch('/api/championships', { credentials: 'include' });
-  const data = await handleResponse<ChampionshipListItem[] | { championships: ChampionshipListItem[] }>(res);
-  return Array.isArray(data) ? data : data.championships ?? [];
+  const data = await handleResponse<
+    ChampionshipListItem[] | { championships: ChampionshipListItem[] }
+  >(res);
+  return Array.isArray(data) ? data : (data.championships ?? []);
 }
 
 export async function getChampionship(id: string): Promise<ChampionshipDetail> {
   const res = await fetch(`/api/championships/${id}`, { credentials: 'include' });
   const data = await handleResponse<ChampionshipDetail | { championship: ChampionshipDetail }>(res);
-  return 'championship' in data && data.championship ? data.championship : (data as ChampionshipDetail);
+  return 'championship' in data && data.championship
+    ? data.championship
+    : (data as ChampionshipDetail);
 }
 
 export async function joinChampionship(id: string): Promise<void> {
@@ -200,8 +195,10 @@ export async function leaveChampionship(id: string): Promise<void> {
 
 export async function getChampionshipRanking(id: string): Promise<ChampionshipRankingEntry[]> {
   const res = await fetch(`/api/championships/${id}/ranking`, { credentials: 'include' });
-  const data = await handleResponse<ChampionshipRankingEntry[] | { ranking: ChampionshipRankingEntry[] }>(res);
-  return Array.isArray(data) ? data : data.ranking ?? [];
+  const data = await handleResponse<
+    ChampionshipRankingEntry[] | { ranking: ChampionshipRankingEntry[] }
+  >(res);
+  return Array.isArray(data) ? data : (data.ranking ?? []);
 }
 
 export async function enterMatch(

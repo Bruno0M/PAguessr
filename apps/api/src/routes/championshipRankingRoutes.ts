@@ -9,10 +9,7 @@ import {
   users,
 } from '../db/schema.js';
 import { requireAuth, isAdminNick } from '../auth/session.js';
-import {
-  isChampionshipsVisible,
-  parseChampionshipsMode,
-} from '../championship/featureFlag.js';
+import { isChampionshipsVisible, parseChampionshipsMode } from '../championship/featureFlag.js';
 import { advanceChampionship } from '../championship/advance.js';
 
 export interface ChampionshipRankingEntry {
@@ -29,11 +26,10 @@ export interface ChampionshipRankingEntry {
   seed: number | null;
 }
 
-export async function getChampionshipRanking(championshipId: string): Promise<ChampionshipRankingEntry[]> {
-  const [champ] = await db
-    .select()
-    .from(championships)
-    .where(eq(championships.id, championshipId));
+export async function getChampionshipRanking(
+  championshipId: string
+): Promise<ChampionshipRankingEntry[]> {
+  const [champ] = await db.select().from(championships).where(eq(championships.id, championshipId));
 
   if (!champ) {
     throw new Error('Campeonato não encontrado');
