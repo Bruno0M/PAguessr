@@ -1,22 +1,33 @@
+/* Duelo 1v1, no sistema visual do jogo. Cores por papel: você = céu, adversário
+   = creme, vencedor e pontos = dourado. Tokens em styles/tokens.css. */
+
 .duel-header {
   position: relative;
 }
 
+.duel-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .duel-badge {
-  background: rgba(234, 178, 90, 0.15);
-  color: var(--pa-sun, #eab25a);
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.2rem 0.55rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(234, 178, 90, 0.3);
+  padding: 5px 11px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.22);
+  color: var(--pa-cream-soft);
+  font:
+    600 10.5px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .duel-btn-exit {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.75rem;
+  min-height: 32px;
+  padding: 0 0.9em;
+  font-size: 11px;
 }
 
 .duel-scoreboard {
@@ -29,43 +40,41 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--bg-card, #273549);
-  padding: 0.35rem 0.85rem;
-  border-radius: 9999px;
-  border: 1px solid var(--border, #334155);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.16);
   font-size: 0.85rem;
 }
 
 .duel-player-me {
-  border-color: rgba(56, 189, 248, 0.4);
-  background: rgba(56, 189, 248, 0.08);
+  background: rgb(var(--pa-sky-rgb) / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-sky-rgb) / 0.4);
 }
 
 .duel-player-me .duel-player-nick {
-  color: var(--pa-sky, #38bdf8);
+  color: var(--pa-sky);
   font-weight: 700;
 }
 
 .duel-player-opp {
-  border-color: rgba(234, 178, 90, 0.4);
-  background: rgba(234, 178, 90, 0.08);
+  background: rgb(var(--pa-cream-rgb) / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.3);
 }
 
 .duel-player-opp .duel-player-nick {
-  color: var(--pa-sun, #eab25a);
+  color: var(--pa-cream);
   font-weight: 700;
 }
 
 .duel-player-score {
-  font-family: var(--pa-font-mono, monospace);
-  font-weight: 800;
-  color: var(--text-primary, #f8fafc);
+  font-weight: 700;
+  color: var(--pa-sun);
+  font-variant-numeric: tabular-nums;
 }
 
 .duel-vs {
   font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--text-muted, #64748b);
+  color: var(--pa-cream-soft);
 }
 
 .duel-waiting-card {
@@ -76,16 +85,15 @@
   width: 90%;
   max-width: 580px;
   z-index: 1001;
-  background: rgba(30, 41, 59, 0.96);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border, #334155);
-  border-radius: 1rem;
-  padding: 1.25rem 1.5rem;
-  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   gap: 1.25rem;
   animation: duel-slide-up 0.3s ease-out;
+}
+
+/* O .game-card define o próprio padding; o cartão de espera é mais compacto. */
+.game-card.duel-waiting-card {
+  padding: 1.1rem 1.4rem;
 }
 
 @keyframes duel-slide-up {
@@ -97,6 +105,18 @@
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .duel-waiting-card {
+    animation: none;
+  }
+}
+
+/* Gêmeo do bloco acima pro override manual das Configurações (ver
+   lib/motionPreference.ts). */
+:root[data-reduce-motion='true'] .duel-waiting-card {
+  animation: none;
 }
 
 .duel-waiting-spinner-wrap {
@@ -111,22 +131,30 @@
 }
 
 .duel-waiting-text h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary, #f8fafc);
+  font:
+    600 1rem / 1.2 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pa-cream);
   margin: 0;
 }
 
 .duel-waiting-text p {
   font-size: 0.85rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--pa-cream-soft);
   margin: 0;
 }
 
-.duel-waiting-countdown {
-  font-size: 0.95rem !important;
-  color: var(--pa-sun, #eab25a) !important;
+.duel-waiting-text p strong {
+  color: var(--pa-sun);
+}
+
+.duel-waiting-text .duel-waiting-countdown {
+  font-size: 0.95rem;
+  color: var(--pa-cream);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .duel-opponent-status {
@@ -134,17 +162,21 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.775rem;
-  color: var(--text-muted, #64748b);
+  color: var(--pa-cream-soft);
   margin-top: 0.25rem;
   flex-wrap: wrap;
 }
 
+.duel-opponent-status strong {
+  color: var(--pa-sun);
+}
+
 .duel-opp-status-pill {
-  background: var(--bg-card, #273549);
-  padding: 0.15rem 0.45rem;
+  background: rgb(var(--pa-cream-rgb) / 0.1);
+  padding: 0.15rem 0.5rem;
   border-radius: 4px;
   font-weight: 600;
-  color: var(--text-primary, #f8fafc);
+  color: var(--pa-cream);
 }
 
 .duel-result-matchup {
@@ -161,55 +193,65 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--bg-card, #273549);
-  border: 1px solid var(--border, #334155);
-  border-radius: 1rem;
+  background: rgb(var(--pa-cream-rgb) / 0.05);
+  border: 1px solid rgb(var(--pa-cream-rgb) / 0.16);
+  border-radius: 14px;
   padding: 1rem 0.75rem;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .duel-result-box.winner {
-  border-color: #34d399;
-  background: rgba(16, 185, 129, 0.12);
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+  border-color: rgb(var(--pa-sun-rgb) / 0.6);
+  background: rgb(var(--pa-sun-rgb) / 0.1);
 }
 
 .duel-result-box-label {
-  font-size: 0.75rem;
+  font:
+    600 0.75rem / 1 var(--pa-font),
+    sans-serif;
   text-transform: uppercase;
-  color: var(--text-muted, #64748b);
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  color: var(--pa-cream-soft);
+  letter-spacing: 0.2em;
 }
 
 .duel-result-box-nick {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary, #f8fafc);
+  color: var(--pa-cream);
   margin: 0.25rem 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-result-me .duel-result-box-label,
+.duel-result-me .duel-result-box-nick {
+  color: var(--pa-sky);
 }
 
 .duel-result-box-score {
   font-size: 2rem;
-  font-weight: 900;
-  color: #34d399;
-  font-family: var(--pa-font-mono, monospace);
+  font-weight: 600;
+  color: var(--pa-cream);
+  font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 
-.duel-result-box:not(.winner) .duel-result-box-score {
-  color: var(--text-primary, #f8fafc);
+.duel-result-box.winner .duel-result-box-score {
+  color: var(--pa-sun);
 }
 
 .duel-result-box-unit {
   font-size: 0.75rem;
-  color: var(--text-muted, #64748b);
+  color: var(--pa-cream-soft);
 }
 
 .duel-result-vs {
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: var(--text-muted, #64748b);
+  font-size: 1.1rem;
+  color: var(--pa-cream-soft);
 }
 
 @media (max-width: 768px) {
@@ -228,10 +270,13 @@
 
   .duel-waiting-card {
     width: 95%;
-    padding: 1rem;
     bottom: 0.75rem;
     flex-direction: column;
     text-align: center;
+  }
+
+  .game-card.duel-waiting-card {
+    padding: 1rem;
   }
 
   .duel-opponent-status {

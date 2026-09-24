@@ -1,3 +1,11 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowRight,
+  faFlagCheckered,
+  faHandshake,
+  faTrophy,
+  faXmark,
+} from '@fortawesome/free-solid-svg-icons';
 import type { RoundResult } from '../../types';
 
 export interface DuelResultProps {
@@ -34,9 +42,14 @@ export function DuelResult({
 
   return (
     <div className="game-result-container duel-result-screen">
-      <div className="game-result-card duel-result-card">
+      <div className="game-card game-result-card duel-result-card">
         <div className="result-header">
-          <span className="trophy-emoji">{isWinner ? '🏆' : isDraw ? '🤝' : '⚔️'}</span>
+          <span className="trophy-emoji">
+            <FontAwesomeIcon
+              icon={isWinner ? faTrophy : isDraw ? faHandshake : faFlagCheckered}
+              aria-hidden="true"
+            />
+          </span>
           <h2 className="result-title">{isWinner ? 'Vitória!' : isDraw ? 'Empate!' : 'Derrota'}</h2>
           <p className="result-subtitle">
             {isWinner
@@ -47,16 +60,20 @@ export function DuelResult({
           </p>
 
           <div className="duel-result-matchup">
-            <div className={`duel-result-box ${isWinner ? 'winner' : ''}`}>
+            <div className={`duel-result-box duel-result-me ${isWinner ? 'winner' : ''}`}>
               <span className="duel-result-box-label">Você</span>
               <span className="duel-result-box-nick">{myNick}</span>
               <span className="duel-result-box-score">{myScore.toLocaleString('pt-BR')}</span>
               <span className="duel-result-box-unit">pontos</span>
             </div>
 
-            <span className="duel-result-vs">✕</span>
+            <span className="duel-result-vs">
+              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+            </span>
 
-            <div className={`duel-result-box ${!isWinner && !isDraw ? 'winner' : ''}`}>
+            <div
+              className={`duel-result-box duel-result-opp ${!isWinner && !isDraw ? 'winner' : ''}`}
+            >
               <span className="duel-result-box-label">Adversário</span>
               <span className="duel-result-box-nick">{opponentNick}</span>
               <span className="duel-result-box-score">{opponentScore.toLocaleString('pt-BR')}</span>
@@ -96,8 +113,8 @@ export function DuelResult({
         </div>
 
         <div className="result-actions">
-          <button type="button" className="btn-play-again" onClick={onBackToBracket}>
-            Ver Chave do Campeonato →
+          <button type="button" className="game-cta" onClick={onBackToBracket}>
+            Ver chave do campeonato <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
           </button>
         </div>
       </div>
