@@ -41,6 +41,7 @@ const STATUS_LABELS: Record<ChampionshipStatus, string> = {
 };
 
 function getPhaseName(phase: number, totalPhases: number): string {
+  if (phase > totalPhases) return 'Campeão';
   if (phase === totalPhases) return 'Final';
   if (phase === totalPhases - 1) return 'Semifinal';
   if (phase === totalPhases - 2) return 'Quartas de final';
