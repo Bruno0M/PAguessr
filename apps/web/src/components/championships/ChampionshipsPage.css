@@ -1,6 +1,8 @@
 .championships-screen {
   position: relative;
-  min-height: 100vh;
+  /* O body tem overflow: hidden (a partida precisa), então a tela rola por dentro. */
+  height: 100%;
+  overflow-y: auto;
   background-color: var(--pa-night);
   background-image:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgb(var(--pa-sun-rgb) / 0.12), transparent 70%),
