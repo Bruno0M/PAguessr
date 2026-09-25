@@ -376,6 +376,16 @@ body {
     inset 0 0 0 1px rgb(var(--pa-sky-rgb) / 0.6);
 }
 
+.opponent-pin .pin-tag {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.4),
+    inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.5);
+}
+
 .correct-pin .pin-tag {
   box-shadow:
     0 2px 6px rgb(0 0 0 / 0.4),

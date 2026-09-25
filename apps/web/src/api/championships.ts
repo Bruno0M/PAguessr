@@ -130,12 +130,19 @@ export interface LiveMatchOpponent {
 
 export interface LiveMatchRound {
   order: number;
+  /** Horário gravado no servidor; anda pra frente quando os dois respondem antes do tempo. */
+  startedAt: string | null;
+  durationSeconds: number;
   /** Os dois responderam ou o tempo acabou: só então os pontos do adversário aparecem. */
   closed: boolean;
   myPoints: number | null;
   myDistance: number | null;
   opponentPoints: number | null;
   opponentDistance: number | null;
+  /** Só nas rodadas fechadas: o local certo e os dois palpites (nulos se não houve palpite). */
+  location?: { lat: number; lng: number } | null;
+  myGuess?: { lat: number; lng: number } | null;
+  opponentGuess?: { lat: number; lng: number } | null;
 }
 
 export interface LiveMatchResponse {
@@ -143,6 +150,8 @@ export interface LiveMatchResponse {
   current_round?: number;
   myScore: number;
   my_score?: number;
+  /** Pausa entre uma rodada e a seguinte, em segundos. */
+  revealSeconds: number;
   /** Fase deste confronto e total de fases: o resultado precisa saber se era a final. */
   phase: number;
   totalPhases: number;

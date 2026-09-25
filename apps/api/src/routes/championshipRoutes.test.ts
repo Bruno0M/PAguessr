@@ -3,7 +3,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { PAULO_AFONSO_CENTER } from '@paguessr/shared';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
-import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
+import { createDuelHelpers, loginNewUser } from '../test/duelHelpers.js';
 import { db } from '../db/index.js';
 import { advanceChampionship } from '../championship/advance.js';
 import {
@@ -12,22 +12,8 @@ import {
   championshipMatches,
   games,
   rounds,
-  locations,
   users,
 } from '../db/schema.js';
-
-async function loginNewUser(
-  app: ReturnType<typeof buildApp>,
-  nick: string
-): Promise<{ cookie: string; userId: string }> {
-  const res = await registerUser(app, { nick });
-  if (res.statusCode !== 201) {
-    throw new Error(`Failed to register user ${nick}: ${res.statusCode} ${res.body}`);
-  }
-  const cookie = extractSessionCookie(res.headers['set-cookie']);
-  const [user] = await db.select().from(users).where(eq(users.nick, nick));
-  return { cookie, userId: user.id };
-}
 
 async function createChampionship(creatorId: string, maxParticipants: number = 4) {
   const [champ] = await db
@@ -290,6 +276,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     expect(matches.filter((m) => m.phase === 4)).toHaveLength(1);
   });
 
+  // Cadastrar 32 jogadores leva ~5 s, no limite padrão do Vitest: timeout maior só aqui.
   it('sorteio com 32 participantes gera chave completa de 5 fases e 31 confrontos', async () => {
     const admin = await loginNewUser(app, 'host_s32');
     const champ = await createChampionship(admin.userId, 32);
@@ -320,7 +307,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     expect(matches.filter((m) => m.phase === 3)).toHaveLength(4);
     expect(matches.filter((m) => m.phase === 4)).toHaveLength(2);
     expect(matches.filter((m) => m.phase === 5)).toHaveLength(1);
-  });
+  }, 20_000);
 
   it('corrida da última vaga: duas inscrições concorrentes não geram dois sorteios nem passam de max_participants', async () => {
     const admin = await loginNewUser(app, 'host_race');
@@ -382,119 +369,8 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
   });
 
   describe('Fatia 5: Largada e Duelo', () => {
-    async function setupActiveChampionship(options: {
-      maxParticipants?: number;
-      roundsPerMatch?: number;
-      roundDurationSeconds?: number;
-      phaseIntervalSeconds?: number;
-      prefix: string;
-    }) {
-      const count = options.maxParticipants ?? 4;
-      const host = await loginNewUser(app, `${options.prefix}_host`);
-      const [champ] = await db
-        .insert(championships)
-        .values({
-          title: `Torneio ${options.prefix}`,
-          max_participants: count,
-          rounds_per_match: options.roundsPerMatch ?? 3,
-          round_duration_seconds: options.roundDurationSeconds ?? 60,
-          phase_interval_seconds: options.phaseIntervalSeconds ?? 3600,
-          status: 'inscricoes',
-          created_by: host.userId,
-        })
-        .returning();
-
-      const players = [];
-      for (let i = 0; i < count; i++) {
-        const p = await loginNewUser(app, `${options.prefix}_p${i}`);
-        players.push(p);
-        await app.inject({
-          method: 'POST',
-          url: `/api/championships/${champ.id}/join`,
-          headers: { cookie: p.cookie },
-        });
-      }
-
-      const now = new Date();
-      await db
-        .update(championships)
-        .set({ status: 'em_andamento', started_at: now })
-        .where(eq(championships.id, champ.id));
-
-      await db
-        .update(championshipMatches)
-        .set({ opens_at: now })
-        .where(
-          and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
-        );
-
-      const matches = await db
-        .select()
-        .from(championshipMatches)
-        .where(eq(championshipMatches.championship_id, champ.id))
-        .orderBy(asc(championshipMatches.phase), asc(championshipMatches.slot));
-
-      return { champ, host, players, matches };
-    }
-
-    type ActiveSetup = Awaited<ReturnType<typeof setupActiveChampionship>>;
-
-    async function enterMatch(
-      champId: string,
-      matchId: string,
-      player: { cookie: string }
-    ): Promise<{ gameId: string; rounds: { id: number }[] }> {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/championships/${champId}/matches/${matchId}/enter`,
-        headers: { cookie: player.cookie },
-      });
-      expect(res.statusCode).toBe(200);
-      return JSON.parse(res.body);
-    }
-
-    async function guessRound(
-      player: { cookie: string },
-      roundId: number,
-      point: { lat: number; lng: number } | null
-    ): Promise<{ score: number; distancia: number | null }> {
-      const res = await app.inject({
-        method: 'POST',
-        url: `/api/rounds/${roundId}/guess`,
-        headers: { cookie: player.cookie },
-        payload: point ?? {},
-      });
-      expect(res.statusCode).toBe(200);
-      return JSON.parse(res.body);
-    }
-
-    async function locationOfRound(roundId: number): Promise<{ lat: number; lng: number }> {
-      const [row] = await db
-        .select({ lat: locations.lat, lng: locations.lng })
-        .from(rounds)
-        .innerJoin(locations, eq(rounds.location_id, locations.id))
-        .where(eq(rounds.id, roundId));
-      return row;
-    }
-
-    async function getLive(champId: string, matchId: string, player: { cookie: string }) {
-      const res = await app.inject({
-        method: 'GET',
-        url: `/api/championships/${champId}/matches/${matchId}/live`,
-        headers: { cookie: player.cookie },
-      });
-      expect(res.statusCode).toBe(200);
-      return JSON.parse(res.body);
-    }
-
-    function sidesOf(setup: ActiveSetup) {
-      const match = setup.matches[0];
-      return {
-        match,
-        playerA: setup.players.find((p) => p.userId === match.player_a_id)!,
-        playerB: setup.players.find((p) => p.userId === match.player_b_id)!,
-      };
-    }
+    const { setupActiveChampionship, enterMatch, guessRound, locationOfRound, getLive, sidesOf } =
+      createDuelHelpers(app);
 
     it('POST /api/championships/:id/matches/:matchId/enter sem sessão retorna 401', async () => {
       const res = await app.inject({
@@ -634,7 +510,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       }
     });
 
-    it('started_at das rodadas é derivado corretamente de opens_at e duration_seconds', async () => {
+    it('started_at das rodadas é derivado de opens_at, da duração e da revelação entre rodadas', async () => {
       const { champ, players, matches } = await setupActiveChampionship({
         prefix: 'f5_start',
         roundDurationSeconds: 45,
@@ -651,8 +527,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
 
       const opensAtMs = new Date(match.opens_at!).getTime();
       expect(new Date(data.rounds[0].started_at).getTime()).toBe(opensAtMs);
-      expect(new Date(data.rounds[1].started_at).getTime()).toBe(opensAtMs + 45 * 1000);
-      expect(new Date(data.rounds[2].started_at).getTime()).toBe(opensAtMs + 90 * 1000);
+      // Cada rodada dura 45 s e a próxima começa depois da revelação de 5 s.
+      expect(new Date(data.rounds[1].started_at).getTime()).toBe(opensAtMs + 50 * 1000);
+      expect(new Date(data.rounds[2].started_at).getTime()).toBe(opensAtMs + 100 * 1000);
     });
 
     it('live não vaza dados nem coordenadas do adversário antes da rodada fechar', async () => {
@@ -700,7 +577,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
 
       // O adversário respondeu, mas a rodada segue aberta pra mim: nada dele aparece.
       expect(liveData.opponentScore).toBe(0);
-      expect(liveData.rounds[0]).toEqual({
+      expect(liveData.rounds[0]).toMatchObject({
         order: 1,
         closed: false,
         myPoints: null,
@@ -708,6 +585,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         opponentPoints: null,
         opponentDistance: null,
       });
+      expect(liveData.rounds[0]).not.toHaveProperty('opponentGuess');
+      expect(liveData.rounds[0]).not.toHaveProperty('myGuess');
+      expect(liveData.rounds[0]).not.toHaveProperty('location');
     });
 
     it('live: os pontos do adversário entram quando a rodada fecha, pros dois lados', async () => {
@@ -730,13 +610,16 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       const guessA = await guessRound(playerA, dataA.rounds[0].id, PAULO_AFONSO_CENTER);
 
       const liveA = await getLive(champ.id, match.id, playerA);
-      expect(liveA.rounds[0]).toEqual({
+      expect(liveA.rounds[0]).toMatchObject({
         order: 1,
         closed: true,
         myPoints: guessA.score,
         myDistance: guessA.distancia,
         opponentPoints: 5000,
         opponentDistance: guessB.distancia,
+        location: target,
+        myGuess: PAULO_AFONSO_CENTER,
+        opponentGuess: target,
       });
       expect(liveA.opponentScore).toBe(5000);
       expect(liveA.myScore).toBe(guessA.score);
@@ -765,26 +648,30 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         .where(and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, 1)));
 
       const liveA = await getLive(champ.id, match.id, playerA);
-      expect(liveA.rounds[0]).toEqual({
+      expect(liveA.rounds[0]).toMatchObject({
         order: 1,
         closed: true,
         myPoints: guessA.score,
         myDistance: guessA.distancia,
         opponentPoints: null,
         opponentDistance: null,
+        myGuess: PAULO_AFONSO_CENTER,
+        opponentGuess: null,
       });
       expect(liveA.opponentScore).toBe(0);
       expect(liveA.rounds[1].closed).toBe(false);
 
       // Do outro lado: eu não respondi, então myPoints é nulo e o dele aparece.
       const liveB = await getLive(champ.id, match.id, playerB);
-      expect(liveB.rounds[0]).toEqual({
+      expect(liveB.rounds[0]).toMatchObject({
         order: 1,
         closed: true,
         myPoints: null,
         myDistance: null,
         opponentPoints: guessA.score,
         opponentDistance: guessA.distancia,
+        myGuess: null,
+        opponentGuess: PAULO_AFONSO_CENTER,
       });
       expect(liveB.opponentScore).toBe(guessA.score);
     });
@@ -799,6 +686,18 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
 
       const beforeResolve = await getLive(champ.id, match.id, playerA);
       expect(beforeResolve.finalScore).toBeNull();
+
+      // As rodadas seguintes só abrem depois da revelação; aqui todas já começaram
+      // pra o teste palpitar nas três em seguida. Com 10 s entre elas, pra o
+      // antifraude (tempo por rodada abaixo de 5 s) não marcar a partida e zerar o placar.
+      for (let i = 0; i < dataA.rounds.length; i++) {
+        await db
+          .update(rounds)
+          .set({ started_at: new Date(Date.now() - (dataA.rounds.length - i) * 10_000) })
+          .where(
+            and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, i + 1))
+          );
+      }
 
       let totalA = 0;
       let totalB = 0;
@@ -908,8 +807,8 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         .orderBy(asc(rounds.ordem));
       expect(roundsA.map((r) => r.started_at!.getTime())).toEqual([
         opensAt.getTime(),
-        opensAt.getTime() + 45 * 1000,
-        opensAt.getTime() + 90 * 1000,
+        opensAt.getTime() + 50 * 1000,
+        opensAt.getTime() + 100 * 1000,
       ]);
       expect(dataB.gameId).not.toBe(dataA.gameId);
 

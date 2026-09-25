@@ -9,6 +9,9 @@ interface GuessMapProps {
   center: LatLng;
   guess: LatLng | null;
   correctCoords?: LatLng | null;
+  /** Duelo: o palpite do adversário, mostrado junto do seu na revelação da rodada. */
+  opponentGuess?: LatLng | null;
+  opponentLabel?: string;
   locationName?: string;
   gameState: GameState;
   onSelectGuess: (coords: LatLng) => void;
@@ -52,6 +55,37 @@ const correctIcon = L.divIcon({
   iconAnchor: [16, 42],
 });
 
+// O HTML do `divIcon` é string: o nick do adversário entra escapado.
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Creme = o adversário (a cor de foco do sistema), contorno em tinta pra
+// separar dos outros dois pinos.
+function createOpponentIcon(label: string) {
+  return L.divIcon({
+    className: 'custom-pin-wrap',
+    html: `
+    <div class="pin-marker opponent-pin">
+      <div class="pin-bubble">
+        <svg width="28" height="38" viewBox="0 0 32 42" fill="none">
+          <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#f6ecd4" stroke="#10161d" stroke-width="2"/>
+          <circle cx="16" cy="16" r="6" fill="#10161d"/>
+        </svg>
+      </div>
+      <span class="pin-tag">${escapeHtml(label)}</span>
+    </div>
+  `,
+    iconSize: [32, 42],
+    iconAnchor: [16, 42],
+  });
+}
+
 function MapInteractionHandler({
   enabled,
   onMapClick,
@@ -72,29 +106,32 @@ function MapInteractionHandler({
 function MapViewManager({
   gameState,
   guess,
+  opponent,
   correct,
   center,
 }: {
   gameState: GameState;
   guess: LatLng | null;
+  opponent?: LatLng | null;
   correct?: LatLng | null;
   center: LatLng;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (gameState === 'round_result' && guess && correct) {
-      const bounds = L.latLngBounds([
-        [guess.lat, guess.lng],
-        [correct.lat, correct.lng],
-      ]);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-    } else if (gameState === 'round_result' && !guess && correct) {
-      map.setView([correct.lat, correct.lng], 15);
+    if (gameState === 'round_result' && correct) {
+      // Enquadra todos os pontos presentes: o seu palpite, o dele e o local certo.
+      const points = [guess, opponent, correct].filter((p): p is LatLng => !!p);
+      if (points.length > 1) {
+        const bounds = L.latLngBounds(points.map((p): [number, number] => [p.lat, p.lng]));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } else {
+        map.setView([correct.lat, correct.lng], 15);
+      }
     } else if (gameState === 'guessing' && !guess) {
       map.setView([center.lat, center.lng], 14);
     }
-  }, [gameState, guess, correct, center, map]);
+  }, [gameState, guess, opponent, correct, center, map]);
 
   return null;
 }
@@ -103,6 +140,8 @@ export function GuessMap({
   center,
   guess,
   correctCoords,
+  opponentGuess,
+  opponentLabel = 'Adversário',
   gameState,
   onSelectGuess,
   onConfirmGuess,
@@ -112,6 +151,8 @@ export function GuessMap({
   const isRoundResult = gameState === 'round_result';
   const showCorrectMarker = isRoundResult && !!correctCoords;
   const showGuessLine = showCorrectMarker && !!guess;
+  const showOpponentMarker = showCorrectMarker && !!opponentGuess;
+  const opponentIcon = useMemo(() => createOpponentIcon(opponentLabel), [opponentLabel]);
 
   const linePositions = useMemo(() => {
     if (!showGuessLine || !guess || !correctCoords) return [];
@@ -120,6 +161,14 @@ export function GuessMap({
       [correctCoords.lat, correctCoords.lng] as [number, number],
     ];
   }, [showGuessLine, guess, correctCoords]);
+
+  const opponentLinePositions = useMemo(() => {
+    if (!showOpponentMarker || !opponentGuess || !correctCoords) return [];
+    return [
+      [opponentGuess.lat, opponentGuess.lng] as [number, number],
+      [correctCoords.lat, correctCoords.lng] as [number, number],
+    ];
+  }, [showOpponentMarker, opponentGuess, correctCoords]);
 
   return (
     <div className="map-wrapper">
@@ -142,6 +191,7 @@ export function GuessMap({
         <MapViewManager
           gameState={gameState}
           guess={guess}
+          opponent={opponentGuess}
           correct={correctCoords}
           center={center}
         />
@@ -161,6 +211,10 @@ export function GuessMap({
           />
         )}
 
+        {showOpponentMarker && opponentGuess && (
+          <Marker position={[opponentGuess.lat, opponentGuess.lng]} icon={opponentIcon} />
+        )}
+
         {showCorrectMarker && correctCoords && (
           <Marker position={[correctCoords.lat, correctCoords.lng]} icon={correctIcon} />
         )}
@@ -173,6 +227,18 @@ export function GuessMap({
               weight: 3,
               dashArray: '8, 8',
               opacity: 0.6,
+            }}
+          />
+        )}
+
+        {showOpponentMarker && (
+          <Polyline
+            positions={opponentLinePositions}
+            pathOptions={{
+              color: '#f6ecd4',
+              weight: 2,
+              dashArray: '4, 8',
+              opacity: 0.35,
             }}
           />
         )}

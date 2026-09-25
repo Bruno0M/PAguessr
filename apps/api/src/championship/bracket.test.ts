@@ -4,7 +4,6 @@ import {
   generateBracket,
   getNextMatchDestination,
   resolveDuel,
-  calculateRoundStartedAt,
   type ParticipantWithSeed,
   type DuelPlayerInput,
 } from './bracket.js';
@@ -340,35 +339,6 @@ describe('Módulo de Chaveamento (bracket.ts)', () => {
 
       expect(res1).toEqual(res2);
       expect(res1.winnerId).toBe('det-a');
-    });
-  });
-
-  describe('6. Relógio da Rodada (calculateRoundStartedAt)', () => {
-    it('calcula started_at rigorosamente com a fórmula opens_at + (N - 1) * round_duration_seconds', () => {
-      const opensAt = '2026-09-17T12:00:00.000Z';
-      const durationSeconds = 60;
-
-      const r1 = calculateRoundStartedAt(opensAt, 1, durationSeconds);
-      expect(r1.toISOString()).toBe('2026-09-17T12:00:00.000Z');
-
-      const r2 = calculateRoundStartedAt(opensAt, 2, durationSeconds);
-      expect(r2.toISOString()).toBe('2026-09-17T12:01:00.000Z');
-
-      const r3 = calculateRoundStartedAt(opensAt, 3, durationSeconds);
-      expect(r3.toISOString()).toBe('2026-09-17T12:02:00.000Z');
-
-      const r5 = calculateRoundStartedAt(opensAt, 5, durationSeconds);
-      expect(r5.toISOString()).toBe('2026-09-17T12:04:00.000Z');
-    });
-
-    it('funciona com durações não padrão (ex: 45s e 120s)', () => {
-      const opensAt = new Date('2026-09-17T10:00:00.000Z');
-
-      const r3_45s = calculateRoundStartedAt(opensAt, 3, 45);
-      expect(r3_45s.getTime()).toBe(opensAt.getTime() + 90 * 1000);
-
-      const r4_120s = calculateRoundStartedAt(opensAt, 4, 120);
-      expect(r4_120s.getTime()).toBe(opensAt.getTime() + 360 * 1000);
     });
   });
 });

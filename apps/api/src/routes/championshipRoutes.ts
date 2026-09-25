@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import { type ChampionshipSize, phasesFor, shuffle } from '@paguessr/shared';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { DUEL_REVEAL_SECONDS, type ChampionshipSize, phasesFor, shuffle } from '@paguessr/shared';
 import { db, type Tx } from '../db/index.js';
 import {
   championships,
@@ -15,9 +15,9 @@ import {
 } from '../db/schema.js';
 import { requireAuth, isAdminNick } from '../auth/session.js';
 import { isChampionshipsVisible, parseChampionshipsMode } from '../championship/featureFlag.js';
-import { calculateRoundStartedAt, createInitialBracket } from '../championship/bracket.js';
+import { createInitialBracket } from '../championship/bracket.js';
 import { advanceChampionship } from '../championship/advance.js';
-import { isRoundClosed } from '../championship/timeline.js';
+import { currentRoundOrder, isRoundClosed, plannedRoundStart } from '../championship/timeline.js';
 import { resolveStreetviewMode } from '../streetview.js';
 
 async function pickLocationsForMatch(
@@ -511,10 +511,11 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
               ordem: idx + 1,
               streetview_mode: modes[idx],
               duration_seconds: champ.round_duration_seconds,
-              started_at: calculateRoundStartedAt(
+              started_at: plannedRoundStart(
                 match.opens_at!,
                 idx + 1,
-                champ.round_duration_seconds
+                champ.round_duration_seconds,
+                DUEL_REVEAL_SECONDS
               ),
             }));
             await tx.insert(rounds).values(roundsA);
@@ -536,10 +537,11 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
               ordem: idx + 1,
               streetview_mode: modes[idx],
               duration_seconds: champ.round_duration_seconds,
-              started_at: calculateRoundStartedAt(
+              started_at: plannedRoundStart(
                 match.opens_at!,
                 idx + 1,
-                champ.round_duration_seconds
+                champ.round_duration_seconds,
+                DUEL_REVEAL_SECONDS
               ),
             }));
             await tx.insert(rounds).values(roundsB);
@@ -644,14 +646,6 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
       const myGameId = isPlayerA ? match.game_a_id : match.game_b_id;
       const oppGameId = isPlayerA ? match.game_b_id : match.game_a_id;
 
-      let currentRound = 1;
-      if (match.opens_at) {
-        const elapsedMs = Math.max(0, Date.now() - match.opens_at.getTime());
-        const roundDurationMs = champ.round_duration_seconds * 1000;
-        const calculated = Math.floor(elapsedMs / roundDurationMs) + 1;
-        currentRound = Math.min(champ.rounds_per_match, Math.max(1, calculated));
-      }
-
       const loadRounds = (gameId: string | null): Promise<Round[]> =>
         gameId
           ? db.select().from(rounds).where(eq(rounds.game_id, gameId)).orderBy(asc(rounds.ordem))
@@ -676,8 +670,8 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
       const opponent = opponentRow ?? null;
 
       // Os dois jogos têm os mesmos locais e horários, então casam por `ordem`. Os
-      // pontos e a distância do adversário só saem depois que a rodada fecha:
-      // antes disso o placar dele viraria dica pra quem ainda está pensando.
+      // pontos, a distância e o palpite do adversário só saem depois que a rodada
+      // fecha: antes disso o placar dele viraria dica pra quem ainda está pensando.
       const now = new Date();
       const myByOrder = new Map(myRounds.map((r) => [r.ordem, r]));
       const oppByOrder = new Map(oppRounds.map((r) => [r.ordem, r]));
@@ -685,8 +679,27 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         (a, b) => a - b
       );
 
-      let opponentScore = 0;
-      const roundsView = orders.map((order) => {
+      // Rodada atual pela linha do tempo real (`started_at` das rodadas, já com os
+      // adiantamentos); sem partida criada, pela planejada.
+      const realStarts = [...myRounds, ...(myRounds.length > 0 ? [] : oppRounds)].flatMap((r) =>
+        r.started_at ? [{ order: r.ordem, startedAt: r.started_at }] : []
+      );
+      const opensAt = match.opens_at;
+      const startsForCurrent =
+        realStarts.length > 0 || !opensAt
+          ? realStarts
+          : Array.from({ length: champ.rounds_per_match }, (_, index) => ({
+              order: index + 1,
+              startedAt: plannedRoundStart(
+                opensAt,
+                index + 1,
+                champ.round_duration_seconds,
+                DUEL_REVEAL_SECONDS
+              ),
+            }));
+      const currentRound = currentRoundOrder(startsForCurrent, now);
+
+      const states = orders.map((order) => {
         const mine = myByOrder.get(order);
         const theirs = oppByOrder.get(order);
         const reference = (mine ?? theirs)!;
@@ -699,17 +712,57 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
           opponentAnswered,
           now,
         });
-
         const showOpponent = closed && opponentAnswered;
-        if (showOpponent) opponentScore += theirs.pontos ?? 0;
-
         return {
           order,
+          reference,
           closed,
+          myGuessRow: mine,
+          opponentGuessRow: showOpponent ? theirs : undefined,
           myPoints: myAnswered ? mine.pontos : null,
           myDistance: myAnswered ? mine.distancia : null,
           opponentPoints: showOpponent ? theirs.pontos : null,
           opponentDistance: showOpponent ? theirs.distancia : null,
+        };
+      });
+
+      // O local certo só sai das rodadas fechadas (a revelação do duelo).
+      const closedLocationIds = [
+        ...new Set(states.filter((st) => st.closed).map((st) => st.reference.location_id)),
+      ];
+      const closedLocations =
+        closedLocationIds.length > 0
+          ? await db
+              .select({ id: locations.id, lat: locations.lat, lng: locations.lng })
+              .from(locations)
+              .where(inArray(locations.id, closedLocationIds))
+          : [];
+      const locationById = new Map(closedLocations.map((loc) => [loc.id, loc]));
+
+      const guessOf = (round: Round | undefined) =>
+        round && round.guess_lat !== null && round.guess_lng !== null
+          ? { lat: round.guess_lat, lng: round.guess_lng }
+          : null;
+
+      const opponentScore = states.reduce((sum, st) => sum + (st.opponentPoints ?? 0), 0);
+      const roundsView = states.map((st) => {
+        const location = locationById.get(st.reference.location_id);
+        return {
+          order: st.order,
+          startedAt: st.reference.started_at?.toISOString() ?? null,
+          durationSeconds: st.reference.duration_seconds,
+          closed: st.closed,
+          myPoints: st.myPoints,
+          myDistance: st.myDistance,
+          opponentPoints: st.opponentPoints,
+          opponentDistance: st.opponentDistance,
+          ...(st.closed
+            ? {
+                location: location ? { lat: location.lat, lng: location.lng } : null,
+                myGuess: guessOf(st.myGuessRow),
+                opponentGuess: guessOf(st.opponentGuessRow),
+              }
+            : {}),
         };
       });
 
@@ -731,6 +784,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         resolved_at: match.resolved_at?.toISOString() ?? null,
         winnerId: match.winner_id,
         winner_id: match.winner_id,
+        revealSeconds: DUEL_REVEAL_SECONDS,
         phase: match.phase,
         totalPhases: phasesFor(champ.max_participants),
         opponent,
