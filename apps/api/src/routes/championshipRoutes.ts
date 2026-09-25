@@ -256,6 +256,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         joined,
         myMatch,
         myStatus,
+        serverTime: new Date().toISOString(),
       });
     }
   );
@@ -587,7 +588,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         return reply.status(result.status).send({ error: result.error });
       }
 
-      return reply.send(result.data);
+      return reply.send({ ...result.data, serverTime: new Date().toISOString() });
     }
   );
 
@@ -734,6 +735,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         opponentScore,
         rounds: roundsView,
         finalScore,
+        serverTime: new Date().toISOString(),
       });
     }
   );

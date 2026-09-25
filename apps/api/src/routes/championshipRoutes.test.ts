@@ -854,6 +854,37 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       });
     });
 
+    it('detalhe, enter e live devolvem serverTime em ISO, perto da hora do servidor', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f6_clock' });
+      const { match, playerA } = sidesOf(setup);
+      const { champ } = setup;
+
+      const expectServerTime = (value: unknown) => {
+        expect(typeof value).toBe('string');
+        const parsed = new Date(value as string);
+        expect(parsed.toISOString()).toBe(value);
+        expect(Math.abs(parsed.getTime() - Date.now())).toBeLessThan(5000);
+      };
+
+      const detailRes = await app.inject({
+        method: 'GET',
+        url: `/api/championships/${champ.id}`,
+        headers: { cookie: playerA.cookie },
+      });
+      expect(detailRes.statusCode).toBe(200);
+      expectServerTime(JSON.parse(detailRes.body).serverTime);
+
+      const enterRes = await app.inject({
+        method: 'POST',
+        url: `/api/championships/${champ.id}/matches/${match.id}/enter`,
+        headers: { cookie: playerA.cookie },
+      });
+      expect(enterRes.statusCode).toBe(200);
+      expectServerTime(JSON.parse(enterRes.body).serverTime);
+
+      expectServerTime((await getLive(champ.id, match.id, playerA)).serverTime);
+    });
+
     it('consolidação de duelo: vitória por pontos promove o vencedor para a próxima fase', async () => {
       const { champ, players, matches } = await setupActiveChampionship({ prefix: 'f5_pts' });
       const match = matches[0];
