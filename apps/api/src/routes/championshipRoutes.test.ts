@@ -577,7 +577,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
 
       // O adversário respondeu, mas a rodada segue aberta pra mim: nada dele aparece.
       expect(liveData.opponentScore).toBe(0);
-      expect(liveData.rounds[0]).toEqual({
+      expect(liveData.rounds[0]).toMatchObject({
         order: 1,
         closed: false,
         myPoints: null,
@@ -585,6 +585,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         opponentPoints: null,
         opponentDistance: null,
       });
+      expect(liveData.rounds[0]).not.toHaveProperty('opponentGuess');
+      expect(liveData.rounds[0]).not.toHaveProperty('myGuess');
+      expect(liveData.rounds[0]).not.toHaveProperty('location');
     });
 
     it('live: os pontos do adversário entram quando a rodada fecha, pros dois lados', async () => {
@@ -607,13 +610,16 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       const guessA = await guessRound(playerA, dataA.rounds[0].id, PAULO_AFONSO_CENTER);
 
       const liveA = await getLive(champ.id, match.id, playerA);
-      expect(liveA.rounds[0]).toEqual({
+      expect(liveA.rounds[0]).toMatchObject({
         order: 1,
         closed: true,
         myPoints: guessA.score,
         myDistance: guessA.distancia,
         opponentPoints: 5000,
         opponentDistance: guessB.distancia,
+        location: target,
+        myGuess: PAULO_AFONSO_CENTER,
+        opponentGuess: target,
       });
       expect(liveA.opponentScore).toBe(5000);
       expect(liveA.myScore).toBe(guessA.score);
@@ -642,26 +648,30 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         .where(and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, 1)));
 
       const liveA = await getLive(champ.id, match.id, playerA);
-      expect(liveA.rounds[0]).toEqual({
+      expect(liveA.rounds[0]).toMatchObject({
         order: 1,
         closed: true,
         myPoints: guessA.score,
         myDistance: guessA.distancia,
         opponentPoints: null,
         opponentDistance: null,
+        myGuess: PAULO_AFONSO_CENTER,
+        opponentGuess: null,
       });
       expect(liveA.opponentScore).toBe(0);
       expect(liveA.rounds[1].closed).toBe(false);
 
       // Do outro lado: eu não respondi, então myPoints é nulo e o dele aparece.
       const liveB = await getLive(champ.id, match.id, playerB);
-      expect(liveB.rounds[0]).toEqual({
+      expect(liveB.rounds[0]).toMatchObject({
         order: 1,
         closed: true,
         myPoints: null,
         myDistance: null,
         opponentPoints: guessA.score,
         opponentDistance: guessA.distancia,
+        myGuess: null,
+        opponentGuess: PAULO_AFONSO_CENTER,
       });
       expect(liveB.opponentScore).toBe(guessA.score);
     });

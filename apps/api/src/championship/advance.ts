@@ -1,4 +1,9 @@
-import { phasesFor, type ChampionshipSize, type ChampionshipStatus } from '@paguessr/shared';
+import {
+  DUEL_REVEAL_SECONDS,
+  phasesFor,
+  type ChampionshipSize,
+  type ChampionshipStatus,
+} from '@paguessr/shared';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { db, type Tx } from '../db/index.js';
 import {
@@ -11,6 +16,7 @@ import {
   type ChampionshipMatch,
 } from '../db/schema.js';
 import { resolveDuel, getNextMatchDestination, type DuelPlayerInput } from './bracket.js';
+import { matchEndTime, plannedMatchEnd } from './timeline.js';
 
 export interface AdvanceOptions {
   force?: boolean;
@@ -78,6 +84,46 @@ async function getPlayerDuelStats(
     hasGuessedAtLeastOnce: hasGuessed,
     lastGuessAt: game?.finished_at ?? null,
   };
+}
+
+// Fim real do duelo (ver `timeline.matchEndTime`): os horários das rodadas já vêm
+// com os adiantamentos de quando os dois responderam, e `games.finished_at` diz
+// quando cada lado terminou tudo. Sem partida criada (ninguém entrou), vale o
+// fim planejado.
+async function realMatchEnd(tx: Tx, champ: Championship, match: ChampionshipMatch): Promise<Date> {
+  const opensAt = match.opens_at!;
+  const planned = plannedMatchEnd(
+    opensAt,
+    champ.rounds_per_match,
+    champ.round_duration_seconds,
+    DUEL_REVEAL_SECONDS
+  );
+
+  const gameIds = [match.game_a_id, match.game_b_id].filter((id): id is string => id !== null);
+  if (gameIds.length === 0) return planned;
+
+  const lastRounds = await tx
+    .select({ startedAt: rounds.started_at })
+    .from(rounds)
+    .where(and(inArray(rounds.game_id, gameIds), eq(rounds.ordem, champ.rounds_per_match)));
+  const lastStarts = lastRounds.flatMap((r) => (r.startedAt ? [r.startedAt.getTime()] : []));
+  if (lastStarts.length === 0) return planned;
+
+  const finished = async (gameId: string | null): Promise<Date | null> => {
+    if (!gameId) return null;
+    const [game] = await tx
+      .select({ finishedAt: games.finished_at })
+      .from(games)
+      .where(eq(games.id, gameId));
+    return game?.finishedAt ?? null;
+  };
+
+  return matchEndTime({
+    lastRoundStart: new Date(Math.max(...lastStarts)),
+    durationSeconds: champ.round_duration_seconds,
+    finishedA: await finished(match.game_a_id),
+    finishedB: await finished(match.game_b_id),
+  });
 }
 
 async function resolveSingleMatch(
@@ -194,7 +240,6 @@ export async function advanceChampionship(
     }
 
     const totalPhases = phasesFor(champ.max_participants as ChampionshipSize);
-    const matchDurationSeconds = champ.rounds_per_match * champ.round_duration_seconds;
     const now = options?.now ?? new Date();
 
     const phase1Matches = await tx
@@ -257,15 +302,15 @@ export async function advanceChampionship(
           continue;
         }
 
-        const matchEndTime = new Date(match.opens_at.getTime() + matchDurationSeconds * 1000);
-        const isExpired = now.getTime() >= matchEndTime.getTime();
+        const matchEnd = await realMatchEnd(tx, champ, match);
+        const isExpired = now.getTime() >= matchEnd.getTime();
 
         if (!isExpired && !options?.force) {
           continue;
         }
 
         const resolvedAtTimestamp =
-          options?.force && now.getTime() < matchEndTime.getTime() ? now : matchEndTime;
+          options?.force && now.getTime() < matchEnd.getTime() ? now : matchEnd;
 
         await resolveSingleMatch(tx, champ, match, totalPhases, resolvedAtTimestamp);
 
@@ -310,7 +355,12 @@ export async function advanceChampionship(
             )
           );
 
-        const nextPhaseEndTime = new Date(nextOpensAt.getTime() + matchDurationSeconds * 1000);
+        const nextPhaseEndTime = plannedMatchEnd(
+          nextOpensAt,
+          champ.rounds_per_match,
+          champ.round_duration_seconds,
+          DUEL_REVEAL_SECONDS
+        );
         if (now.getTime() < nextPhaseEndTime.getTime() && !options?.force) {
           break;
         }

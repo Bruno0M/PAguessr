@@ -6,15 +6,17 @@ import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { createDuelHelpers } from '../test/duelHelpers.js';
 import { db } from '../db/index.js';
+import { advanceChampionship } from '../championship/advance.js';
 import { closeDuelRoundIfReady } from '../championship/closeRound.js';
-import { rounds } from '../db/schema.js';
+import { championshipMatches, games, rounds } from '../db/schema.js';
 
 // Duelo de campeonato: a linha do tempo é do servidor (`rounds.started_at`), as
 // rodadas fecham quando os dois respondem ou o tempo acaba, e o que ainda não
 // começou não pode ser usado.
 describe('Campeonatos: linha do tempo do duelo', () => {
   const app = buildApp();
-  const { setupActiveChampionship, enterMatch, guessRound, sidesOf } = createDuelHelpers(app);
+  const { setupActiveChampionship, enterMatch, guessRound, locationOfRound, getLive, sidesOf } =
+    createDuelHelpers(app);
 
   beforeAll(async () => {
     process.env.LOG_LEVEL = 'silent';
@@ -259,6 +261,118 @@ describe('Campeonatos: linha do tempo do duelo', () => {
         new Date(b.nextRound.startedAt).toISOString()
       );
       expect(nextStarts).toContain(finalStart);
+    });
+  });
+
+  describe('linha do tempo real no live', () => {
+    it('a rodada atual segue os horários gravados e o live traz início, duração e revelação', async () => {
+      const { champ, match, playerA, playerB, dataA, dataB } = await openDuel('f10_live');
+
+      const first = await getLive(champ.id, match.id, playerA);
+      expect(first.currentRound).toBe(1);
+      expect(first.revealSeconds).toBe(DUEL_REVEAL_SECONDS);
+      expect(first.rounds).toHaveLength(3);
+      expect(first.rounds[0].durationSeconds).toBe(60);
+
+      // Os dois respondem: a rodada 2 é puxada pra agora + 5 s e ainda não começou.
+      await guessRound(playerA, dataA.rounds[0].id, PAULO_AFONSO_CENTER);
+      await guessRound(playerB, dataB.rounds[0].id, PAULO_AFONSO_CENTER);
+      const closed = await getLive(champ.id, match.id, playerA);
+      expect(closed.currentRound).toBe(1);
+      const startsNow = await startsOf(dataA.gameId);
+      expect(
+        closed.rounds.map((r: { startedAt: string }) => new Date(r.startedAt).getTime())
+      ).toEqual(startsNow);
+
+      // Quando o início da rodada 2 passa, ela vira a atual.
+      await db
+        .update(rounds)
+        .set({ started_at: new Date(Date.now() - 1000) })
+        .where(and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, 2)));
+      const next = await getLive(champ.id, match.id, playerB);
+      expect(next.currentRound).toBe(2);
+    });
+  });
+
+  describe('duelo decidido pelo fim real', () => {
+    async function openAllRounds(gameIds: string[]) {
+      // Todas as rodadas abertas de uma vez, pra o teste palpitar nas três em seguida.
+      await db
+        .update(rounds)
+        .set({ started_at: new Date(Date.now() - 1000) })
+        .where(inArray(rounds.game_id, gameIds));
+    }
+
+    it('os dois terminam tudo antes: resolved_at = quem terminou por último e a fase 2 abre daí', async () => {
+      const setup = await openDuel('f11_early');
+      const { champ, matches, match, playerA, playerB, dataA, dataB } = setup;
+      await openAllRounds([dataA.gameId, dataB.gameId]);
+
+      for (let i = 0; i < dataA.rounds.length; i++) {
+        const target = await locationOfRound(dataA.rounds[i].id);
+        await guessRound(playerA, dataA.rounds[i].id, target);
+        await guessRound(playerB, dataB.rounds[i].id, PAULO_AFONSO_CENTER);
+      }
+
+      // O outro confronto da fase 1 ninguém jogou: o tempo dele já passou.
+      await db
+        .update(championshipMatches)
+        .set({ opens_at: new Date(Date.now() - 3600 * 1000) })
+        .where(eq(championshipMatches.id, matches[1].id));
+
+      await advanceChampionship(champ.id);
+
+      const [resolved] = await db
+        .select()
+        .from(championshipMatches)
+        .where(eq(championshipMatches.id, match.id));
+      const [gameA] = await db.select().from(games).where(eq(games.id, dataA.gameId));
+      const [gameB] = await db.select().from(games).where(eq(games.id, dataB.gameId));
+      const lastFinish = Math.max(gameA.finished_at!.getTime(), gameB.finished_at!.getTime());
+
+      expect(resolved.resolved_at!.getTime()).toBe(lastFinish);
+      expect(resolved.winner_id).toBe(playerA.userId);
+
+      const [final] = await db
+        .select()
+        .from(championshipMatches)
+        .where(
+          and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 2))
+        );
+      expect(final.opens_at!.getTime()).toBe(lastFinish + champ.phase_interval_seconds * 1000);
+    });
+
+    it('adversário ausente: vale o relógio cheio até o fim da última rodada', async () => {
+      const setup = await openDuel('f11_absent');
+      const { champ, match, playerA, dataA, dataB } = setup;
+      await openAllRounds([dataA.gameId, dataB.gameId]);
+
+      for (const round of dataA.rounds) {
+        await guessRound(playerA, round.id, PAULO_AFONSO_CENTER);
+      }
+
+      // A terminou, o adversário não: o duelo não é decidido antes da hora.
+      await advanceChampionship(champ.id);
+      const [pending] = await db
+        .select()
+        .from(championshipMatches)
+        .where(eq(championshipMatches.id, match.id));
+      expect(pending.resolved_at).toBeNull();
+
+      // Só depois do fim do tempo da última rodada, exatamente nesse instante.
+      const lastStart = new Date(Date.now() - 61 * 1000);
+      await db
+        .update(rounds)
+        .set({ started_at: lastStart })
+        .where(and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, 3)));
+      await advanceChampionship(champ.id);
+
+      const [resolved] = await db
+        .select()
+        .from(championshipMatches)
+        .where(eq(championshipMatches.id, match.id));
+      expect(resolved.resolved_at!.getTime()).toBe(lastStart.getTime() + 60 * 1000);
+      expect(resolved.winner_id).toBe(playerA.userId);
     });
   });
 });
