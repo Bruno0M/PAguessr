@@ -4,19 +4,18 @@
 }
 
 .pin-tag {
-  --tag-color: #3ee3ad;
+  /* A cor da medalha do lugar (vem da cena); dourado se ninguém definir. */
+  --tag-color: var(--pa-sun);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   padding: 6px 12px 7px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--tag-color) 55%, transparent);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 50%, transparent);
   border-bottom-width: 3px;
-  background: linear-gradient(180deg, #102338ee, #081524ee);
-  box-shadow:
-    0 8px 22px #02070d99,
-    0 0 18px color-mix(in srgb, var(--tag-color) 22%, transparent);
+  background: rgb(var(--pa-shade-rgb) / 0.86);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.5);
   white-space: nowrap;
   opacity: 0;
   /* O Html do drei centraliza no ponto 3D; o -50% apoia a base da etiqueta nele. */
@@ -32,51 +31,55 @@
 }
 
 .pin-tag.is-me {
-  border-color: #40cddd;
+  border-color: var(--pa-sky);
   box-shadow:
-    0 8px 22px #02070d99,
-    0 0 22px #40cddd66;
+    0 8px 22px rgb(0 0 0 / 0.5),
+    0 0 20px rgb(var(--pa-sky-rgb) / 0.35);
 }
 
+/* Céu é "você". */
 .pin-tag-you {
-  font-size: 9px;
-  font-weight: 800;
+  font:
+    600 10px / 1 var(--pa-font),
+    sans-serif;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #40cddd;
+  color: var(--pa-sky);
 }
 
 .pin-tag-nick {
-  font-family: 'Arial Black', 'Segoe UI', sans-serif;
-  font-style: italic;
-  font-size: 14px;
-  color: #eef6ff;
+  font:
+    600 14px / 1.2 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--pa-cream);
 }
 
 .pin-tag-score {
-  font-size: 13px;
-  font-weight: 700;
+  font:
+    600 13px / 1.2 var(--pa-font),
+    sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--tag-color);
 }
 
 .pin-tag-score.is-negative {
-  color: var(--pa-danger, #ef8e73);
+  color: var(--pa-danger);
 }
 
 .pin-tag-score small {
   font-size: 10px;
-  font-weight: 600;
-  opacity: 0.75;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 .pin-tag-empty {
-  font-size: 10px;
-  font-weight: 700;
+  font:
+    600 10px / 1 var(--pa-font),
+    sans-serif;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #40cddd;
-  opacity: 0.7;
+  color: var(--pa-cream-soft);
 }
 
 .podium-fallback {
@@ -94,14 +97,15 @@
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border-radius: 12px;
-  background: #13283e;
-  color: #eef6ff;
+  border-radius: 8px;
+  background: rgb(var(--pa-shade-rgb) / 0.72);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.16);
+  color: var(--pa-cream);
 }
 
 .podium-fallback li span:last-child {
   margin-left: auto;
-  color: #3ee3ad;
+  color: var(--pa-sun);
 }
 
 .podium-fallback-avatar {

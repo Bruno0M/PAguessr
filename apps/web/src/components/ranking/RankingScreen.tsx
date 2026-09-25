@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import type { PublicUser } from '../../api/auth';
 import { getRanking, type ApiRankingResponse, type RankingPeriod } from '../../api/ranking';
 import { AvatarSvg } from '../auth/avatars';
 import { track } from '../../lib/analytics';
 import { Podium3D } from './Podium3D';
 import { RankingGeralDialog } from './RankingGeralDialog';
-import '../../styles/navyTheme.css';
 import './RankingScreen.css';
 
 type Status = 'loading' | 'ready' | 'error';
@@ -93,13 +92,13 @@ export function RankingScreen({
         </nav>
 
         <header className="ranking-hud">
-          <button type="button" className="ranking-back" onClick={onBack}>
+          <button type="button" className="game-ghost ranking-back" onClick={onBack}>
             <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" /> Início
           </button>
 
           <div className="ranking-heading">
             <h1 id="ranking-title" className="ranking-title">
-              Ranking<b>.</b>
+              Ranking
             </h1>
             <p className="ranking-caption">{CAPTIONS[period]}</p>
           </div>
@@ -130,24 +129,29 @@ export function RankingScreen({
         )}
 
         {status === 'error' && (
-          <div className="ranking-stage-message" role="alert">
+          <div className="game-card ranking-stage-message" role="alert">
+            <FontAwesomeIcon
+              icon={faTriangleExclamation}
+              className="ranking-message-icon"
+              aria-hidden="true"
+            />
             <h2>Não deu para carregar o ranking.</h2>
             <p>Verifique sua conexão e tente de novo.</p>
-            <button type="button" className="ranking-action" onClick={() => load(period)}>
+            <button type="button" className="game-cta ranking-action" onClick={() => load(period)}>
               Tentar de novo
             </button>
           </div>
         )}
 
         {isEmpty && (
-          <div className="ranking-stage-message">
+          <div className="game-card ranking-stage-message">
             <h2>
               {period === 'semana'
                 ? 'Ninguém jogou Ranqueado nesta semana ainda.'
                 : 'Ninguém jogou Ranqueado ainda.'}
             </h2>
             <p>Termine uma partida Ranqueada para colocar seu pin no pódio.</p>
-            <button type="button" className="ranking-action" onClick={onPlayRanked}>
+            <button type="button" className="game-cta ranking-action" onClick={onPlayRanked}>
               Jogar Ranqueado
             </button>
           </div>
