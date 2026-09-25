@@ -254,7 +254,61 @@
   color: var(--pa-cream-soft);
 }
 
+/* Rodadas do resultado: os pontos dos dois lados em colunas fixas, com o
+   cabeçalho (Você e o nick do adversário) alinhado em cima delas. */
+.duel-rounds-head,
+.duel-round-scores {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.duel-rounds-head {
+  padding: 0 1rem;
+}
+
+.duel-round-scores {
+  flex-shrink: 0;
+}
+
+.duel-rounds-head .duel-rounds-col,
+.duel-round-cell {
+  width: 4.8rem;
+  text-align: right;
+}
+
+.duel-rounds-col {
+  font:
+    600 10px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pa-cream-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-rounds-col:first-child {
+  color: var(--pa-sky);
+}
+
+.round-score-pill.is-opponent {
+  background: rgb(var(--pa-cream-rgb) / 0.1);
+  color: var(--pa-cream);
+}
+
+.duel-round-none {
+  color: var(--pa-cream-soft);
+  font-size: 13px;
+}
+
 @media (max-width: 768px) {
+  .duel-rounds-head .duel-rounds-col,
+  .duel-round-cell {
+    width: 4rem;
+  }
+
   .duel-header {
     flex-wrap: wrap;
     height: auto;

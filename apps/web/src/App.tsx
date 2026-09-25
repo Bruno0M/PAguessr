@@ -46,7 +46,6 @@ export function App() {
   const [features, setFeatures] = useState<Features>({ championships: false });
   const [authView, setAuthView] = useState<AuthView>('login');
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
-  const [duelOpponentNick, setDuelOpponentNick] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname);
@@ -98,7 +97,6 @@ export function App() {
     setAuthView('login');
     setShowRanking(false);
     setShowTitle(true);
-    setDuelOpponentNick(undefined);
     returnHome();
   }, [returnHome]);
 
@@ -459,11 +457,7 @@ export function App() {
             championshipId={champId}
             matchId={matchId}
             user={authUser}
-            opponentNick={duelOpponentNick}
-            onBackToBracket={() => {
-              setDuelOpponentNick(undefined);
-              navigate(`/campeonatos/${champId}`);
-            }}
+            onBackToBracket={() => navigate(`/campeonatos/${champId}`)}
           />
         );
       }
@@ -474,10 +468,7 @@ export function App() {
             championshipId={championshipId}
             user={authUser}
             onBack={() => navigate('/campeonatos')}
-            onEnterMatch={(matchId, oppNick) => {
-              setDuelOpponentNick(oppNick);
-              navigate(`/campeonatos/${championshipId}/duelo/${matchId}`);
-            }}
+            onEnterMatch={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
           />
         );
       }

@@ -122,13 +122,33 @@ export interface EnterMatchResponse {
   serverTime?: string;
 }
 
+export interface LiveMatchOpponent {
+  id: string;
+  nick: string;
+  avatarId: number;
+}
+
+export interface LiveMatchRound {
+  order: number;
+  /** Os dois responderam ou o tempo acabou: só então os pontos do adversário aparecem. */
+  closed: boolean;
+  myPoints: number | null;
+  myDistance: number | null;
+  opponentPoints: number | null;
+  opponentDistance: number | null;
+}
+
 export interface LiveMatchResponse {
   currentRound: number;
   current_round?: number;
   myScore: number;
   my_score?: number;
-  opponentScore?: number;
-  opponent_score?: number;
+  /** Soma dos pontos do adversário só nas rodadas fechadas. */
+  opponentScore: number;
+  opponent: LiveMatchOpponent | null;
+  rounds: LiveMatchRound[];
+  /** Placar consolidado pelo servidor, depois que o duelo é resolvido. */
+  finalScore: { me: number; opponent: number } | null;
   opponentRoundsAnswered: number;
   opponent_rounds_answered?: number;
   resolvedAt: string | null;

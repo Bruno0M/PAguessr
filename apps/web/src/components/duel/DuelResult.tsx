@@ -2,18 +2,21 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRight,
   faFlagCheckered,
-  faHandshake,
+  faHourglassHalf,
   faTrophy,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
-import type { RoundResult } from '../../types';
+import type { LiveMatchRound } from '../../api/championships';
 
 export interface DuelResultProps {
   myNick: string;
   opponentNick: string;
   myScore: number;
   opponentScore: number;
-  myResults: RoundResult[];
+  /** As rodadas do `live`, com os pontos dos dois lados. */
+  rounds: LiveMatchRound[];
+  /** Placar consolidado pelo servidor; nulo até o duelo ser resolvido. */
+  finalScore: { me: number; opponent: number } | null;
   winnerId?: string | null;
   myUserId: string;
   onBackToBracket: () => void;
@@ -26,19 +29,55 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
+function PointsCell({ points, opponent = false }: { points: number | null; opponent?: boolean }) {
+  return (
+    <span className="duel-round-cell">
+      {points === null ? (
+        <span className="duel-round-none">–</span>
+      ) : (
+        <span className={`round-score-pill${opponent ? ' is-opponent' : ''}`}>
+          +{points.toLocaleString('pt-BR')}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function describeMyRound(round: LiveMatchRound): string {
+  if (round.myDistance !== null) return `Erro: ${formatDistance(round.myDistance)}`;
+  return round.myPoints === null ? 'Sem palpite' : 'Tempo esgotado';
+}
+
 export function DuelResult({
   myNick,
   opponentNick,
   myScore,
   opponentScore,
-  myResults,
+  rounds,
+  finalScore,
   winnerId,
   myUserId,
   onBackToBracket,
 }: DuelResultProps) {
-  const isWinner = winnerId ? winnerId === myUserId : myScore > opponentScore;
-  const isDraw = !winnerId && myScore === opponentScore;
-  const totalDistance = myResults.reduce((acc, curr) => acc + (curr.distanceMeters ?? 0), 0);
+  // Quem vence é sempre o servidor que decide (pontos, depois desempate por
+  // distância, horário e seed). Enquanto o vencedor não chega, ninguém é destacado.
+  const isDecided = Boolean(winnerId);
+  const isWinner = isDecided && winnerId === myUserId;
+  const isLoser = isDecided && !isWinner;
+
+  const totalMe = finalScore?.me ?? myScore;
+  const totalOpponent = finalScore?.opponent ?? opponentScore;
+  const tiedOnPoints = finalScore !== null && finalScore.me === finalScore.opponent;
+  const totalDistance = rounds.reduce((acc, r) => acc + (r.myDistance ?? 0), 0);
+
+  const title = !isDecided ? 'Duelo encerrado' : isWinner ? 'Vitória!' : 'Derrota';
+  const subtitle = !isDecided
+    ? 'Apurando o resultado...'
+    : tiedOnPoints
+      ? 'Empate nos pontos, decidido no desempate.'
+      : isWinner
+        ? `Você superou ${opponentNick} e avançou no chaveamento.`
+        : `${opponentNick} somou mais pontos neste duelo.`;
 
   return (
     <div className="game-result-container duel-result-screen">
@@ -46,24 +85,18 @@ export function DuelResult({
         <div className="result-header">
           <span className="trophy-emoji">
             <FontAwesomeIcon
-              icon={isWinner ? faTrophy : isDraw ? faHandshake : faFlagCheckered}
+              icon={!isDecided ? faHourglassHalf : isWinner ? faTrophy : faFlagCheckered}
               aria-hidden="true"
             />
           </span>
-          <h2 className="result-title">{isWinner ? 'Vitória!' : isDraw ? 'Empate!' : 'Derrota'}</h2>
-          <p className="result-subtitle">
-            {isWinner
-              ? `Você superou ${opponentNick} e avançou no chaveamento.`
-              : isDraw
-                ? 'Duelo empatado em pontuação.'
-                : `${opponentNick} somou mais pontos neste duelo.`}
-          </p>
+          <h2 className="result-title">{title}</h2>
+          <p className="result-subtitle">{subtitle}</p>
 
           <div className="duel-result-matchup">
             <div className={`duel-result-box duel-result-me ${isWinner ? 'winner' : ''}`}>
               <span className="duel-result-box-label">Você</span>
               <span className="duel-result-box-nick">{myNick}</span>
-              <span className="duel-result-box-score">{myScore.toLocaleString('pt-BR')}</span>
+              <span className="duel-result-box-score">{totalMe.toLocaleString('pt-BR')}</span>
               <span className="duel-result-box-unit">pontos</span>
             </div>
 
@@ -71,12 +104,10 @@ export function DuelResult({
               <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
             </span>
 
-            <div
-              className={`duel-result-box duel-result-opp ${!isWinner && !isDraw ? 'winner' : ''}`}
-            >
+            <div className={`duel-result-box duel-result-opp ${isLoser ? 'winner' : ''}`}>
               <span className="duel-result-box-label">Adversário</span>
               <span className="duel-result-box-nick">{opponentNick}</span>
-              <span className="duel-result-box-score">{opponentScore.toLocaleString('pt-BR')}</span>
+              <span className="duel-result-box-score">{totalOpponent.toLocaleString('pt-BR')}</span>
               <span className="duel-result-box-unit">pontos</span>
             </div>
           </div>
@@ -87,25 +118,26 @@ export function DuelResult({
         </div>
 
         <div className="rounds-summary">
-          <h3 className="rounds-summary-title">Suas Rodadas</h3>
+          <h3 className="rounds-summary-title">Rodadas</h3>
+          <div className="duel-rounds-head">
+            <span className="duel-rounds-col">Você</span>
+            <span className="duel-rounds-col" title={opponentNick}>
+              {opponentNick}
+            </span>
+          </div>
           <div className="rounds-list">
-            {myResults.map((r) => (
-              <div key={r.roundNumber} className="round-item">
+            {rounds.map((r) => (
+              <div key={r.order} className="round-item">
                 <div className="round-item-left">
-                  <span className="round-badge">R{r.roundNumber}</span>
+                  <span className="round-badge">R{r.order}</span>
                   <div className="round-loc-text">
-                    <span className="round-loc-name">
-                      {r.location.name || `Rodada ${r.roundNumber}`}
-                    </span>
-                    <span className="round-loc-dist">
-                      {r.distanceMeters === null
-                        ? 'Tempo esgotado'
-                        : `Erro: ${formatDistance(r.distanceMeters)}`}
-                    </span>
+                    <span className="round-loc-name">Rodada {r.order}</span>
+                    <span className="round-loc-dist">{describeMyRound(r)}</span>
                   </div>
                 </div>
-                <div className="round-item-right">
-                  <span className="round-score-pill">+{r.score.toLocaleString('pt-BR')} pts</span>
+                <div className="duel-round-scores">
+                  <PointsCell points={r.myPoints} />
+                  <PointsCell points={r.opponentPoints} opponent />
                 </div>
               </div>
             ))}
