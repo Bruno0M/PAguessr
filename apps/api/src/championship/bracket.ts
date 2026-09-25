@@ -163,13 +163,3 @@ export function resolveDuel(
   const winnerId = playerA.seed < playerB.seed ? playerA.userId : playerB.userId;
   return { winnerId, reason: 'seed' };
 }
-
-export function calculateRoundStartedAt(
-  opensAt: Date | string | number,
-  roundNumber: number,
-  roundDurationSeconds: number
-): Date {
-  const opensAtMs = new Date(opensAt).getTime();
-  const offsetSeconds = (roundNumber - 1) * roundDurationSeconds;
-  return new Date(opensAtMs + offsetSeconds * 1000);
-}

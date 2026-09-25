@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import { type ChampionshipSize, phasesFor, shuffle } from '@paguessr/shared';
+import { DUEL_REVEAL_SECONDS, type ChampionshipSize, phasesFor, shuffle } from '@paguessr/shared';
 import { db, type Tx } from '../db/index.js';
 import {
   championships,
@@ -15,9 +15,9 @@ import {
 } from '../db/schema.js';
 import { requireAuth, isAdminNick } from '../auth/session.js';
 import { isChampionshipsVisible, parseChampionshipsMode } from '../championship/featureFlag.js';
-import { calculateRoundStartedAt, createInitialBracket } from '../championship/bracket.js';
+import { createInitialBracket } from '../championship/bracket.js';
 import { advanceChampionship } from '../championship/advance.js';
-import { isRoundClosed } from '../championship/timeline.js';
+import { isRoundClosed, plannedRoundStart } from '../championship/timeline.js';
 import { resolveStreetviewMode } from '../streetview.js';
 
 async function pickLocationsForMatch(
@@ -511,10 +511,11 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
               ordem: idx + 1,
               streetview_mode: modes[idx],
               duration_seconds: champ.round_duration_seconds,
-              started_at: calculateRoundStartedAt(
+              started_at: plannedRoundStart(
                 match.opens_at!,
                 idx + 1,
-                champ.round_duration_seconds
+                champ.round_duration_seconds,
+                DUEL_REVEAL_SECONDS
               ),
             }));
             await tx.insert(rounds).values(roundsA);
@@ -536,10 +537,11 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
               ordem: idx + 1,
               streetview_mode: modes[idx],
               duration_seconds: champ.round_duration_seconds,
-              started_at: calculateRoundStartedAt(
+              started_at: plannedRoundStart(
                 match.opens_at!,
                 idx + 1,
-                champ.round_duration_seconds
+                champ.round_duration_seconds,
+                DUEL_REVEAL_SECONDS
               ),
             }));
             await tx.insert(rounds).values(roundsB);

@@ -634,7 +634,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       }
     });
 
-    it('started_at das rodadas é derivado corretamente de opens_at e duration_seconds', async () => {
+    it('started_at das rodadas é derivado de opens_at, da duração e da revelação entre rodadas', async () => {
       const { champ, players, matches } = await setupActiveChampionship({
         prefix: 'f5_start',
         roundDurationSeconds: 45,
@@ -651,8 +651,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
 
       const opensAtMs = new Date(match.opens_at!).getTime();
       expect(new Date(data.rounds[0].started_at).getTime()).toBe(opensAtMs);
-      expect(new Date(data.rounds[1].started_at).getTime()).toBe(opensAtMs + 45 * 1000);
-      expect(new Date(data.rounds[2].started_at).getTime()).toBe(opensAtMs + 90 * 1000);
+      // Cada rodada dura 45 s e a próxima começa depois da revelação de 5 s.
+      expect(new Date(data.rounds[1].started_at).getTime()).toBe(opensAtMs + 50 * 1000);
+      expect(new Date(data.rounds[2].started_at).getTime()).toBe(opensAtMs + 100 * 1000);
     });
 
     it('live não vaza dados nem coordenadas do adversário antes da rodada fechar', async () => {
@@ -907,8 +908,8 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
         .orderBy(asc(rounds.ordem));
       expect(roundsA.map((r) => r.started_at!.getTime())).toEqual([
         opensAt.getTime(),
-        opensAt.getTime() + 45 * 1000,
-        opensAt.getTime() + 90 * 1000,
+        opensAt.getTime() + 50 * 1000,
+        opensAt.getTime() + 100 * 1000,
       ]);
       expect(dataB.gameId).not.toBe(dataA.gameId);
 
