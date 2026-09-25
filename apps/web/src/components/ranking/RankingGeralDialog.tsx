@@ -124,7 +124,7 @@ export function RankingGeralDialog({
                   {entry.nick}
                   {isMe && <span className="geral-you">Você</span>}
                 </span>
-                <span className="geral-score">
+                <span className={`geral-score${entry.score < 0 ? ' is-negative' : ''}`}>
                   {formatScore(entry.score)} <small>pts</small>
                 </span>
               </li>
@@ -163,7 +163,9 @@ export function RankingGeralDialog({
             <>
               <span>Sua posição</span>
               <strong>{me.position}º</strong>
-              <span className="geral-footer-score">{formatScore(me.score)} pts</span>
+              <span className={`geral-footer-score${me.score < 0 ? ' is-negative' : ''}`}>
+                {formatScore(me.score)} pts
+              </span>
             </>
           ) : (
             <span>Termine uma partida Ranqueada para entrar no ranking.</span>

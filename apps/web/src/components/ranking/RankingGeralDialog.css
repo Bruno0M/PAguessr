@@ -117,6 +117,8 @@
   font-style: italic;
   font-size: 15px;
   color: var(--navy-text-muted, #92a9c0);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .geral-position-1 {
@@ -168,6 +170,11 @@
   font-variant-numeric: tabular-nums;
   color: var(--navy-accent, #3ee3ad);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.geral-score.is-negative {
+  color: var(--pa-danger, #ef8e73);
 }
 
 .geral-score small {
@@ -221,6 +228,12 @@
   font-weight: 800;
   color: var(--navy-accent, #3ee3ad);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.geral-footer-score.is-negative {
+  color: var(--pa-danger, #ef8e73);
 }
 
 .geral-dialog :focus-visible {

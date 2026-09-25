@@ -26,7 +26,8 @@ async function loginNewUser(app: ReturnType<typeof buildApp>, nick: string): Pro
 async function finishGame(
   app: ReturnType<typeof buildApp>,
   cookie: string,
-  exactRounds: number
+  exactRounds: number,
+  flaggedReason?: string | null
 ): Promise<{ id: string }> {
   const gameRes = await app.inject({ method: 'POST', url: '/api/games', headers: { cookie } });
   const game = JSON.parse(gameRes.body);
@@ -45,6 +46,12 @@ async function finishGame(
     });
     const data = JSON.parse(res.body);
     if (data.nextRound) roundId = data.nextRound.id;
+  }
+
+  if (flaggedReason !== undefined) {
+    await db.update(games).set({ flagged_reason: flaggedReason }).where(eq(games.id, game.id));
+  } else {
+    await db.update(games).set({ flagged_reason: null }).where(eq(games.id, game.id));
   }
 
   return { id: game.id };
@@ -224,6 +231,57 @@ describe('Ranking Routes Integration', () => {
     expect(first.score).toBe(second.score);
     expect(first.position).toBeLessThan(second.position);
     expect(second.position).toBe(first.position + 1);
+  });
+
+  it('jogador com dívida aparece negativo no geral e na semana', async () => {
+    const cookie = await loginNewUser(app, 'jogadorcomdivida');
+    await finishGame(app, cookie, 2);
+    await finishGame(app, cookie, 5, 'offset_constante');
+
+    const geralRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+    expect(geralRes.statusCode).toBe(200);
+    const geralBody = JSON.parse(geralRes.body);
+    expect(geralBody.me.score).toBe(-25000);
+    expect(geralBody.me.position).toBe(geralBody.total);
+
+    const semanaRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=semana',
+      headers: { cookie },
+    });
+    expect(semanaRes.statusCode).toBe(200);
+    const semanaBody = JSON.parse(semanaRes.body);
+    expect(semanaBody.me.score).toBe(-25000);
+    expect(semanaBody.me.position).toBe(semanaBody.total);
+  });
+
+  it('depois de quitar a dívida volta a melhor partida (incluindo as de antes da fraude)', async () => {
+    const cookie = await loginNewUser(app, 'jogadorquitou');
+    await finishGame(app, cookie, 3);
+    await finishGame(app, cookie, 2, 'tempo_desumano');
+
+    const midRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+    expect(JSON.parse(midRes.body).me.score).toBe(-10000);
+
+    await finishGame(app, cookie, 2);
+
+    const finalRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+    const finalBody = JSON.parse(finalRes.body);
+    expect(finalBody.me.score).toBe(15000);
+    const entry = finalBody.entries.find((e: { nick: string }) => e.nick === 'jogadorquitou');
+    expect(entry.score).toBe(15000);
   });
 
   it('partida de campeonato finalizada não entra no ranking geral nem no da semana', async () => {
