@@ -435,4 +435,78 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
 
     expect(phase1Matches.every((m) => m.resolved_at !== null)).toBe(true);
   });
+
+  it('partida marcada perde o duelo (score 0 e distância infinita)', async () => {
+    const champ = await createTestChampionship(4);
+
+    const [match0] = await db
+      .select()
+      .from(championshipMatches)
+      .where(
+        and(
+          eq(championshipMatches.championship_id, champ.id),
+          eq(championshipMatches.phase, 1),
+          eq(championshipMatches.slot, 0)
+        )
+      );
+
+    const [gameA] = await db
+      .insert(games)
+      .values({
+        user_id: match0.player_a_id!,
+        championship_match_id: match0.id,
+        total_score: 5000,
+        flagged_reason: 'tempo_desumano',
+        finished_at: new Date(Date.now() - 1000 * 1000),
+      })
+      .returning();
+
+    await db.insert(rounds).values({
+      game_id: gameA.id,
+      location_id: 1,
+      ordem: 1,
+      distancia: 10,
+      pontos: 5000,
+      guess_lat: -9.4,
+      guess_lng: -38.2,
+    });
+
+    const [gameB] = await db
+      .insert(games)
+      .values({
+        user_id: match0.player_b_id!,
+        championship_match_id: match0.id,
+        total_score: 1000,
+        flagged_reason: null,
+        finished_at: new Date(Date.now() - 1000 * 1000),
+      })
+      .returning();
+
+    await db.insert(rounds).values({
+      game_id: gameB.id,
+      location_id: 1,
+      ordem: 1,
+      distancia: 500,
+      pontos: 1000,
+      guess_lat: -9.41,
+      guess_lng: -38.21,
+    });
+
+    await db
+      .update(championshipMatches)
+      .set({ game_a_id: gameA.id, game_b_id: gameB.id })
+      .where(eq(championshipMatches.id, match0.id));
+
+    const result = await advanceChampionship(champ.id);
+    expect(result.advanced).toBe(true);
+
+    const [updatedMatch0] = await db
+      .select()
+      .from(championshipMatches)
+      .where(eq(championshipMatches.id, match0.id));
+
+    expect(updatedMatch0.score_a).toBe(0);
+    expect(updatedMatch0.score_b).toBe(1000);
+    expect(updatedMatch0.winner_id).toBe(match0.player_b_id);
+  });
 });

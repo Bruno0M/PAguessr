@@ -15,6 +15,8 @@ import { createGame, submitGuess, getGameSummary, type ApiRoundInitial } from '.
 import { me, logout, type PublicUser } from './api/auth';
 import { getRanking } from './api/ranking';
 import { getFeatures, type Features } from './api/features';
+import { getFraudNotice, type FraudNoticePendingResponse } from './api/fraudNotice';
+import { FraudNoticeModal } from './components/fraud/FraudNoticeModal';
 import { RoundHeader } from './components/RoundHeader';
 import { ImagePanel } from './components/ImagePanel';
 import { PanoramaPanel } from './components/PanoramaPanel';
@@ -92,13 +94,40 @@ export function App() {
     }
   }, [features.championships, currentPath, navigate]);
 
+  const [fraudNotice, setFraudNotice] = useState<FraudNoticePendingResponse | null>(null);
+  const wasInGameRef = useRef(false);
+
+  const checkFraudNotice = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const notice = await getFraudNotice();
+      if (notice.pending) {
+        setShowTitle(false);
+        setShowRanking(false);
+        setFraudNotice(notice);
+      }
+    } catch {
+      // Ignora erro para não quebrar o fluxo da partida
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    if (authUser) {
+      checkFraudNotice();
+    }
+  }, [authUser, checkFraudNotice]);
+
   const sessionVersion = useRef(0);
   const pauseRef = useRef<HTMLDialogElement>(null);
   const returnHome = useCallback(() => {
     sessionVersion.current += 1;
     pauseRef.current?.close();
     setGameState('home');
-  }, []);
+    if (wasInGameRef.current) {
+      wasInGameRef.current = false;
+      checkFraudNotice();
+    }
+  }, [checkFraudNotice]);
 
   const handleLogout = useCallback(async () => {
     await logout().catch(() => {});
@@ -106,6 +135,7 @@ export function App() {
     setAuthView('login');
     setShowRanking(false);
     setShowTitle(true);
+    setFraudNotice(null);
     returnHome();
   }, [returnHome]);
 
@@ -121,6 +151,15 @@ export function App() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submittingError, setSubmittingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (gameState !== 'home' && gameState !== 'loading' && gameState !== 'error') {
+      wasInGameRef.current = true;
+    } else if (gameState === 'home' && wasInGameRef.current) {
+      wasInGameRef.current = false;
+      checkFraudNotice();
+    }
+  }, [gameState, checkFraudNotice]);
 
   useEffect(() => {
     if (gameState === 'home') return;
@@ -367,11 +406,23 @@ export function App() {
   const latestResult = results[results.length - 1];
   const isLastRound = currentRoundIndex === totalRounds - 1;
 
+  const fraudModal =
+    fraudNotice && authUser ? (
+      <FraudNoticeModal notice={fraudNotice} user={authUser} onClose={() => setFraudNotice(null)} />
+    ) : null;
+
   // Tela de título: abre o jogo pra todo mundo (com ou sem sessão) e é o destino
   // do "Sair". O me() lá em cima confere a sessão enquanto ela está na tela.
   if (showTitle) {
     return (
-      <TitleScreen ready={authChecked} goesToAuth={!authUser} onStart={() => setShowTitle(false)} />
+      <>
+        <TitleScreen
+          ready={authChecked}
+          goesToAuth={!authUser}
+          onStart={() => setShowTitle(false)}
+        />
+        {fraudModal}
+      </>
     );
   }
 
@@ -424,21 +475,25 @@ export function App() {
 
   if (currentPath.startsWith('/admin')) {
     return (
-      <AdminApp
-        user={authUser}
-        path={currentPath}
-        onNavigate={navigate}
-        onLogout={handleLogout}
-        onUnauthorized={() => setAuthUser(null)}
-        onGoHome={() => navigate('/')}
-        championships={features.championships}
-      />
+      <>
+        <AdminApp
+          user={authUser}
+          path={currentPath}
+          onNavigate={navigate}
+          onLogout={handleLogout}
+          onUnauthorized={() => setAuthUser(null)}
+          onGoHome={() => navigate('/')}
+          championships={features.championships}
+        />
+        {fraudModal}
+      </>
     );
   }
 
   if (gameState === 'home') {
+    let homeContent: React.ReactNode = null;
     if (showRanking) {
-      return (
+      homeContent = (
         <Suspense
           fallback={
             <div className="status-screen">
@@ -456,12 +511,11 @@ export function App() {
           />
         </Suspense>
       );
-    }
-    if (features.championships) {
+    } else if (features.championships) {
       const duelMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/(?:duelo|matches)\/([^/]+)$/);
       if (duelMatch) {
         const [, champId, matchId] = duelMatch;
-        return (
+        homeContent = (
           <DuelScreen
             championshipId={champId}
             matchId={matchId}
@@ -470,54 +524,67 @@ export function App() {
             onBackToLobby={() => navigate(`/campeonatos/${champId}/sala`)}
           />
         );
-      }
-      const lobbyMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/sala$/);
-      if (lobbyMatch) {
-        const [, championshipId] = lobbyMatch;
-        return (
-          <ChampionshipLobby
-            championshipId={championshipId}
-            user={authUser}
-            onBackToList={() => navigate('/campeonatos')}
-            onViewBracket={() => navigate(`/campeonatos/${championshipId}`)}
-            onEnterDuel={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
-            onLeave={() => replacePath(`/campeonatos/${championshipId}`)}
-          />
-        );
-      }
-      const detailMatch = currentPath.match(/^\/campeonatos\/([^/]+)$/);
-      if (detailMatch) {
-        const [, championshipId] = detailMatch;
-        return (
-          <ChampionshipDetailPage
-            championshipId={championshipId}
-            user={authUser}
-            onBack={() => navigate('/campeonatos')}
-            onOpenLobby={() => navigate(`/campeonatos/${championshipId}/sala`)}
-            onEnterMatch={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
-          />
-        );
-      }
-      if (currentPath === '/campeonatos') {
-        return (
-          <ChampionshipsPage
-            user={authUser}
-            onBack={() => navigate('/')}
-            onSelectChampionship={(id) => navigate(`/campeonatos/${id}`)}
-            onOpenLobby={(id) => navigate(`/campeonatos/${id}/sala`)}
-          />
-        );
+      } else {
+        const lobbyMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/sala$/);
+        if (lobbyMatch) {
+          const [, championshipId] = lobbyMatch;
+          homeContent = (
+            <ChampionshipLobby
+              championshipId={championshipId}
+              user={authUser}
+              onBackToList={() => navigate('/campeonatos')}
+              onViewBracket={() => navigate(`/campeonatos/${championshipId}`)}
+              onEnterDuel={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
+              onLeave={() => replacePath(`/campeonatos/${championshipId}`)}
+            />
+          );
+        } else {
+          const detailMatch = currentPath.match(/^\/campeonatos\/([^/]+)$/);
+          if (detailMatch) {
+            const [, championshipId] = detailMatch;
+            homeContent = (
+              <ChampionshipDetailPage
+                championshipId={championshipId}
+                user={authUser}
+                onBack={() => navigate('/campeonatos')}
+                onOpenLobby={() => navigate(`/campeonatos/${championshipId}/sala`)}
+                onEnterMatch={(matchId) =>
+                  navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)
+                }
+              />
+            );
+          } else if (currentPath === '/campeonatos') {
+            homeContent = (
+              <ChampionshipsPage
+                user={authUser}
+                onBack={() => navigate('/')}
+                onSelectChampionship={(id) => navigate(`/campeonatos/${id}`)}
+                onOpenLobby={(id) => navigate(`/campeonatos/${id}/sala`)}
+              />
+            );
+          }
+        }
       }
     }
+
+    if (!homeContent) {
+      homeContent = (
+        <HomeScreen
+          user={authUser}
+          championships={features.championships}
+          onLogout={handleLogout}
+          onStartRanked={() => startNewGame(false, 'home')}
+          onOpenRanking={() => setShowRanking(true)}
+          onOpenChampionships={() => navigate('/campeonatos')}
+        />
+      );
+    }
+
     return (
-      <HomeScreen
-        user={authUser}
-        championships={features.championships}
-        onLogout={handleLogout}
-        onStartRanked={() => startNewGame(false, 'home')}
-        onOpenRanking={() => setShowRanking(true)}
-        onOpenChampionships={() => navigate('/campeonatos')}
-      />
+      <>
+        {homeContent}
+        {fraudModal}
+      </>
     );
   }
 
@@ -664,6 +731,7 @@ export function App() {
         </button>
         <p>Ao voltar, a próxima partida começa do zero.</p>
       </dialog>
+      {fraudModal}
     </div>
   );
 }

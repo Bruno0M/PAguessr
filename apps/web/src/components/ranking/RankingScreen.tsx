@@ -179,7 +179,7 @@ export function RankingScreen({
                       {entry.nick}
                       {entry.userId === user.id && <span className="ranking-you">Você</span>}
                     </span>
-                    <span className="ranking-score">
+                    <span className={`ranking-score${entry.score < 0 ? ' is-negative' : ''}`}>
                       {formatScore(entry.score)} <small>pts</small>
                     </span>
                   </li>
@@ -198,7 +198,7 @@ export function RankingScreen({
                   {user.nick}
                   <span className="ranking-you">Você</span>
                 </span>
-                <span className="ranking-score">
+                <span className={`ranking-score${me.score < 0 ? ' is-negative' : ''}`}>
                   {formatScore(me.score)} <small>pts</small>
                 </span>
               </div>

@@ -10,6 +10,7 @@ import { adminRoutes } from './routes/adminRoutes.js';
 import { championshipAdminRoutes } from './routes/championshipAdminRoutes.js';
 import { championshipRoutes } from './routes/championshipRoutes.js';
 import { championshipRankingRoutes } from './routes/championshipRankingRoutes.js';
+import { fraudNoticeRoutes } from './routes/fraudNoticeRoutes.js';
 import { getSessionUser, isAdminNick } from './auth/session.js';
 import { parseChampionshipsMode, isChampionshipsVisible } from './championship/featureFlag.js';
 
@@ -100,6 +101,8 @@ export function buildApp(): FastifyInstance {
   app.register(championshipRoutes);
   app.register(championshipRankingRoutes, { prefix: '/api' });
   app.register(championshipRankingRoutes);
+  app.register(fraudNoticeRoutes, { prefix: '/api' });
+  app.register(fraudNoticeRoutes);
 
   return app;
 }

@@ -13,6 +13,7 @@ import { games, locations, rounds, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
 import { resolveStreetviewMode } from '../streetview.js';
 import { closeDuelRoundIfReady } from '../championship/closeRound.js';
+import { detectGame, FlagReason, RoundSample } from '../antifraude/detect.js';
 
 const MIN_LOCATIONS_PER_GAME = 5;
 const RECENT_GAMES_TO_AVOID = 2;
@@ -484,7 +485,21 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         return reply.status(409).send({ error: 'Palpite já registrado para esta rodada' });
       }
 
-      const allGameRounds = await db.select().from(rounds).where(eq(rounds.game_id, round.game_id));
+      const allGameRounds = await db
+        .select({
+          id: rounds.id,
+          ordem: rounds.ordem,
+          guess_lat: rounds.guess_lat,
+          guess_lng: rounds.guess_lng,
+          pontos: rounds.pontos,
+          started_at: rounds.started_at,
+          loc_lat: locations.lat,
+          loc_lng: locations.lng,
+        })
+        .from(rounds)
+        .innerJoin(locations, eq(rounds.location_id, locations.id))
+        .where(eq(rounds.game_id, round.game_id))
+        .orderBy(rounds.ordem);
 
       const totalScore = allGameRounds.reduce((acc, r) => {
         if (r.id === id) return acc + roundScore;
@@ -493,11 +508,38 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       const allFinished = allGameRounds.every((r) => (r.id === id ? true : r.pontos !== null));
 
+      let finishedAt: Date | undefined;
+      let flaggedReason: FlagReason | null | undefined;
+
+      if (allFinished) {
+        finishedAt = new Date();
+        const samples: RoundSample[] = allGameRounds.map((r, idx) => {
+          let answerSeconds: number | null = null;
+          if (r.started_at) {
+            const nextTime =
+              idx < allGameRounds.length - 1
+                ? allGameRounds[idx + 1].started_at?.getTime()
+                : finishedAt!.getTime();
+            if (nextTime !== undefined) {
+              answerSeconds = (nextTime - r.started_at.getTime()) / 1000;
+            }
+          }
+          return {
+            guessLat: r.id === id ? (hasGuess ? (body.lat as number) : null) : r.guess_lat,
+            guessLng: r.id === id ? (hasGuess ? (body.lng as number) : null) : r.guess_lng,
+            locLat: r.loc_lat,
+            locLng: r.loc_lng,
+            answerSeconds,
+          };
+        });
+        flaggedReason = detectGame(samples);
+      }
+
       await db
         .update(games)
         .set({
           total_score: totalScore,
-          ...(allFinished ? { finished_at: new Date() } : {}),
+          ...(allFinished ? { finished_at: finishedAt, flagged_reason: flaggedReason } : {}),
         })
         .where(eq(games.id, round.game_id));
 
