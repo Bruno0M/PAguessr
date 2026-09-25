@@ -91,5 +91,9 @@ export const CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS = 604800;
 // todo mundo estar na sala de espera antes de o relógio das rodadas começar.
 export const LOBBY_COUNTDOWN_SECONDS = 60;
 
+// Pausa entre uma rodada do duelo e a seguinte: todo mundo vê o local certo e os dois
+// palpites antes de a próxima começar. Vale pro fechamento antecipado e pro fim do tempo.
+export const DUEL_REVEAL_SECONDS = 5;
+
 export type ChampionshipStatus =
   'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';
