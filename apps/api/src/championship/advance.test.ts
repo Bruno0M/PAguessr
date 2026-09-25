@@ -510,4 +510,3 @@ describe('Avanço Preguiçoso de Campeonatos (advanceChampionship)', () => {
     expect(updatedMatch0.winner_id).toBe(match0.player_b_id);
   });
 });
-

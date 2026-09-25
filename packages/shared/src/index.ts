@@ -120,4 +120,3 @@ export interface FraudNoticeNotPendingResponse {
 }
 
 export type FraudNoticeResponse = FraudNoticePendingResponse | FraudNoticeNotPendingResponse;
-

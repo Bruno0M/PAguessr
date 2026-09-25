@@ -408,11 +408,7 @@ export function App() {
 
   const fraudModal =
     fraudNotice && authUser ? (
-      <FraudNoticeModal
-        notice={fraudNotice}
-        user={authUser}
-        onClose={() => setFraudNotice(null)}
-      />
+      <FraudNoticeModal notice={fraudNotice} user={authUser} onClose={() => setFraudNotice(null)} />
     ) : null;
 
   // Tela de título: abre o jogo pra todo mundo (com ou sem sessão) e é o destino
@@ -420,7 +416,11 @@ export function App() {
   if (showTitle) {
     return (
       <>
-        <TitleScreen ready={authChecked} goesToAuth={!authUser} onStart={() => setShowTitle(false)} />
+        <TitleScreen
+          ready={authChecked}
+          goesToAuth={!authUser}
+          onStart={() => setShowTitle(false)}
+        />
         {fraudModal}
       </>
     );
@@ -548,7 +548,9 @@ export function App() {
                 user={authUser}
                 onBack={() => navigate('/campeonatos')}
                 onOpenLobby={() => navigate(`/campeonatos/${championshipId}/sala`)}
-                onEnterMatch={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
+                onEnterMatch={(matchId) =>
+                  navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)
+                }
               />
             );
           } else if (currentPath === '/campeonatos') {

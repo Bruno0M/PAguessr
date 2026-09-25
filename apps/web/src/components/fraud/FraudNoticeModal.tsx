@@ -4,10 +4,7 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { AvatarSvg } from '../auth/avatars';
 import type { PublicUser } from '../../api/auth';
 import type { ApiRankingEntry } from '../../api/ranking';
-import {
-  acknowledgeFraudNotice,
-  type FraudNoticePendingResponse,
-} from '../../api/fraudNotice';
+import { acknowledgeFraudNotice, type FraudNoticePendingResponse } from '../../api/fraudNotice';
 import { useReducedMotion } from '../title/useReducedMotion';
 import './FraudNoticeModal.css';
 

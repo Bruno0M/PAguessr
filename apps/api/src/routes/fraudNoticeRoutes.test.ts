@@ -109,7 +109,9 @@ describe('Fraud Notice Routes Integration', () => {
     expect(body.after.position).toBe(body.total);
     expect(body.gap).toBe(false);
     expect(Array.isArray(body.entries)).toBe(true);
-    expect(body.entries.find((e: { userId: string }) => e.userId === cheaterUser.id)).toBeUndefined();
+    expect(
+      body.entries.find((e: { userId: string }) => e.userId === cheaterUser.id)
+    ).toBeUndefined();
   });
 
   it('POST /api/me/fraud-notice/ack marca partidas e subsequente GET retorna pending: false', async () => {
@@ -183,6 +185,8 @@ describe('Fraud Notice Routes Integration', () => {
     expect(body.pending).toBe(true);
     expect(body.gap).toBe(true);
     expect(body.entries).toHaveLength(60);
-    expect(body.entries.find((e: { userId: string }) => e.userId === cheaterUser.id)).toBeUndefined();
+    expect(
+      body.entries.find((e: { userId: string }) => e.userId === cheaterUser.id)
+    ).toBeUndefined();
   });
 });

@@ -69,7 +69,9 @@ async function getPlayerDuelStats(
     ? 0
     : (game?.total_score ?? validGuesses.reduce((sum, r) => sum + (r.pontos ?? 0), 0));
   const totalDistance =
-    isFlagged || !hasGuessed ? Infinity : validGuesses.reduce((sum, r) => sum + (r.distancia ?? 0), 0);
+    isFlagged || !hasGuessed
+      ? Infinity
+      : validGuesses.reduce((sum, r) => sum + (r.distancia ?? 0), 0);
 
   return {
     userId,
