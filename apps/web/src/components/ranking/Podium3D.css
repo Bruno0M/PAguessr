@@ -60,6 +60,10 @@
   color: var(--tag-color);
 }
 
+.pin-tag-score.is-negative {
+  color: var(--pa-danger, #ef8e73);
+}
+
 .pin-tag-score small {
   font-size: 10px;
   font-weight: 600;

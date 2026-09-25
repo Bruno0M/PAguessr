@@ -292,6 +292,8 @@
   font-style: italic;
   font-size: 16px;
   color: var(--navy-text-muted, #92a9c0);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ranking-avatar {
@@ -330,6 +332,11 @@
   font-variant-numeric: tabular-nums;
   color: var(--navy-accent, #3ee3ad);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ranking-score.is-negative {
+  color: var(--pa-danger, #ef8e73);
 }
 
 .ranking-score small {

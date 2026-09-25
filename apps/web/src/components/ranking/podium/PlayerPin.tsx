@@ -185,7 +185,7 @@ export function PlayerPin({
         >
           {isCurrentUser && <span className="pin-tag-you">Você</span>}
           <span className="pin-tag-nick">{entry.nick}</span>
-          <span className="pin-tag-score">
+          <span className={`pin-tag-score${entry.score < 0 ? ' is-negative' : ''}`}>
             {formatScore(entry.score)} <small>pts</small>
           </span>
         </div>
