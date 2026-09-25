@@ -24,6 +24,7 @@ import { GameResult } from './components/GameResult';
 import { AdminApp } from './components/admin/AdminApp';
 import { ChampionshipsPage } from './components/championships/ChampionshipsPage';
 import { ChampionshipDetailPage } from './components/championships/ChampionshipDetailPage';
+import { ChampionshipLobby } from './components/championships/lobby/ChampionshipLobby';
 import { DuelScreen } from './components/duel';
 import { track } from './lib/analytics';
 
@@ -38,7 +39,8 @@ type AuthView = 'login' | 'register' | 'recover';
 export function App() {
   const [showTitle, setShowTitle] = useState(
     () =>
-      !window.location.pathname.startsWith('/admin') && window.location.pathname !== '/campeonatos'
+      !window.location.pathname.startsWith('/admin') &&
+      !window.location.pathname.startsWith('/campeonatos')
   );
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
@@ -55,6 +57,13 @@ export function App() {
 
   const navigate = useCallback((path: string) => {
     window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  }, []);
+
+  // Troca a página atual sem empilhar no histórico: o "voltar" não cai de novo
+  // numa tela que já mandou a pessoa embora (a sala, por exemplo).
+  const replacePath = useCallback((path: string) => {
+    window.history.replaceState({}, '', path);
     setCurrentPath(path);
   }, []);
 
@@ -461,8 +470,23 @@ export function App() {
           />
         );
       }
-      if (currentPath.startsWith('/campeonatos/')) {
-        const championshipId = currentPath.slice('/campeonatos/'.length);
+      const lobbyMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/sala$/);
+      if (lobbyMatch) {
+        const [, championshipId] = lobbyMatch;
+        return (
+          <ChampionshipLobby
+            championshipId={championshipId}
+            user={authUser}
+            onBackToList={() => navigate('/campeonatos')}
+            onViewBracket={() => navigate(`/campeonatos/${championshipId}`)}
+            onEnterDuel={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
+            onLeave={() => replacePath(`/campeonatos/${championshipId}`)}
+          />
+        );
+      }
+      const detailMatch = currentPath.match(/^\/campeonatos\/([^/]+)$/);
+      if (detailMatch) {
+        const [, championshipId] = detailMatch;
         return (
           <ChampionshipDetailPage
             championshipId={championshipId}

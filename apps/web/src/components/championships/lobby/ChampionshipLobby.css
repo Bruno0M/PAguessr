@@ -1,0 +1,556 @@
+/* Sala de espera do campeonato, no clima de tela de carregamento de partida:
+   o mapa noturno de Paulo Afonso de cenário e as peças do jogo por cima. Creme
+   marca foco (meu slot), dourado só a contagem e o "×" do confronto, céu é
+   "você". Tokens em styles/tokens.css, peças em styles/gameUi.css. */
+
+.lobby-screen {
+  --lobby-gutter: clamp(20px, 3.4vw, 60px);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--pa-night);
+  color: var(--pa-cream);
+  font-family: var(--pa-font);
+}
+
+/* ---------- Cenário ---------- */
+
+.lobby-map {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: url('../../../assets/mapa-paulo-afonso.webp') 50% 50% / cover no-repeat;
+}
+
+.lobby-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgb(var(--pa-shade-rgb) / 0.5), rgb(var(--pa-shade-rgb) / 0.5)),
+    radial-gradient(ellipse 85% 80% at 50% 45%, transparent 42%, rgb(3 6 10 / 0.62) 100%);
+}
+
+/* ---------- Topo ---------- */
+
+.lobby-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px var(--lobby-gutter) 0;
+}
+
+.lobby-back {
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.lobby-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    600 15px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+}
+
+.lobby-player {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  font:
+    600 13px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(var(--pa-cream-rgb) / 0.88);
+}
+
+.lobby-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.lobby-avatar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- Palco ---------- */
+
+.lobby-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 28px var(--lobby-gutter) 96px;
+  text-align: center;
+}
+
+.lobby-eyebrow {
+  font:
+    600 12px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--pa-cream-soft);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.lobby-count {
+  font:
+    600 clamp(24px, 3vw, 34px) / 1.1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.lobby-note {
+  max-width: 460px;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0.03em;
+  color: var(--pa-cream-soft);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+
+.lobby-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.lobby-actions .game-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lobby-enter,
+.lobby-retry {
+  width: auto;
+  min-width: 240px;
+  padding-inline: 2em;
+}
+
+.lobby-status {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+
+.lobby-error-icon {
+  font-size: 2.2rem;
+  color: var(--pa-danger);
+}
+
+.lobby-action-error {
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  background: rgb(var(--pa-danger-rgb) / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-danger-rgb) / 0.35);
+  font-size: 14px;
+  color: var(--pa-danger);
+}
+
+/* ---------- Vagas ---------- */
+
+.lobby-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 132px));
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby-grid[data-size='32'] {
+  grid-template-columns: repeat(8, minmax(0, 116px));
+}
+
+/* O .game-card define o próprio raio e padding; a vaga é menor. */
+.game-card.lobby-slot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 12px;
+  border-radius: 14px;
+}
+
+.lobby-slot-avatar {
+  width: 56px;
+  height: 56px;
+}
+
+.lobby-slot-avatar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lobby-slot-nick {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    600 11px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Meu lugar: a tarja creme, igual ao item selecionado do menu. */
+.game-card.lobby-slot.is-me {
+  background: var(--pa-cream);
+  color: var(--pa-ink);
+  box-shadow: 0 0 28px rgb(var(--pa-cream-rgb) / 0.22);
+}
+
+.game-card.lobby-slot.is-empty {
+  justify-content: center;
+  min-height: 98px;
+  background: transparent;
+  border: 1px dashed rgb(var(--pa-cream-rgb) / 0.25);
+  box-shadow: none;
+  color: var(--pa-cream-soft);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.lobby-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.lobby-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: lobby-dot 1.6s ease-in-out infinite;
+}
+
+.lobby-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.lobby-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes lobby-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* ---------- Confronto ---------- */
+
+.lobby-versus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 5vw, 64px);
+  width: 100%;
+}
+
+.game-card.lobby-player-card {
+  display: flex;
+  width: min(240px, 38vw);
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 18px 18px;
+}
+
+.lobby-player-card.is-left {
+  animation: lobby-in-left 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.lobby-player-card.is-right {
+  animation: lobby-in-right 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes lobby-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-56px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lobby-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(56px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lobby-player-avatar {
+  display: grid;
+  width: 96px;
+  height: 96px;
+  place-items: center;
+}
+
+.lobby-player-avatar svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lobby-player-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    600 clamp(15px, 1.2vw + 6px, 20px) / 1.1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.lobby-player-card.is-me .lobby-player-name {
+  color: var(--pa-sky);
+}
+
+.lobby-player-seed {
+  min-height: 1em;
+  font:
+    400 12px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.12em;
+  color: var(--pa-cream-soft);
+}
+
+.game-card.lobby-player-card.is-ghost {
+  background: transparent;
+  border: 1px dashed rgb(var(--pa-cream-rgb) / 0.25);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--pa-cream-soft);
+}
+
+.lobby-x {
+  font-size: 26px;
+  color: var(--pa-sun);
+}
+
+/* ---------- Contagem ---------- */
+
+.lobby-clock {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.lobby-digits {
+  font:
+    600 clamp(56px, 11vw, 120px) / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--pa-sun);
+  text-shadow: 0 0 40px rgb(var(--pa-sun-rgb) / 0.35);
+}
+
+.lobby-digits.is-date {
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Últimos 10 s: dígitos maiores e um pulso leve por segundo. */
+.lobby-digits.is-final {
+  font-size: clamp(72px, 15vw, 160px);
+  animation: lobby-pulse 1s ease-in-out infinite;
+}
+
+@keyframes lobby-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* ---------- Listas de confrontos ---------- */
+
+.lobby-others {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.lobby-others ul {
+  display: flex;
+  max-width: 900px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 26px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pa-cream-soft);
+}
+
+.lobby-line-x {
+  font-size: 0.8em;
+  color: rgb(var(--pa-sun-rgb) / 0.85);
+}
+
+.lobby-line-status {
+  margin-left: 0.8em;
+  font-weight: 600;
+  color: var(--pa-cream);
+}
+
+.lobby-feeder {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pa-cream-soft);
+}
+
+.lobby-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Celular ---------- */
+
+@media (max-width: 640px) {
+  .lobby-top {
+    flex-wrap: wrap;
+    padding-top: 16px;
+  }
+
+  .lobby-title {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .lobby-stage {
+    gap: 18px;
+  }
+
+  .lobby-grid,
+  .lobby-grid[data-size='32'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .game-card.lobby-slot {
+    gap: 6px;
+    padding: 10px 4px 8px;
+  }
+
+  .game-card.lobby-slot.is-empty {
+    min-height: 74px;
+  }
+
+  .lobby-slot-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lobby-slot-nick {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .lobby-versus {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .game-card.lobby-player-card {
+    width: min(280px, 100%);
+    padding: 16px 14px 14px;
+  }
+
+  .lobby-player-avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .lobby-x {
+    font-size: 22px;
+  }
+
+  .lobby-enter,
+  .lobby-retry {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* ---------- Reduzir movimento ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-player-card.is-left,
+  .lobby-player-card.is-right,
+  .lobby-digits.is-final {
+    animation: none;
+  }
+
+  .lobby-dots i {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* Gêmeo do bloco acima pro override manual das Configurações (ver
+   lib/motionPreference.ts). */
+:root[data-reduce-motion='true']
+  :is(.lobby-player-card.is-left, .lobby-player-card.is-right, .lobby-digits.is-final) {
+  animation: none;
+}
+
+:root[data-reduce-motion='true'] .lobby-dots i {
+  animation: none;
+  opacity: 0.6;
+}

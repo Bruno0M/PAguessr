@@ -25,6 +25,7 @@ import {
   type ChampionshipStatus,
 } from '../../api/championships';
 import { AvatarSvg } from '../auth/avatars';
+import { getPhaseName, totalPhasesFor } from './phaseNames';
 import defaultBanner from '../../assets/mapa-paulo-afonso.webp';
 import '../../styles/tokens.css';
 import '../../styles/gameUi.css';
@@ -39,15 +40,6 @@ const STATUS_LABELS: Record<ChampionshipStatus, string> = {
   finalizado: 'Finalizado',
   cancelado: 'Cancelado',
 };
-
-function getPhaseName(phase: number, totalPhases: number): string {
-  if (phase > totalPhases) return 'Campeão';
-  if (phase === totalPhases) return 'Final';
-  if (phase === totalPhases - 1) return 'Semifinal';
-  if (phase === totalPhases - 2) return 'Quartas de final';
-  if (phase === totalPhases - 3) return 'Oitavas de final';
-  return `Fase ${phase}`;
-}
 
 function formatDateTime(isoString?: string | null): string {
   if (!isoString) return '';
@@ -119,7 +111,7 @@ export function ChampionshipDetailPage({
 
   const totalPhases = useMemo(() => {
     if (!detail?.max_participants) return 1;
-    return Math.max(1, Math.round(Math.log2(detail.max_participants)));
+    return totalPhasesFor(detail.max_participants);
   }, [detail?.max_participants]);
 
   const isJoined = useMemo(() => {
