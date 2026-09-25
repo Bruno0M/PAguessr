@@ -38,10 +38,12 @@ export function ChampionshipsPage({
   user,
   onBack,
   onSelectChampionship,
+  onOpenLobby,
 }: {
   user: PublicUser;
   onBack: () => void;
   onSelectChampionship?: (id: string) => void;
+  onOpenLobby?: (id: string) => void;
 }) {
   const [items, setItems] = useState<ChampionshipListItem[]>([]);
   const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
@@ -88,6 +90,7 @@ export function ChampionshipsPage({
         })
       );
       setFeedbackToast('Inscrição confirmada com sucesso!');
+      onOpenLobby?.(id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao se inscrever no campeonato.';
       setFeedbackToast(msg);
@@ -122,18 +125,31 @@ export function ChampionshipsPage({
 
   const renderCardAction = (item: ChampionshipListItem) => {
     const isLoading = actionLoadingId === item.id;
+    const openLobby = () => (onOpenLobby ?? onSelectChampionship)?.(item.id);
+    const openLobbyButton = (
+      <button
+        type="button"
+        className="championship-btn championship-btn-primary"
+        onClick={openLobby}
+      >
+        Abrir sala
+      </button>
+    );
 
     if (item.status === 'inscricoes') {
       if (item.joined) {
         return (
-          <button
-            type="button"
-            className="championship-btn championship-btn-leave"
-            disabled={isLoading}
-            onClick={() => handleLeave(item.id)}
-          >
-            {isLoading ? 'Saindo...' : 'Sair'}
-          </button>
+          <div className="championship-card-actions">
+            {openLobbyButton}
+            <button
+              type="button"
+              className="championship-btn championship-btn-leave"
+              disabled={isLoading}
+              onClick={() => handleLeave(item.id)}
+            >
+              {isLoading ? 'Saindo...' : 'Sair'}
+            </button>
+          </div>
         );
       }
 
@@ -159,6 +175,7 @@ export function ChampionshipsPage({
     }
 
     if (item.status === 'chaveado') {
+      if (item.joined) return openLobbyButton;
       return (
         <button
           type="button"
@@ -171,13 +188,14 @@ export function ChampionshipsPage({
     }
 
     if (item.status === 'em_andamento') {
+      if (item.joined) return openLobbyButton;
       return (
         <button
           type="button"
           className="championship-btn championship-btn-primary"
           onClick={() => onSelectChampionship?.(item.id)}
         >
-          {item.joined ? 'Jogar' : 'Acompanhar'}
+          Acompanhar
         </button>
       );
     }

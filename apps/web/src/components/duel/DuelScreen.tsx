@@ -29,6 +29,8 @@ export interface DuelScreenProps {
   matchId: string;
   user: PublicUser;
   onBackToBracket: () => void;
+  /** Depois de vencer um duelo que não era a final, o resultado leva de volta à sala. */
+  onBackToLobby?: () => void;
 }
 
 /** Quanto antes do fim da rodada o palpite sai sozinho, em ms do relógio do servidor. */
@@ -41,7 +43,13 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: DuelScreenProps) {
+export function DuelScreen({
+  championshipId,
+  matchId,
+  user,
+  onBackToBracket,
+  onBackToLobby,
+}: DuelScreenProps) {
   const [rounds, setRounds] = useState<EnterMatchRound[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>('loading');
@@ -53,6 +61,7 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
   const [opponentScore, setOpponentScore] = useState(0);
   const [liveRounds, setLiveRounds] = useState<LiveMatchRound[]>([]);
   const [finalScore, setFinalScore] = useState<LiveMatchResponse['finalScore']>(null);
+  const [phaseInfo, setPhaseInfo] = useState<{ phase: number; totalPhases: number } | null>(null);
   // Antes da primeira rodada: hora (do servidor) em que ela abre. Nulo depois disso.
   const [firstStartMs, setFirstStartMs] = useState<number | null>(null);
   const [preStartLeftMs, setPreStartLeftMs] = useState(0);
@@ -128,6 +137,7 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
         setOpponent(live.opponent);
         setLiveRounds(live.rounds);
         setFinalScore(live.finalScore);
+        setPhaseInfo({ phase: live.phase, totalPhases: live.totalPhases });
 
         const oppRounds = live.opponent_rounds_answered ?? live.opponentRoundsAnswered;
         if (oppRounds !== undefined) {
@@ -333,7 +343,10 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
         finalScore={finalScore}
         winnerId={winnerId}
         myUserId={user.id}
+        phase={phaseInfo?.phase ?? null}
+        totalPhases={phaseInfo?.totalPhases ?? null}
         onBackToBracket={onBackToBracket}
+        onBackToLobby={onBackToLobby}
       />
     );
   }

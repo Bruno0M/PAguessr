@@ -467,6 +467,7 @@ export function App() {
             matchId={matchId}
             user={authUser}
             onBackToBracket={() => navigate(`/campeonatos/${champId}`)}
+            onBackToLobby={() => navigate(`/campeonatos/${champId}/sala`)}
           />
         );
       }
@@ -492,6 +493,7 @@ export function App() {
             championshipId={championshipId}
             user={authUser}
             onBack={() => navigate('/campeonatos')}
+            onOpenLobby={() => navigate(`/campeonatos/${championshipId}/sala`)}
             onEnterMatch={(matchId) => navigate(`/campeonatos/${championshipId}/duelo/${matchId}`)}
           />
         );
@@ -502,6 +504,7 @@ export function App() {
             user={authUser}
             onBack={() => navigate('/')}
             onSelectChampionship={(id) => navigate(`/campeonatos/${id}`)}
+            onOpenLobby={(id) => navigate(`/campeonatos/${id}/sala`)}
           />
         );
       }

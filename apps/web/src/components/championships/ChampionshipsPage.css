@@ -368,6 +368,22 @@
   transform: translateY(-1px);
 }
 
+.championship-card-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.championship-card-actions .championship-btn-primary {
+  flex: 1;
+}
+
+.championship-card-actions .championship-btn-leave {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0 14px;
+}
+
 .championship-btn-disabled {
   background: rgb(var(--pa-cream-rgb) / 0.06);
   border: 1px solid rgb(var(--pa-cream-rgb) / 0.1);

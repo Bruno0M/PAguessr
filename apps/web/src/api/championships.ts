@@ -143,6 +143,9 @@ export interface LiveMatchResponse {
   current_round?: number;
   myScore: number;
   my_score?: number;
+  /** Fase deste confronto e total de fases: o resultado precisa saber se era a final. */
+  phase: number;
+  totalPhases: number;
   /** Soma dos pontos do adversário só nas rodadas fechadas. */
   opponentScore: number;
   opponent: LiveMatchOpponent | null;

@@ -55,11 +55,13 @@ export function ChampionshipDetailPage({
   championshipId,
   user,
   onBack,
+  onOpenLobby,
   onEnterMatch,
 }: {
   championshipId: string;
   user: PublicUser;
   onBack: () => void;
+  onOpenLobby?: () => void;
   onEnterMatch?: (matchId: string) => void;
 }) {
   const [detail, setDetail] = useState<ChampionshipDetail | null>(null);
@@ -145,7 +147,11 @@ export function ChampionshipDetailPage({
     setActionError(null);
     try {
       await joinChampionship(championshipId);
-      loadData();
+      if (onOpenLobby) {
+        onOpenLobby();
+      } else {
+        loadData();
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao se inscrever.';
       setActionError(msg);
@@ -206,6 +212,13 @@ export function ChampionshipDetailPage({
     );
   };
 
+  const lobbyButton = (className: string) =>
+    onOpenLobby ? (
+      <button type="button" className={className} onClick={onOpenLobby}>
+        Abrir sala
+      </button>
+    ) : null;
+
   const renderMyStatusCard = () => {
     if (!detail) return null;
 
@@ -251,14 +264,17 @@ export function ChampionshipDetailPage({
               chave.
             </p>
           </div>
-          <button
-            type="button"
-            className="championship-btn championship-btn-leave status-card-leave"
-            disabled={actionLoading}
-            onClick={handleLeave}
-          >
-            {actionLoading ? 'Saindo...' : 'Sair do Campeonato'}
-          </button>
+          <div className="status-card-actions">
+            {lobbyButton('game-cta status-card-cta')}
+            <button
+              type="button"
+              className="championship-btn championship-btn-leave status-card-leave"
+              disabled={actionLoading}
+              onClick={handleLeave}
+            >
+              {actionLoading ? 'Saindo...' : 'Sair do Campeonato'}
+            </button>
+          </div>
         </div>
       );
     }
@@ -284,6 +300,7 @@ export function ChampionshipDetailPage({
               para o início da partida.
             </p>
           </div>
+          {lobbyButton('game-cta status-card-cta')}
         </div>
       );
     }
@@ -325,13 +342,16 @@ export function ChampionshipDetailPage({
                   O relógio está correndo no servidor! Entre na partida para enviar seus palpites.
                 </p>
               </div>
-              <button
-                type="button"
-                className="game-cta status-card-cta"
-                onClick={() => onEnterMatch?.(match.id)}
-              >
-                Jogar Duelo
-              </button>
+              <div className="status-card-actions">
+                <button
+                  type="button"
+                  className="game-cta status-card-cta"
+                  onClick={() => onEnterMatch?.(match.id)}
+                >
+                  Jogar Duelo
+                </button>
+                {lobbyButton('game-ghost status-card-lobby')}
+              </div>
             </div>
           );
         }
@@ -345,6 +365,7 @@ export function ChampionshipDetailPage({
               <h3>Próxima fase abre às {formatDateTime(opensAt)}</h3>
               <p>Prepare-se para o seu confronto na {getPhaseName(match.phase, totalPhases)}.</p>
             </div>
+            {lobbyButton('game-cta status-card-cta')}
           </div>
         );
       }
