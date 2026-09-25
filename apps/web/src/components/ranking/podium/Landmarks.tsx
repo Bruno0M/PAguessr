@@ -2,9 +2,10 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { USINA_POSITION } from './layout';
 import { glowColor } from './textures';
+import { ARENA, DANGER, SUN_SOFT } from './palette';
 
-const CONCRETE = '#98a6b3';
-const STEEL = '#b5c2cd';
+const CONCRETE = ARENA.concrete;
+const STEEL = ARENA.steel;
 
 function TransmissionTower({ position }: { position: [number, number, number] }) {
   const height = 1.25;
@@ -48,7 +49,7 @@ function TransmissionTower({ position }: { position: [number, number, number] })
       </mesh>
       <mesh position-y={height + 0.03}>
         <sphereGeometry args={[0.025, 10, 8]} />
-        <meshBasicMaterial color={glowColor('#ff4d4d', 4)} toneMapped={false} />
+        <meshBasicMaterial color={glowColor(DANGER, 4)} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -75,7 +76,7 @@ function UsinaChesf() {
       </mesh>
       <mesh position={[0, 0.82, -0.32]}>
         <boxGeometry args={[1.56, 0.04, 0.3]} />
-        <meshStandardMaterial color="#c8d2db" roughness={0.6} />
+        <meshStandardMaterial color={ARENA.roof} roughness={0.6} />
       </mesh>
 
       {[-0.4, 0, 0.4].map((x) => (
@@ -87,23 +88,23 @@ function UsinaChesf() {
 
       <mesh position={[0, 0.2, 0.18]}>
         <boxGeometry args={[1.25, 0.4, 0.48]} />
-        <meshStandardMaterial color="#b3bfca" roughness={0.7} metalness={0.15} />
+        <meshStandardMaterial color={ARENA.concreteLight} roughness={0.7} metalness={0.15} />
       </mesh>
       <mesh position={[0, 0.25, 0.425]}>
         <planeGeometry args={[1.05, 0.08]} />
-        <meshBasicMaterial color={glowColor('#ffcf7a', 2.4)} toneMapped={false} />
+        <meshBasicMaterial color={glowColor(SUN_SOFT, 2.4)} toneMapped={false} />
       </mesh>
       {[-0.5, -0.25, 0, 0.25, 0.5].map((x) => (
         <mesh key={x} position={[x, 0.2, 0.43]}>
           <boxGeometry args={[0.04, 0.4, 0.02]} />
-          <meshStandardMaterial color="#8f9ca8" roughness={0.7} />
+          <meshStandardMaterial color={ARENA.concreteDark} roughness={0.7} />
         </mesh>
       ))}
 
       <TransmissionTower position={[-0.95, 0, -0.05]} />
       <TransmissionTower position={[0.95, 0, -0.05]} />
       <mesh geometry={cable}>
-        <meshStandardMaterial color="#2d3a48" />
+        <meshStandardMaterial color={ARENA.cable} />
       </mesh>
     </group>
   );

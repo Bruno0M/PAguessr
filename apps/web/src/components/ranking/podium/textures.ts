@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ARENA, INK, SUN_SOFT } from './palette';
 
 // Cor acima de 1.0 com toneMapped={false}: é o que o Bloom (limiar 1) pega.
 export function glowColor(hex: string, intensity: number): THREE.Color {
@@ -23,14 +24,14 @@ function canvasTexture(canvas: HTMLCanvasElement, srgb = true): THREE.CanvasText
 // tracejado central. V repete ao longo da pista.
 export function createRoadTextures(): { map: THREE.CanvasTexture; glow: THREE.CanvasTexture } {
   const { canvas: base, ctx: b } = makeCanvas(128, 256);
-  b.fillStyle = '#16212e';
+  b.fillStyle = ARENA.asphalt;
   b.fillRect(0, 0, 128, 256);
   for (let i = 0; i < 900; i += 1) {
     const shade = 30 + Math.random() * 25;
     b.fillStyle = `rgb(${shade}, ${shade + 8}, ${shade + 18})`;
     b.fillRect(Math.random() * 128, Math.random() * 256, 1.5, 1.5);
   }
-  b.fillStyle = '#9fdcea';
+  b.fillStyle = SUN_SOFT;
   b.fillRect(6, 0, 5, 256);
   b.fillRect(117, 0, 5, 256);
   b.fillRect(60, 0, 8, 110);
@@ -66,7 +67,7 @@ export function createFacadeTextures(
   };
   const { canvas: base, ctx: b } = makeCanvas(128, 256);
   const { canvas: glowCanvas, ctx: g } = makeCanvas(128, 256);
-  b.fillStyle = '#2a3a4f';
+  b.fillStyle = ARENA.wall;
   b.fillRect(0, 0, 128, 256);
   g.fillStyle = '#000';
   g.fillRect(0, 0, 128, 256);
@@ -76,7 +77,7 @@ export function createFacadeTextures(
       const x = 12 + col * 28;
       const y = 14 + row * 22;
       const on = random() < lit;
-      b.fillStyle = on ? '#ffd58a' : '#16212e';
+      b.fillStyle = on ? ARENA.windowOn : ARENA.windowOff;
       b.fillRect(x, y, 16, 12);
       if (on) {
         g.fillStyle = `rgba(255, 200, 120, ${0.6 + random() * 0.4})`;
@@ -87,22 +88,37 @@ export function createFacadeTextures(
   return { map: canvasTexture(base), glow: canvasTexture(glowCanvas) };
 }
 
+// Texto da placa: tinta escura na tarja creme, na Saira do jogo. O canvas não
+// espera a fonte carregar, então desenha já com o que tem e redesenha quando ela chega.
 export function createSignTexture(label: string): THREE.CanvasTexture {
   const { canvas, ctx } = makeCanvas(512, 128);
-  ctx.clearRect(0, 0, 512, 128);
-  ctx.font = '900 64px "Arial Black", "Segoe UI", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const size = ctx.measureText(label).width;
-  if (size > 440) {
-    ctx.font = `900 ${Math.floor((64 * 440) / size)}px "Arial Black", "Segoe UI", sans-serif`;
+  const texture = canvasTexture(canvas);
+
+  const draw = () => {
+    ctx.clearRect(0, 0, 512, 128);
+    const family = 'Saira, "Segoe UI", sans-serif';
+    ctx.font = `600 60px ${family}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Espaçamento de letras do menu do jogo; navegador sem suporte ignora.
+    if ('letterSpacing' in ctx) (ctx as { letterSpacing: string }).letterSpacing = '6px';
+    const size = ctx.measureText(label).width;
+    if (size > 440) {
+      ctx.font = `600 ${Math.floor((60 * 440) / size)}px ${family}`;
+    }
+    ctx.fillStyle = INK;
+    ctx.fillText(label, 259, 68);
+    texture.needsUpdate = true;
+  };
+
+  draw();
+  if (typeof document !== 'undefined' && document.fonts) {
+    document.fonts
+      .load('600 60px Saira')
+      .then(draw)
+      .catch(() => undefined);
   }
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = 'rgba(4, 30, 40, 0.6)';
-  ctx.strokeText(label, 256, 68);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(label, 256, 68);
-  return canvasTexture(canvas);
+  return texture;
 }
 
 // Mancha radial branca pra halos e feixes (usada com blending aditivo).

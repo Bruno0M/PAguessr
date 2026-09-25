@@ -1,9 +1,13 @@
 .ranking-screen {
+  /* Cores das medalhas. A cena 3D tem as mesmas em podium/layout.ts (MEDAL). */
+  --rank-gold: var(--pa-sun);
+  --rank-silver: #e4e0d4;
+  --rank-bronze: #e0955a;
   height: 100%;
   overflow-y: auto;
-  background: var(--navy-bg, #0e1b2d);
-  color: var(--navy-text, #eef6ff);
-  font-family: 'Segoe UI', sans-serif;
+  background: var(--pa-night);
+  color: var(--pa-cream);
+  font-family: var(--pa-font);
 }
 
 :where(.ranking-screen) button {
@@ -12,7 +16,7 @@
 }
 
 :where(.ranking-screen) :focus-visible {
-  outline: 3px solid var(--navy-cyan, #40cddd);
+  outline: 2px solid var(--pa-cream);
   outline-offset: 3px;
 }
 
@@ -21,9 +25,8 @@
   height: clamp(520px, 82vh, 780px);
   overflow: hidden;
   background:
-    radial-gradient(ellipse 60% 55% at 50% 58%, #1b4a6655, transparent 70%),
-    radial-gradient(ellipse 90% 60% at 50% 0%, #16425b40, transparent 60%),
-    linear-gradient(180deg, #0b1727 0%, #0e1b2d 100%);
+    radial-gradient(ellipse 60% 55% at 50% 58%, rgb(var(--pa-sky-rgb) / 0.1), transparent 70%),
+    linear-gradient(180deg, #080e15 0%, var(--pa-night) 100%);
 }
 
 .ranking-stage::after {
@@ -31,7 +34,7 @@
   position: absolute;
   inset: auto 0 0;
   height: 90px;
-  background: linear-gradient(180deg, transparent, var(--navy-bg, #0e1b2d));
+  background: linear-gradient(180deg, transparent, var(--pa-night));
   pointer-events: none;
   z-index: 25;
 }
@@ -52,21 +55,16 @@
   pointer-events: auto;
 }
 
-.ranking-back {
+/* Sobre a cena 3D o contorno fino do .game-ghost some: um vidro escuro atrás. */
+.game-ghost.ranking-back {
   justify-self: start;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid #789abe30;
-  background: #0b1727b3;
-  color: var(--navy-text-muted, #92a9c0);
-  font-size: 13px;
-  font-weight: 600;
+  background-color: rgb(var(--pa-shade-rgb) / 0.6);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 
-.ranking-back:hover {
-  color: var(--navy-text, #eef6ff);
-  border-color: #789abe66;
+.game-ghost.ranking-back:hover {
+  background-color: rgb(var(--pa-shade-rgb) / 0.82);
 }
 
 .ranking-heading {
@@ -75,59 +73,65 @@
 
 .ranking-title {
   margin: 0;
-  font-family: 'Arial Black', 'Segoe UI', sans-serif;
-  font-size: clamp(30px, 4vw, 44px);
-  font-style: italic;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--navy-cyan, #40cddd);
-  text-shadow: 0 4px 24px #40cddd40;
-}
-
-.ranking-title b {
-  color: var(--navy-accent, #3ee3ad);
+  padding-left: 0.32em;
+  font:
+    600 clamp(22px, 2.6vw, 30px) / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--pa-cream);
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.6),
+    0 0 22px rgb(0 0 0 / 0.65);
 }
 
 .ranking-caption {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font-size: 12px;
-  letter-spacing: 0.04em;
-  color: var(--navy-text-muted, #92a9c0);
+  letter-spacing: 0.06em;
+  color: var(--pa-cream-soft);
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.6),
+    0 0 14px rgb(0 0 0 / 0.65);
 }
 
+/* Abas como o menu do jogo: a tarja creme marca a que está no foco. */
 .ranking-tabs {
   justify-self: end;
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: #0b1727cc;
-  border: 1px solid #789abe30;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 2px;
+  background: rgb(var(--pa-shade-rgb) / 0.6);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.16);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 
 .ranking-tab {
-  border: none;
+  border: 0;
   background: none;
-  color: var(--navy-text-muted, #92a9c0);
-  padding: 7px 18px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  color: var(--pa-cream-soft);
+  /* O espaçamento sobra depois da última letra; o recuo à esquerda recentraliza. */
+  padding: 8px 18px 8px calc(18px + 0.2em);
+  border-radius: 1px;
+  font:
+    600 12px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   transition:
-    background 0.15s ease,
-    color 0.15s ease;
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .ranking-tab:hover {
-  color: var(--navy-text, #eef6ff);
+  color: var(--pa-cream);
 }
 
 .ranking-tab.is-active {
-  background: linear-gradient(#5be0ee, #1fa8bb);
-  color: #06222b;
+  background: var(--pa-cream);
+  color: var(--pa-ink);
 }
 
 .ranking-stage-status {
@@ -138,21 +142,23 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 999px;
-  background: #0b1727cc;
+  background: rgb(var(--pa-shade-rgb) / 0.72);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.16);
   font-size: 12px;
-  color: var(--navy-text-muted, #92a9c0);
+  letter-spacing: 0.06em;
+  color: var(--pa-cream-soft);
 }
 
 .ranking-stage-spinner {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #40cddd40;
-  border-top-color: #40cddd;
+  border: 2px solid rgb(var(--pa-cream-rgb) / 0.25);
+  border-top-color: var(--pa-cream);
   animation: ranking-spin 0.8s linear infinite;
 }
 
@@ -162,50 +168,45 @@
   }
 }
 
-.ranking-stage-message {
+.game-card.ranking-stage-message {
   position: absolute;
   z-index: 30;
   left: 50%;
   bottom: 96px;
   transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
   width: min(420px, 88%);
-  padding: 18px 22px 20px;
-  border-radius: 16px;
-  border: 1px solid #789abe30;
-  background: #0b1727e6;
-  box-shadow: 0 18px 40px #02070daa;
+  padding: 22px 24px 24px;
   text-align: center;
-  backdrop-filter: blur(8px);
+}
+
+.ranking-message-icon {
+  margin-bottom: 10px;
+  font-size: 1.6rem;
+  color: var(--pa-danger);
 }
 
 .ranking-stage-message h2 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 800;
+  font:
+    600 16px / 1.35 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.02em;
 }
 
 .ranking-stage-message p {
-  margin: 6px 0 14px;
+  margin: 6px 0 16px;
   font-size: 13px;
-  color: var(--navy-text-muted, #92a9c0);
+  line-height: 1.5;
+  color: var(--pa-cream-soft);
 }
 
-.ranking-action {
-  border: none;
-  padding: 10px 22px;
-  border-radius: 12px;
-  background: linear-gradient(#5be0ee, #1fa8bb);
-  color: #06222b;
-  font-family: 'Arial Black', 'Segoe UI', sans-serif;
-  font-size: 13px;
-  font-style: italic;
-  letter-spacing: 0.04em;
-  box-shadow: 0 5px 0 #0f6f7d;
-}
-
-.ranking-action:active {
-  transform: translateY(3px);
-  box-shadow: 0 2px 0 #0f6f7d;
+/* O .game-cta ocupa a largura toda; aqui é um botão só, no pé do cartão. */
+.game-cta.ranking-action {
+  width: auto;
+  min-width: 220px;
+  padding: 0 1.6em 0 calc(1.6em + 0.26em);
 }
 
 /* Escondido até alguém navegar por teclado até ele. */
@@ -227,13 +228,16 @@
 }
 
 .ranking-scene-actions button {
-  padding: 8px 14px;
+  padding: 10px 16px;
+  border: 0;
   border-radius: 999px;
-  border: 1px solid #40cddd;
-  background: #0b1727f2;
-  color: var(--navy-text, #eef6ff);
-  font-size: 12px;
-  font-weight: 700;
+  background: rgb(var(--pa-shade-rgb) / 0.92);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.46);
+  color: var(--pa-cream);
+  font:
+    600 12px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
@@ -256,11 +260,12 @@
 
 .ranking-board-title {
   margin: 20px 0 10px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+  font:
+    600 11px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--navy-text-muted, #92a9c0);
+  color: var(--pa-cream-soft);
 }
 
 .ranking-list {
@@ -276,22 +281,26 @@
   align-items: center;
   gap: 14px;
   padding: 10px 16px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #13283e, #102236);
-  border: 1px solid #26456380;
+  border-radius: 8px;
+  background: rgb(var(--pa-cream-rgb) / 0.06);
+  box-shadow: inset 0 0 0 1px rgb(var(--pa-cream-rgb) / 0.12);
 }
 
+/* Céu é "você": a linha do próprio jogador ganha a faixa dele. */
 .ranking-row.is-me {
-  border-color: #40cddd;
-  box-shadow: inset 4px 0 0 #40cddd;
+  background: rgb(var(--pa-sky-rgb) / 0.1);
+  box-shadow:
+    inset 4px 0 0 var(--pa-sky),
+    inset 0 0 0 1px rgb(var(--pa-sky-rgb) / 0.5);
 }
 
 .ranking-position {
   min-width: 34px;
-  font-family: 'Arial Black', 'Segoe UI', sans-serif;
-  font-style: italic;
-  font-size: 16px;
-  color: var(--navy-text-muted, #92a9c0);
+  font:
+    600 15px / 1 var(--pa-font),
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--pa-cream-soft);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -309,40 +318,42 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .ranking-you {
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #40cddd26;
-  color: #40cddd;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  padding: 3px 7px 3px calc(7px + 0.16em);
+  border-radius: 2px;
+  background: rgb(var(--pa-sky-rgb) / 0.16);
+  color: var(--pa-sky);
+  font:
+    600 10px / 1 var(--pa-font),
+    sans-serif;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
+/* Dourado é o que vale ponto. */
 .ranking-score {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
-  color: var(--navy-accent, #3ee3ad);
+  color: var(--pa-sun);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .ranking-score.is-negative {
-  color: var(--pa-danger, #ef8e73);
+  color: var(--pa-danger);
 }
 
 .ranking-score small {
   font-size: 11px;
-  font-weight: 600;
-  opacity: 0.7;
+  font-weight: 400;
+  opacity: 0.75;
 }
 
 @media (max-width: 640px) {
@@ -354,7 +365,7 @@
     padding-top: 16px;
   }
 
-  .ranking-back {
+  .game-ghost.ranking-back {
     grid-area: back;
   }
 
@@ -375,8 +386,16 @@
   .ranking-stage-spinner {
     animation: none;
   }
+
+  .ranking-tab {
+    transition: none;
+  }
 }
 
 :root[data-reduce-motion='true'] .ranking-stage-spinner {
   animation: none;
+}
+
+:root[data-reduce-motion='true'] .ranking-tab {
+  transition: none;
 }

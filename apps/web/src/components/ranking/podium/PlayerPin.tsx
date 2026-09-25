@@ -13,8 +13,10 @@ import {
   PIN_HOLE_RADIUS,
   SYMBOL_EXTENT,
 } from './geometry';
+import { MEDAL } from './layout';
 import { clamp01, easeOutBounce } from './motion';
 import { createBeamTexture, createGlowTexture, glowColor } from './textures';
+import { ARENA, CREAM } from './palette';
 
 const HOVER = 0.04;
 const DROP_HEIGHT = 5;
@@ -122,7 +124,7 @@ export function PlayerPin({
   return (
     <group>
       {landed && (
-        <StageGlow color={isWinner ? '#ffc75a' : medalColor} strength={isWinner ? 1.6 : 0.9} />
+        <StageGlow color={isWinner ? MEDAL[1].glow : medalColor} strength={isWinner ? 1.6 : 0.9} />
       )}
 
       <group ref={dropRef} position={[0, reducedMotion ? 0 : DROP_HEIGHT, 0]}>
@@ -150,7 +152,7 @@ export function PlayerPin({
               args={[PIN_HOLE_RADIUS + 0.02, PIN_HOLE_RADIUS + 0.02, PIN_DEPTH + 0.26, 48]}
             />
             <meshPhysicalMaterial
-              color="#040d18"
+              color={ARENA.pinHole}
               roughness={0.08}
               metalness={0.4}
               clearcoat={1}
@@ -166,7 +168,7 @@ export function PlayerPin({
                 rotation={[0, side === 1 ? 0 : Math.PI, 0]}
                 scale={SYMBOL_SCALE}
               >
-                <meshBasicMaterial color={glowColor('#ffffff', 1.4)} toneMapped={false} />
+                <meshBasicMaterial color={glowColor(CREAM, 1.4)} toneMapped={false} />
               </mesh>
             ))}
         </group>

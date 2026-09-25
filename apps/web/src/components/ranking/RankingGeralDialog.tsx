@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { PublicUser } from '../../api/auth';
 import { getRanking, type ApiRankingEntry } from '../../api/ranking';
 import { AvatarSvg } from '../auth/avatars';
@@ -107,7 +109,7 @@ export function RankingGeralDialog({
             aria-label="Fechar ranking geral"
             onClick={onClose}
           >
-            ×
+            <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
           </button>
         </header>
 

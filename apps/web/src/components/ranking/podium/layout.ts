@@ -1,9 +1,13 @@
+import { SUN } from './palette';
+
 export const PLATFORM_RADIUS = 5;
 
+// Ouro no dourado do jogo; prata e bronze afastados do azul e do coral (perigo).
+// O HUD tem as mesmas cores em RankingScreen.css (--rank-*).
 export const MEDAL = {
-  1: { metal: '#d9a441', glow: '#ffc75a' },
-  2: { metal: '#9aa8b5', glow: '#e3f1ff' },
-  3: { metal: '#c27a45', glow: '#ffae70' },
+  1: { metal: '#d9a441', glow: SUN },
+  2: { metal: '#a8a59c', glow: '#e4e0d4' },
+  3: { metal: '#c27a45', glow: '#e0955a' },
 } as const;
 
 export const PODIUM_SLOTS = [

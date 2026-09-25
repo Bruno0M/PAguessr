@@ -19,6 +19,7 @@ import {
   projectToMap,
 } from './pauloAfonsoMap';
 import { createRoadTextures, glowColor } from './textures';
+import { ARENA, SKY, SUN } from './palette';
 
 const R = PLATFORM_RADIUS;
 const RIM_HEIGHT = 0.42;
@@ -41,19 +42,19 @@ function Disc({ reflective }: { reflective: boolean }) {
             depthScale={0.4}
             minDepthThreshold={0.4}
             maxDepthThreshold={1.3}
-            color="#0c2238"
+            color={ARENA.ground}
             metalness={0.55}
             roughness={0.75}
           />
         ) : (
-          <meshStandardMaterial color="#0c2238" metalness={0.5} roughness={0.45} />
+          <meshStandardMaterial color={ARENA.ground} metalness={0.5} roughness={0.45} />
         )}
       </mesh>
 
       <mesh position-y={-RIM_HEIGHT / 2}>
         <cylinderGeometry args={[R + 0.06, R + 0.02, RIM_HEIGHT, 160, 1, true]} />
         <meshStandardMaterial
-          color="#c3d2df"
+          color={ARENA.rimMetal}
           metalness={0.9}
           roughness={0.22}
           envMapIntensity={1.6}
@@ -62,17 +63,17 @@ function Disc({ reflective }: { reflective: boolean }) {
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position-y={0.02}>
         <torusGeometry args={[R + 0.03, 0.055, 12, 200]} />
-        <meshBasicMaterial color={glowColor('#3fdcff', 4.5)} toneMapped={false} />
+        <meshBasicMaterial color={glowColor(ARENA.ring, 2.4)} toneMapped={false} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position-y={-RIM_HEIGHT + 0.04}>
         <torusGeometry args={[R + 0.04, 0.014, 8, 200]} />
-        <meshBasicMaterial color={glowColor('#3fdcff', 1.3)} toneMapped={false} />
+        <meshBasicMaterial color={glowColor(ARENA.ring, 0.9)} toneMapped={false} />
       </mesh>
 
       <mesh position-y={-RIM_HEIGHT - 0.8} rotation-x={Math.PI}>
         <coneGeometry args={[R + 0.02, 1.6, 128, 1, true]} />
         <meshStandardMaterial
-          color="#0a1624"
+          color={ARENA.hull}
           metalness={0.8}
           roughness={0.45}
           side={THREE.DoubleSide}
@@ -115,9 +116,9 @@ function PauloAfonsoMap() {
     canvas.width = 128;
     canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#123a5e';
+    ctx.fillStyle = ARENA.land;
     ctx.fillRect(0, 0, 128, 128);
-    ctx.strokeStyle = '#2d7bab';
+    ctx.strokeStyle = ARENA.landLine;
     ctx.lineWidth = 3;
     ctx.strokeRect(0, 0, 128, 128);
     const texture = new THREE.CanvasTexture(canvas);
@@ -142,17 +143,17 @@ function PauloAfonsoMap() {
       <mesh geometry={geometry} rotation-x={-Math.PI / 2} position-y={0.005}>
         <meshStandardMaterial
           map={gridTexture}
-          emissive="#1d6fa3"
-          emissiveIntensity={0.25}
+          emissive={ARENA.landGlow}
+          emissiveIntensity={0.3}
           metalness={0.3}
           roughness={0.55}
         />
       </mesh>
-      <Line points={outline} color={glowColor('#63d8ff', 2.4)} lineWidth={2} toneMapped={false} />
-      <Line points={river} color={glowColor('#3fdcff', 4)} lineWidth={4.5} toneMapped={false} />
+      <Line points={outline} color={glowColor(SKY, 1.8)} lineWidth={2} toneMapped={false} />
+      <Line points={river} color={glowColor(ARENA.river, 4.2)} lineWidth={4.5} toneMapped={false} />
       <mesh position={[city[0], 0.1, city[1]]}>
         <sphereGeometry args={[0.05, 16, 12]} />
-        <meshBasicMaterial color={glowColor('#3ee3ad', 5)} toneMapped={false} />
+        <meshBasicMaterial color={glowColor(SUN, 4.5)} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -264,7 +265,7 @@ function Road({ reducedMotion }: { reducedMotion: boolean }) {
       <mesh geometry={top}>
         <meshStandardMaterial
           map={textures.map}
-          emissive={glowColor('#4fe3ff', 3)}
+          emissive={glowColor(SUN, 1.8)}
           emissiveMap={textures.glow}
           roughness={0.6}
           metalness={0.2}
@@ -273,7 +274,7 @@ function Road({ reducedMotion }: { reducedMotion: boolean }) {
       </mesh>
       <mesh geometry={body}>
         <meshStandardMaterial
-          color="#6e7f90"
+          color={ARENA.roadBody}
           metalness={0.5}
           roughness={0.5}
           side={THREE.DoubleSide}
@@ -282,8 +283,8 @@ function Road({ reducedMotion }: { reducedMotion: boolean }) {
 
       <mesh geometry={bridge.river}>
         <meshStandardMaterial
-          color="#0b4a6e"
-          emissive="#0b5f86"
+          color={ARENA.riverDeep}
+          emissive={ARENA.riverGlow}
           emissiveIntensity={0.6}
           metalness={0.3}
           roughness={0.12}
@@ -291,18 +292,18 @@ function Road({ reducedMotion }: { reducedMotion: boolean }) {
       </mesh>
       {bridge.arches.map((geometry, i) => (
         <mesh key={`arch-${i}`} geometry={geometry}>
-          <meshStandardMaterial color="#c9d4de" metalness={0.9} roughness={0.3} />
+          <meshStandardMaterial color={ARENA.steel} metalness={0.9} roughness={0.3} />
         </mesh>
       ))}
       {bridge.rails.map((geometry, i) => (
         <mesh key={`rail-${i}`} geometry={geometry}>
-          <meshStandardMaterial color="#dfe8ef" metalness={0.8} roughness={0.3} />
+          <meshStandardMaterial color={ARENA.steelLight} metalness={0.8} roughness={0.3} />
         </mesh>
       ))}
       {bridge.struts.map((strut, i) => (
         <mesh key={`strut-${i}`} position={strut.position}>
           <cylinderGeometry args={[0.012, 0.012, strut.height, 6]} />
-          <meshStandardMaterial color="#c9d4de" metalness={0.9} roughness={0.3} />
+          <meshStandardMaterial color={ARENA.steel} metalness={0.9} roughness={0.3} />
         </mesh>
       ))}
     </group>

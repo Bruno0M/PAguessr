@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createFacadeTextures } from './textures';
+import { ARENA } from './palette';
 
 const BUILDINGS: { x: number; z: number; w: number; d: number; h: number; rot: number }[] = [
   { x: -3.95, z: -1.35, w: 0.42, d: 0.42, h: 0.95, rot: 0.3 },
@@ -89,7 +90,7 @@ function Buildings() {
             </mesh>
             <mesh position-y={b.h + 0.02}>
               <boxGeometry args={[b.w + 0.04, 0.04, b.d + 0.04]} />
-              <meshStandardMaterial color="#3b4d63" roughness={0.6} metalness={0.4} />
+              <meshStandardMaterial color={ARENA.wallCap} roughness={0.6} metalness={0.4} />
             </mesh>
           </group>
         );
@@ -169,12 +170,12 @@ function Palms() {
   return (
     <group>
       <instancedMesh ref={trunkRef} args={[trunkGeometry, undefined, PALMS.length]}>
-        <meshStandardMaterial color="#7a5a3c" roughness={0.9} />
+        <meshStandardMaterial color={ARENA.trunk} roughness={0.9} />
       </instancedMesh>
       <instancedMesh ref={frondRef} args={[frondGeometry, undefined, PALMS.length]}>
         <meshStandardMaterial
-          color="#2f9a55"
-          emissive="#0f3b22"
+          color={ARENA.frond}
+          emissive={ARENA.frondGlow}
           roughness={0.6}
           side={THREE.DoubleSide}
         />
@@ -188,8 +189,8 @@ function Bushes() {
 
   useLayoutEffect(() => {
     const matrix = new THREE.Matrix4();
-    const light = new THREE.Color('#3fae62');
-    const dark = new THREE.Color('#1f6b3d');
+    const light = new THREE.Color(ARENA.bushLight);
+    const dark = new THREE.Color(ARENA.bushDark);
     BUSHES.forEach(([x, z, r], i) => {
       matrix.compose(
         new THREE.Vector3(x, r * 0.45, z),
@@ -245,8 +246,8 @@ function Clouds() {
         >
           <sphereGeometry args={[1, 20, 14]} />
           <meshStandardMaterial
-            color="#1e3a5c"
-            emissive="#0c1c30"
+            color={ARENA.cloud}
+            emissive={ARENA.cloudGlow}
             roughness={1}
             transparent
             opacity={0.78}
