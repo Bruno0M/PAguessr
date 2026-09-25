@@ -1,3 +1,5 @@
+import { syncServerClock } from '../lib/serverClock';
+
 export type ChampionshipStatus =
   'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';
 
@@ -86,6 +88,7 @@ export interface ChampionshipDetail {
   myMatch?: ChampionshipMatch | null;
   myStatus?:
     'not_joined' | 'waiting' | 'ready_to_play' | 'waiting_next_phase' | 'eliminated' | 'spectator';
+  serverTime?: string;
 }
 
 export interface ChampionshipRankingEntry {
@@ -116,6 +119,23 @@ export interface EnterMatchResponse {
   gameId: string;
   game_id?: string;
   rounds: EnterMatchRound[];
+  serverTime?: string;
+}
+
+export interface LiveMatchOpponent {
+  id: string;
+  nick: string;
+  avatarId: number;
+}
+
+export interface LiveMatchRound {
+  order: number;
+  /** Os dois responderam ou o tempo acabou: só então os pontos do adversário aparecem. */
+  closed: boolean;
+  myPoints: number | null;
+  myDistance: number | null;
+  opponentPoints: number | null;
+  opponentDistance: number | null;
 }
 
 export interface LiveMatchResponse {
@@ -123,14 +143,19 @@ export interface LiveMatchResponse {
   current_round?: number;
   myScore: number;
   my_score?: number;
-  opponentScore?: number;
-  opponent_score?: number;
+  /** Soma dos pontos do adversário só nas rodadas fechadas. */
+  opponentScore: number;
+  opponent: LiveMatchOpponent | null;
+  rounds: LiveMatchRound[];
+  /** Placar consolidado pelo servidor, depois que o duelo é resolvido. */
+  finalScore: { me: number; opponent: number } | null;
   opponentRoundsAnswered: number;
   opponent_rounds_answered?: number;
   resolvedAt: string | null;
   resolved_at?: string | null;
   winnerId: string | null;
   winner_id?: string | null;
+  serverTime?: string;
 }
 
 export class ChampionshipApiError extends Error {
@@ -160,6 +185,21 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return data as T;
 }
 
+// Igual ao fetch + handleResponse, mas aproveita o `serverTime` da resposta pra
+// calibrar o relógio do servidor (lib/serverClock.ts). O instante da resposta é
+// medido assim que os cabeçalhos chegam, antes de ler o corpo.
+async function fetchWithClock<T>(url: string, init: RequestInit): Promise<T> {
+  const requestStartedAt = Date.now();
+  const res = await fetch(url, init);
+  const responseAt = Date.now();
+  const data = await handleResponse<T>(res);
+  const serverTime = (data as { serverTime?: unknown }).serverTime;
+  if (typeof serverTime === 'string') {
+    syncServerClock(serverTime, requestStartedAt, responseAt);
+  }
+  return data;
+}
+
 export async function getChampionships(): Promise<ChampionshipListItem[]> {
   const res = await fetch('/api/championships', { credentials: 'include' });
   const data = await handleResponse<
@@ -169,8 +209,10 @@ export async function getChampionships(): Promise<ChampionshipListItem[]> {
 }
 
 export async function getChampionship(id: string): Promise<ChampionshipDetail> {
-  const res = await fetch(`/api/championships/${id}`, { credentials: 'include' });
-  const data = await handleResponse<ChampionshipDetail | { championship: ChampionshipDetail }>(res);
+  const data = await fetchWithClock<ChampionshipDetail | { championship: ChampionshipDetail }>(
+    `/api/championships/${id}`,
+    { credentials: 'include' }
+  );
   return 'championship' in data && data.championship
     ? data.championship
     : (data as ChampionshipDetail);
@@ -205,20 +247,22 @@ export async function enterMatch(
   championshipId: string,
   matchId: string
 ): Promise<EnterMatchResponse> {
-  const res = await fetch(`/api/championships/${championshipId}/matches/${matchId}/enter`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  return handleResponse<EnterMatchResponse>(res);
+  return fetchWithClock<EnterMatchResponse>(
+    `/api/championships/${championshipId}/matches/${matchId}/enter`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
 }
 
 export async function getLiveMatch(
   championshipId: string,
   matchId: string
 ): Promise<LiveMatchResponse> {
-  const res = await fetch(`/api/championships/${championshipId}/matches/${matchId}/live`, {
-    credentials: 'include',
-  });
-  return handleResponse<LiveMatchResponse>(res);
+  return fetchWithClock<LiveMatchResponse>(
+    `/api/championships/${championshipId}/matches/${matchId}/live`,
+    { credentials: 'include' }
+  );
 }

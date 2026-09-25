@@ -68,7 +68,7 @@ export function ChampionshipDetailPage({
   championshipId: string;
   user: PublicUser;
   onBack: () => void;
-  onEnterMatch?: (matchId: string, opponentNick?: string) => void;
+  onEnterMatch?: (matchId: string) => void;
 }) {
   const [detail, setDetail] = useState<ChampionshipDetail | null>(null);
   const [ranking, setRanking] = useState<ChampionshipRankingEntry[] | null>(null);
@@ -324,18 +324,6 @@ export function ChampionshipDetailPage({
         const isOpen = !opensAt || opensAtTime <= Date.now();
 
         if (isOpen) {
-          const opponentId =
-            (match.playerAId || match.player_a_id) === user.id
-              ? match.playerBId || match.player_b_id
-              : match.playerAId || match.player_a_id;
-          const opponentData = opponentId ? participantsMap.get(opponentId) : null;
-          const oppNick =
-            opponentData?.nick ||
-            ((match.playerAId || match.player_a_id) === user.id
-              ? match.playerB?.nick
-              : match.playerA?.nick) ||
-            'Adversário';
-
           return (
             <div className="game-card championship-status-card is-active">
               <div className="status-card-content">
@@ -348,7 +336,7 @@ export function ChampionshipDetailPage({
               <button
                 type="button"
                 className="game-cta status-card-cta"
-                onClick={() => onEnterMatch?.(match.id, oppNick)}
+                onClick={() => onEnterMatch?.(match.id)}
               >
                 Jogar Duelo
               </button>

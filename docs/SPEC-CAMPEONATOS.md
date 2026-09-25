@@ -221,7 +221,7 @@ Tudo sob sessão (`requireAuth`); a seção de admin usa `requireAdmin` (`ADMIN_
 | `DELETE` | `/api/championships/:id/join`                   | Sai. Só em `inscricoes`.                                                                                                       |
 | `GET`    | `/api/championships/:id/ranking`                | Ranking do campeonato (§6).                                                                                                    |
 | `POST`   | `/api/championships/:id/matches/:matchId/enter` | Entra no duelo. Devolve `gameId` + rodadas com `started_at` já calculado. Idempotente: chamar de novo devolve a mesma partida. |
-| `GET`    | `/api/championships/:id/matches/:matchId/live`  | Alvo do polling: rodada atual, meu placar parcial, quantas rodadas o adversário já respondeu, `resolved_at`.                   |
+| `GET`    | `/api/championships/:id/matches/:matchId/live`  | Alvo do polling: rodada atual, placares, adversário, rodadas com os pontos dos dois lados, `resolved_at`.                      |
 
 Palpite continua em `POST /api/rounds/:id/guess`. Nada muda ali.
 
@@ -230,8 +230,19 @@ para os dois lados (justiça do duelo). Não usa `pickLocationsForUser`: a sele�
 confronto, não por jogador. Mantém a regra de não repetir local dentro do mesmo campeonato
 enquanto o pool permitir.
 
-O endpoint `live` **não** revela o palpite nem os pontos por rodada do adversário antes da
-rodada fechar — só o total parcial e o progresso. Sem isso o adversário vira dica.
+O endpoint `live` devolve, além do progresso, o adversário (`opponent`: id, nick e avatar),
+`opponentScore`, a lista `rounds` e `finalScore`. Cada item de `rounds` traz `order`, `closed`,
+`myPoints`, `myDistance`, `opponentPoints` e `opponentDistance`. Uma rodada está **fechada**
+quando os dois responderam ou o tempo dela acabou. Os pontos e a distância do adversário só
+aparecem em rodada fechada (`null` antes disso, ou se ele não respondeu), e `opponentScore` soma
+só as fechadas: sem isso o placar dele vira dica para quem ainda está pensando. As coordenadas do
+palpite dele não saem neste endpoint. `finalScore` (`me` e `opponent`, do lado de quem pergunta)
+vem do placar consolidado do servidor e só existe depois de `resolved_at`. Os campos novos vêm
+só em camelCase; as chaves antigas em snake_case continuam nas respostas.
+
+`GET /api/championships/:id`, `enter` e `live` também devolvem `serverTime` (ISO, hora do
+servidor). O navegador usa esse valor para calibrar o relógio do duelo, já que o fim de cada
+rodada é decidido pelo servidor.
 
 ### 5.2. Admin
 

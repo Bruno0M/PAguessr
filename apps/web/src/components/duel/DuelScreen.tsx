@@ -7,9 +7,12 @@ import {
   enterMatch,
   getLiveMatch,
   type EnterMatchRound,
+  type LiveMatchOpponent,
   type LiveMatchResponse,
+  type LiveMatchRound,
 } from '../../api/championships';
 import type { PublicUser } from '../../api/auth';
+import { serverNow } from '../../lib/serverClock';
 import type { RoundResult, GameState } from '../../types';
 import { ImagePanel } from '../ImagePanel';
 import { PanoramaPanel } from '../PanoramaPanel';
@@ -23,9 +26,11 @@ export interface DuelScreenProps {
   championshipId: string;
   matchId: string;
   user: PublicUser;
-  opponentNick?: string;
   onBackToBracket: () => void;
 }
+
+/** Quanto antes do fim da rodada o palpite sai sozinho, em ms do relógio do servidor. */
+const AUTO_SUBMIT_LEAD_MS = 500;
 
 function formatDistance(meters: number): string {
   if (meters < 1000) {
@@ -34,13 +39,7 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-export function DuelScreen({
-  championshipId,
-  matchId,
-  user,
-  opponentNick = 'Adversário',
-  onBackToBracket,
-}: DuelScreenProps) {
+export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: DuelScreenProps) {
   const [rounds, setRounds] = useState<EnterMatchRound[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>('loading');
@@ -48,14 +47,18 @@ export function DuelScreen({
 
   const [currentGuess, setCurrentGuess] = useState<LatLng | null>(null);
   const [myScore, setMyScore] = useState(0);
+  const [opponent, setOpponent] = useState<LiveMatchOpponent | null>(null);
   const [opponentScore, setOpponentScore] = useState(0);
+  const [liveRounds, setLiveRounds] = useState<LiveMatchRound[]>([]);
+  const [finalScore, setFinalScore] = useState<LiveMatchResponse['finalScore']>(null);
   const [opponentRoundsAnswered, setOpponentRoundsAnswered] = useState(0);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
-  const [results, setResults] = useState<RoundResult[]>([]);
   const [latestResult, setLatestResult] = useState<RoundResult | null>(null);
   const [isWaitingNextRound, setIsWaitingNextRound] = useState(false);
+
+  const opponentNick = opponent?.nick ?? 'Adversário';
 
   const hasSubmittedRef = useRef(false);
 
@@ -74,7 +77,7 @@ export function DuelScreen({
 
       setRounds(matchRounds);
 
-      const now = Date.now();
+      const now = serverNow();
       let activeIndex = matchRounds.length;
       for (let i = 0; i < matchRounds.length; i++) {
         const r = matchRounds[i];
@@ -112,17 +115,10 @@ export function DuelScreen({
         const live: LiveMatchResponse = await getLiveMatch(championshipId, matchId);
         if (!live) return;
 
-        const liveAny = live as unknown as Record<string, unknown>;
-        const oppScore =
-          typeof liveAny.opponent_score === 'number'
-            ? liveAny.opponent_score
-            : typeof liveAny.opponentScore === 'number'
-              ? liveAny.opponentScore
-              : undefined;
-
-        if (oppScore !== undefined) {
-          setOpponentScore(oppScore);
-        }
+        setOpponentScore(live.opponentScore);
+        setOpponent(live.opponent);
+        setLiveRounds(live.rounds);
+        setFinalScore(live.finalScore);
 
         const oppRounds = live.opponent_rounds_answered ?? live.opponentRoundsAnswered;
         if (oppRounds !== undefined) {
@@ -178,7 +174,6 @@ export function DuelScreen({
           score: roundScore,
         };
 
-        setResults((prev) => [...prev, newResult]);
         setLatestResult(newResult);
         setMyScore((prev) => prev + roundScore);
         setGameState('round_result');
@@ -196,7 +191,6 @@ export function DuelScreen({
           score: 0,
         };
 
-        setResults((prev) => [...prev, fallbackResult]);
         setLatestResult(fallbackResult);
         setGameState('round_result');
         setIsWaitingNextRound(true);
@@ -215,7 +209,7 @@ export function DuelScreen({
     if (!currentRound) return;
 
     const startMs = new Date(
-      currentRound.started_at ?? currentRound.startedAt ?? Date.now()
+      currentRound.started_at ?? currentRound.startedAt ?? serverNow()
     ).getTime();
     const durationSeconds = currentRound.duration_seconds ?? currentRound.durationSeconds ?? 60;
     const endMs = startMs + durationSeconds * 1000;
@@ -223,17 +217,17 @@ export function DuelScreen({
     let timeoutDispatched = false;
 
     const tick = () => {
-      const remainingMs = endMs - Date.now();
+      const remainingMs = endMs - serverNow();
       const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
       setSecondsLeft(remainingSec);
 
-      if (remainingMs <= 0) {
-        if (!hasSubmittedRef.current && !timeoutDispatched) {
-          timeoutDispatched = true;
-          submitOnlineGuess(currentGuess);
-        } else if (hasSubmittedRef.current) {
-          advanceRound();
-        }
+      // O envio sai um pouco antes do fim: o palpite leva um tempo pra chegar e o
+      // servidor zera o que chega depois do prazo.
+      if (!hasSubmittedRef.current && !timeoutDispatched && remainingMs <= AUTO_SUBMIT_LEAD_MS) {
+        timeoutDispatched = true;
+        submitOnlineGuess(currentGuess);
+      } else if (hasSubmittedRef.current && remainingMs <= 0) {
+        advanceRound();
       }
     };
 
@@ -277,7 +271,8 @@ export function DuelScreen({
         opponentNick={opponentNick}
         myScore={myScore}
         opponentScore={opponentScore}
-        myResults={results}
+        rounds={liveRounds}
+        finalScore={finalScore}
         winnerId={winnerId}
         myUserId={user.id}
         onBackToBracket={onBackToBracket}
