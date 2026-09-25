@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { PAULO_AFONSO_CENTER, type LatLng } from '@paguessr/shared';
 import { submitGuess } from '../../api/client';
 import {
@@ -13,6 +13,8 @@ import {
 } from '../../api/championships';
 import type { PublicUser } from '../../api/auth';
 import { serverNow } from '../../lib/serverClock';
+import { AvatarSvg } from '../auth/avatars';
+import { formatCountdown } from '../championships/lobby/lobbyState';
 import type { RoundResult, GameState } from '../../types';
 import { ImagePanel } from '../ImagePanel';
 import { PanoramaPanel } from '../PanoramaPanel';
@@ -51,6 +53,9 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
   const [opponentScore, setOpponentScore] = useState(0);
   const [liveRounds, setLiveRounds] = useState<LiveMatchRound[]>([]);
   const [finalScore, setFinalScore] = useState<LiveMatchResponse['finalScore']>(null);
+  // Antes da primeira rodada: hora (do servidor) em que ela abre. Nulo depois disso.
+  const [firstStartMs, setFirstStartMs] = useState<number | null>(null);
+  const [preStartLeftMs, setPreStartLeftMs] = useState(0);
   const [opponentRoundsAnswered, setOpponentRoundsAnswered] = useState(0);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -78,6 +83,10 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
       setRounds(matchRounds);
 
       const now = serverNow();
+      const first = matchRounds[0];
+      const firstStart = new Date(first.started_at ?? first.startedAt ?? now).getTime();
+      setFirstStartMs(now < firstStart ? firstStart : null);
+
       let activeIndex = matchRounds.length;
       for (let i = 0; i < matchRounds.length; i++) {
         const r = matchRounds[i];
@@ -236,6 +245,24 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
     return () => clearInterval(interval);
   }, [currentRoundIndex, gameState, rounds, currentGuess, submitOnlineGuess, advanceRound]);
 
+  // Contagem antes da primeira rodada. Sem imagem nem panorama montados: pedir a
+  // imagem antes da hora devolve o placeholder e o duelo ficaria preso nele.
+  useEffect(() => {
+    if (firstStartMs === null) return;
+    const tick = () => {
+      const left = firstStartMs - serverNow();
+      if (left <= 0) {
+        setFirstStartMs(null);
+        setPreStartLeftMs(0);
+      } else {
+        setPreStartLeftMs(left);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 250);
+    return () => clearInterval(interval);
+  }, [firstStartMs]);
+
   if (gameState === 'loading') {
     return (
       <div className="status-screen">
@@ -259,6 +286,37 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
           <button type="button" className="game-cta" onClick={initMatch}>
             Tentar novamente
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (gameState === 'guessing' && firstStartMs !== null) {
+    return (
+      <div className="status-screen">
+        <div className="game-card duel-prestart-card">
+          <p className="duel-prestart-eyebrow">Duelo 1v1</p>
+          <div className="duel-prestart-versus">
+            <span className="duel-prestart-player duel-prestart-me">
+              <span className="duel-prestart-avatar">
+                <AvatarSvg id={user.avatarId} />
+              </span>
+              <span className="duel-prestart-nick">Você</span>
+            </span>
+            <span className="duel-prestart-x" aria-hidden="true">
+              <FontAwesomeIcon icon={faXmark} />
+            </span>
+            <span className="duel-prestart-player">
+              <span className="duel-prestart-avatar">
+                {opponent && <AvatarSvg id={opponent.avatarId} />}
+              </span>
+              <span className="duel-prestart-nick">{opponentNick}</span>
+            </span>
+          </div>
+          <p className="duel-prestart-eyebrow">O duelo começa em</p>
+          <p className="duel-prestart-digits" role="timer">
+            {formatCountdown(preStartLeftMs)}
+          </p>
         </div>
       </div>
     );
