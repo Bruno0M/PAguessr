@@ -687,12 +687,17 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       const beforeResolve = await getLive(champ.id, match.id, playerA);
       expect(beforeResolve.finalScore).toBeNull();
 
-      // As rodadas seguintes só abrem depois da revelação; aqui todas ficam abertas
-      // de uma vez pra o teste palpitar nas três em seguida.
-      await db
-        .update(rounds)
-        .set({ started_at: new Date(Date.now() - 1000) })
-        .where(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]));
+      // As rodadas seguintes só abrem depois da revelação; aqui todas já começaram
+      // pra o teste palpitar nas três em seguida. Com 10 s entre elas, pra o
+      // antifraude (tempo por rodada abaixo de 5 s) não marcar a partida e zerar o placar.
+      for (let i = 0; i < dataA.rounds.length; i++) {
+        await db
+          .update(rounds)
+          .set({ started_at: new Date(Date.now() - (dataA.rounds.length - i) * 10_000) })
+          .where(
+            and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, i + 1))
+          );
+      }
 
       let totalA = 0;
       let totalB = 0;
