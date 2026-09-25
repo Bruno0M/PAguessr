@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faTriangleExclamation, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { PAULO_AFONSO_CENTER, type LatLng } from '@paguessr/shared';
 import { submitGuess } from '../../api/client';
 import {
@@ -13,6 +13,8 @@ import {
 } from '../../api/championships';
 import type { PublicUser } from '../../api/auth';
 import { serverNow } from '../../lib/serverClock';
+import { AvatarSvg } from '../auth/avatars';
+import { formatCountdown } from '../championships/lobby/lobbyState';
 import type { RoundResult, GameState } from '../../types';
 import { ImagePanel } from '../ImagePanel';
 import { PanoramaPanel } from '../PanoramaPanel';
@@ -27,6 +29,8 @@ export interface DuelScreenProps {
   matchId: string;
   user: PublicUser;
   onBackToBracket: () => void;
+  /** Depois de vencer um duelo que não era a final, o resultado leva de volta à sala. */
+  onBackToLobby?: () => void;
 }
 
 /** Quanto antes do fim da rodada o palpite sai sozinho, em ms do relógio do servidor. */
@@ -39,7 +43,13 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: DuelScreenProps) {
+export function DuelScreen({
+  championshipId,
+  matchId,
+  user,
+  onBackToBracket,
+  onBackToLobby,
+}: DuelScreenProps) {
   const [rounds, setRounds] = useState<EnterMatchRound[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [gameState, setGameState] = useState<GameState>('loading');
@@ -51,6 +61,10 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
   const [opponentScore, setOpponentScore] = useState(0);
   const [liveRounds, setLiveRounds] = useState<LiveMatchRound[]>([]);
   const [finalScore, setFinalScore] = useState<LiveMatchResponse['finalScore']>(null);
+  const [phaseInfo, setPhaseInfo] = useState<{ phase: number; totalPhases: number } | null>(null);
+  // Antes da primeira rodada: hora (do servidor) em que ela abre. Nulo depois disso.
+  const [firstStartMs, setFirstStartMs] = useState<number | null>(null);
+  const [preStartLeftMs, setPreStartLeftMs] = useState(0);
   const [opponentRoundsAnswered, setOpponentRoundsAnswered] = useState(0);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -78,6 +92,10 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
       setRounds(matchRounds);
 
       const now = serverNow();
+      const first = matchRounds[0];
+      const firstStart = new Date(first.started_at ?? first.startedAt ?? now).getTime();
+      setFirstStartMs(now < firstStart ? firstStart : null);
+
       let activeIndex = matchRounds.length;
       for (let i = 0; i < matchRounds.length; i++) {
         const r = matchRounds[i];
@@ -119,6 +137,7 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
         setOpponent(live.opponent);
         setLiveRounds(live.rounds);
         setFinalScore(live.finalScore);
+        setPhaseInfo({ phase: live.phase, totalPhases: live.totalPhases });
 
         const oppRounds = live.opponent_rounds_answered ?? live.opponentRoundsAnswered;
         if (oppRounds !== undefined) {
@@ -236,6 +255,24 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
     return () => clearInterval(interval);
   }, [currentRoundIndex, gameState, rounds, currentGuess, submitOnlineGuess, advanceRound]);
 
+  // Contagem antes da primeira rodada. Sem imagem nem panorama montados: pedir a
+  // imagem antes da hora devolve o placeholder e o duelo ficaria preso nele.
+  useEffect(() => {
+    if (firstStartMs === null) return;
+    const tick = () => {
+      const left = firstStartMs - serverNow();
+      if (left <= 0) {
+        setFirstStartMs(null);
+        setPreStartLeftMs(0);
+      } else {
+        setPreStartLeftMs(left);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 250);
+    return () => clearInterval(interval);
+  }, [firstStartMs]);
+
   if (gameState === 'loading') {
     return (
       <div className="status-screen">
@@ -264,6 +301,37 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
     );
   }
 
+  if (gameState === 'guessing' && firstStartMs !== null) {
+    return (
+      <div className="status-screen">
+        <div className="game-card duel-prestart-card">
+          <p className="duel-prestart-eyebrow">Duelo 1v1</p>
+          <div className="duel-prestart-versus">
+            <span className="duel-prestart-player duel-prestart-me">
+              <span className="duel-prestart-avatar">
+                <AvatarSvg id={user.avatarId} />
+              </span>
+              <span className="duel-prestart-nick">Você</span>
+            </span>
+            <span className="duel-prestart-x" aria-hidden="true">
+              <FontAwesomeIcon icon={faXmark} />
+            </span>
+            <span className="duel-prestart-player">
+              <span className="duel-prestart-avatar">
+                {opponent && <AvatarSvg id={opponent.avatarId} />}
+              </span>
+              <span className="duel-prestart-nick">{opponentNick}</span>
+            </span>
+          </div>
+          <p className="duel-prestart-eyebrow">O duelo começa em</p>
+          <p className="duel-prestart-digits" role="timer">
+            {formatCountdown(preStartLeftMs)}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (gameState === 'finished') {
     return (
       <DuelResult
@@ -275,7 +343,10 @@ export function DuelScreen({ championshipId, matchId, user, onBackToBracket }: D
         finalScore={finalScore}
         winnerId={winnerId}
         myUserId={user.id}
+        phase={phaseInfo?.phase ?? null}
+        totalPhases={phaseInfo?.totalPhases ?? null}
         onBackToBracket={onBackToBracket}
+        onBackToLobby={onBackToLobby}
       />
     );
   }

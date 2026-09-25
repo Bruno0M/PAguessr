@@ -199,6 +199,17 @@
   flex-shrink: 0;
 }
 
+.status-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.status-card-lobby {
+  flex-shrink: 0;
+}
+
 .status-card-leave {
   width: auto;
   min-width: 160px;
@@ -558,8 +569,14 @@
     align-items: stretch;
   }
 
+  .status-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .status-card-cta,
-  .status-card-leave {
+  .status-card-leave,
+  .status-card-lobby {
     width: 100%;
   }
 

@@ -19,7 +19,11 @@ export interface DuelResultProps {
   finalScore: { me: number; opponent: number } | null;
   winnerId?: string | null;
   myUserId: string;
+  /** Fase deste duelo e total de fases; nulos até o primeiro `live` chegar. */
+  phase?: number | null;
+  totalPhases?: number | null;
   onBackToBracket: () => void;
+  onBackToLobby?: () => void;
 }
 
 function formatDistance(meters: number): string {
@@ -57,13 +61,24 @@ export function DuelResult({
   finalScore,
   winnerId,
   myUserId,
+  phase = null,
+  totalPhases = null,
   onBackToBracket,
+  onBackToLobby,
 }: DuelResultProps) {
   // Quem vence é sempre o servidor que decide (pontos, depois desempate por
   // distância, horário e seed). Enquanto o vencedor não chega, ninguém é destacado.
   const isDecided = Boolean(winnerId);
   const isWinner = isDecided && winnerId === myUserId;
   const isLoser = isDecided && !isWinner;
+
+  // Quem vence e ainda tem fase pela frente volta pra sala, onde o próximo duelo aparece.
+  const returnsToLobby =
+    isWinner &&
+    onBackToLobby !== undefined &&
+    phase !== null &&
+    totalPhases !== null &&
+    phase < totalPhases;
 
   const totalMe = finalScore?.me ?? myScore;
   const totalOpponent = finalScore?.opponent ?? opponentScore;
@@ -145,9 +160,20 @@ export function DuelResult({
         </div>
 
         <div className="result-actions">
-          <button type="button" className="game-cta" onClick={onBackToBracket}>
-            Ver chave do campeonato <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-          </button>
+          {returnsToLobby ? (
+            <>
+              <button type="button" className="game-cta" onClick={onBackToLobby}>
+                Voltar para a sala <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+              </button>
+              <button type="button" className="game-ghost" onClick={onBackToBracket}>
+                Ver chave
+              </button>
+            </>
+          ) : (
+            <button type="button" className="game-cta" onClick={onBackToBracket}>
+              Ver chave do campeonato <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
     </div>

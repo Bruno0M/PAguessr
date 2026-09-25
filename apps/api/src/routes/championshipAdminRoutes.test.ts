@@ -1,8 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { LOBBY_COUNTDOWN_SECONDS } from '@paguessr/shared';
 import { buildApp } from '../app.js';
 import { db } from '../db/index.js';
-import { championships, championshipParticipants, users } from '../db/schema.js';
+import {
+  championships,
+  championshipParticipants,
+  championshipMatches,
+  users,
+} from '../db/schema.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 
@@ -447,6 +453,58 @@ describe('Championship Admin Routes Integration', () => {
       const data = JSON.parse(res.body);
       expect(data.status).toBe('em_andamento');
       expect(data.started_at).not.toBeNull();
+    });
+
+    it('start grava started_at na hora do clique e abre a fase 1 depois da contagem da sala', async () => {
+      const [champ] = await db
+        .insert(championships)
+        .values({
+          title: 'Com Contagem',
+          max_participants: 4,
+          rounds_per_match: 3,
+          phase_interval_seconds: 3600,
+          status: 'chaveado',
+          created_by: adminUserId,
+        })
+        .returning();
+
+      await db.insert(championshipMatches).values([
+        { championship_id: champ.id, phase: 1, slot: 0 },
+        { championship_id: champ.id, phase: 1, slot: 1 },
+        { championship_id: champ.id, phase: 2, slot: 0 },
+      ]);
+
+      const before = Date.now();
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/admin/championships/${champ.id}/start`,
+        headers: { cookie: adminCookie },
+      });
+      const after = Date.now();
+      expect(res.statusCode).toBe(200);
+
+      const startedAt = new Date(JSON.parse(res.body).started_at).getTime();
+      expect(startedAt).toBeGreaterThanOrEqual(before);
+      expect(startedAt).toBeLessThanOrEqual(after);
+
+      const phase1 = await db
+        .select()
+        .from(championshipMatches)
+        .where(
+          and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 1))
+        );
+      expect(phase1).toHaveLength(2);
+      for (const match of phase1) {
+        expect(match.opens_at!.getTime()).toBe(startedAt + LOBBY_COUNTDOWN_SECONDS * 1000);
+      }
+
+      const [finalMatch] = await db
+        .select()
+        .from(championshipMatches)
+        .where(
+          and(eq(championshipMatches.championship_id, champ.id), eq(championshipMatches.phase, 2))
+        );
+      expect(finalMatch.opens_at).toBeNull();
     });
 
     it('advance recusa quando status não é "em_andamento" (409)', async () => {

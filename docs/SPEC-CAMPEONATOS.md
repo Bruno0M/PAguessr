@@ -41,9 +41,14 @@ O que sobra para "ver o adversário ao vivo" (placar parcial, se ele já respond
 enfeite, e vem de **polling** de ~3 s num endpoint leve. Se o polling falhar, o duelo
 continua correto: o servidor é a fonte da verdade do relógio e da pontuação.
 
+O "Iniciar" do admin não abre o relógio na hora: a fase 1 abre 60 s depois
+(`LOBBY_COUNTDOWN_SECONDS`). A sala de espera (§7.3) mostra essa contagem, inclusive no
+título da aba, e leva a pessoa para o duelo quando ela zera. Nas fases seguintes a sala
+mostra a contagem até o `opens_at` (intervalo entre fases).
+
 **Trade-off aceito:** não há aviso em tempo real de que a fase abriu. Quem não estiver com
-a tela aberta na hora marcada joga com menos tempo ou leva W.O. Notificação fica fora do
-escopo (ver §9).
+a sala aberta (ou com o título da aba à vista) na hora marcada joga com menos tempo ou leva
+W.O. Notificação fica fora do escopo (ver §9).
 
 ## 2. Modelo de dados
 
@@ -237,7 +242,9 @@ quando os dois responderam ou o tempo dela acabou. Os pontos e a distância do a
 aparecem em rodada fechada (`null` antes disso, ou se ele não respondeu), e `opponentScore` soma
 só as fechadas: sem isso o placar dele vira dica para quem ainda está pensando. As coordenadas do
 palpite dele não saem neste endpoint. `finalScore` (`me` e `opponent`, do lado de quem pergunta)
-vem do placar consolidado do servidor e só existe depois de `resolved_at`. Os campos novos vêm
+vem do placar consolidado do servidor e só existe depois de `resolved_at`. `phase` e
+`totalPhases` dizem em que fase está o confronto e quantas o campeonato tem (o resultado do
+duelo precisa saber se era a final). Os campos novos vêm
 só em camelCase; as chaves antigas em snake_case continuam nas respostas.
 
 `GET /api/championships/:id`, `enter` e `live` também devolvem `serverTime` (ISO, hora do
@@ -252,7 +259,7 @@ rodada é decidido pelo servidor.
 | `POST`   | `/api/admin/championships`             | Cria.                                                            |
 | `PATCH`  | `/api/admin/championships/:id`         | Edita (§5.3).                                                    |
 | `DELETE` | `/api/admin/championships/:id`         | Exclui (cascade).                                                |
-| `POST`   | `/api/admin/championships/:id/start`   | Largada. Só de `chaveado`. Abre a fase 1 com `opens_at = now()`. |
+| `POST`   | `/api/admin/championships/:id/start`   | Largada. Só de `chaveado`. Fase 1 abre em `now() + 60 s` (§1.1). |
 | `POST`   | `/api/admin/championships/:id/advance` | Força a avaliação de avanço.                                     |
 
 ### 5.3. O que dá para editar, e quando
@@ -319,10 +326,12 @@ enfeite, some em silêncio se a chamada falhar.
 Cards com banner (ou fundo padrão quando não houver), título, selo de status e as vagas
 (`5/8`). Ação por estado:
 
-- `inscricoes` → **Entrar** (ou **Sair**, se já inscrito);
-- `chaveado` → **Ver chave**;
-- `em_andamento` → **Acompanhar** / **Jogar**, se for a minha vez;
+- `inscricoes` → **Entrar**; se já inscrito, **Abrir sala** (com **Sair**, menor, ao lado);
+- `chaveado` → **Abrir sala**, se inscrito, ou **Ver chave**;
+- `em_andamento` → **Abrir sala**, se inscrito, ou **Acompanhar**;
 - `finalizado` → **Ver resultado**, com o campeão no card.
+
+Depois de **Entrar** a pessoa cai direto na sala de espera (§7.3).
 
 ### 7.3. Tela do campeonato
 
@@ -340,6 +349,36 @@ Estados do meu ponto de vista:
 - `em_andamento`, fase futura → "próxima fase abre em HH:MM";
 - eliminado → "eliminado na fase X", chave continua acessível.
 
+Os cartões de status de quem está inscrito ganham o botão **Abrir sala**.
+
+#### Sala de espera
+
+Rota `/campeonatos/:id/sala`. Cobre a jornada inteira até o duelo, inclusive entre fases.
+Quem não está inscrito, foi eliminado ou está em campeonato `finalizado`/`cancelado` é
+mandado para a página do campeonato (sem empilhar a sala no histórico do navegador).
+
+O estado da sala é derivado do `GET /api/championships/:id`, que a sala consulta a cada 3 s
+(1 s quando faltam 15 s ou menos para o `opens_at`):
+
+- `inscricoes`: as vagas em grade, enchendo ao vivo; **Ver chave** e **Sair do campeonato**;
+- `chaveado`: o meu confronto (eu × adversário, com o seed de cada um) e "aguardando a
+  largada"; **sorteio**: se a sala estava aberta quando a chave saiu, uma animação de cerca
+  de 1,2 s troca os avatares de lugar e depois os dois cartões entram pelos lados (vai direto
+  ao estado final com "reduzir movimento");
+- `em_andamento`, confronto com `opens_at` no futuro: contagem regressiva (`m:ss` abaixo de
+  1 h, `h:mm:ss` abaixo de 24 h, "abre dd/mm às HH:MM" acima disso), com pulso e dígitos
+  maiores nos últimos 10 s;
+- `em_andamento`, `opens_at` já passado: "duelo em andamento" e o botão **Entrar no duelo**;
+- `em_andamento`, adversário definido e `opens_at` nulo: "próxima fase", com os outros
+  confrontos da fase e o placar deles;
+- `em_andamento`, vaga do adversário aberta: cartão fantasma "a definir" e o confronto cujo
+  vencedor ocupa a vaga.
+
+A sala **entra sozinha no duelo** quando a contagem que ela estava mostrando zera (uma vez
+por confronto). Abrir a sala com o duelo já aberto só mostra o botão. Enquanto houver
+contagem, o título da aba mostra o tempo (`0:42 · PAguessr`) e uma região `aria-live`
+anuncia "a partida começa em 10 segundos" e "Valendo!".
+
 ### 7.4. Duelo
 
 Reaproveita o `game-stage` inteiro (`ImagePanel`/`PanoramaPanel` + `GuessMap` +
@@ -350,7 +389,12 @@ Quem responde antes do tempo cai num estado **"aguardando a próxima rodada"** c
 relógio correndo — consequência direta do jogo simultâneo (§1.1), e é onde o polling de
 3 s alimenta o placar do adversário.
 
-Ao fim: tela de resultado do duelo (venci / perdi, placar, link para a chave).
+Se a pessoa entra antes de a rodada 1 abrir (a contagem da sala, ou o intervalo entre
+fases), o duelo mostra o confronto e "o duelo começa em", sem montar a imagem: pedir a
+imagem antes da hora devolveria o placeholder.
+
+Ao fim: tela de resultado do duelo (venci / perdi, placar, link para a chave). Quem vence um
+duelo que não era a final tem **Voltar para a sala** como ação principal.
 
 ### 7.5. Admin
 
