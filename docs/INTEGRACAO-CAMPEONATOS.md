@@ -28,6 +28,8 @@ Metodologia: Exercício do fluxo completo via HTTP com `curl`, confrontando resp
 
 ### Divergência 1: Placar Parcial do Adversário no Polling do Duelo
 
+**Status: resolvido.** O `live` manda `opponentScore` (só rodadas fechadas) e `rounds`.
+
 - **Endpoint**: `GET /api/championships/:id/matches/:matchId/live`
 - **O que a API devolve**:
   Campos devolvidos:
