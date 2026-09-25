@@ -1,3 +1,6 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faLocationDot, faXmark } from '@fortawesome/free-solid-svg-icons';
+
 export interface DuelHeaderProps {
   myNick: string;
   opponentNick: string;
@@ -22,14 +25,20 @@ export function DuelHeader({
   return (
     <header className="header duel-header">
       <div className="header-brand">
-        <span className="logo-title">PAguessr</span>
+        <span className="duel-brand">
+          <span className="logo-pin" aria-hidden="true">
+            <FontAwesomeIcon icon={faLocationDot} />
+          </span>
+          <span className="logo-title">PAguessr</span>
+        </span>
         <span className="duel-badge">Duelo 1v1</span>
         <button
           type="button"
-          className="admin-btn admin-btn-secondary duel-btn-exit"
+          className="game-ghost duel-btn-exit"
           onClick={onExit}
           title="Ver chave do campeonato"
         >
+          <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" />
           Chave
         </button>
       </div>
@@ -40,7 +49,9 @@ export function DuelHeader({
           <span className="duel-player-score">{myScore.toLocaleString('pt-BR')}</span>
         </div>
 
-        <span className="duel-vs">✕</span>
+        <span className="duel-vs">
+          <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+        </span>
 
         <div className="duel-player-pill duel-player-opp">
           <span className="duel-player-score">{opponentScore.toLocaleString('pt-BR')}</span>

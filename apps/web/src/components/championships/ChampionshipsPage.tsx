@@ -4,6 +4,7 @@ import {
   faArrowLeft,
   faRotateRight,
   faTrophy,
+  faXmark,
   faUsers,
   faClock,
   faTriangleExclamation,
@@ -227,7 +228,7 @@ export function ChampionshipsPage({
               onClick={() => setFeedbackToast(null)}
               aria-label="Fechar mensagem"
             >
-              ×
+              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -251,7 +252,7 @@ export function ChampionshipsPage({
               {errorMessage || 'Não foi possível carregar os dados. Verifique a conexão com a API.'}
             </p>
             <div className="championships-empty-actions">
-              <button type="button" className="btn-secondary" onClick={onBack}>
+              <button type="button" className="game-ghost" onClick={onBack}>
                 Voltar ao início
               </button>
               <button type="button" className="game-cta" onClick={loadData}>

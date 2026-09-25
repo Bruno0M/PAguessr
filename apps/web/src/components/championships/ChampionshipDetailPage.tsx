@@ -10,6 +10,7 @@ import {
   faCheck,
   faHourglassHalf,
   faCrown,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import type { PublicUser } from '../../api/auth';
 import {
@@ -40,6 +41,7 @@ const STATUS_LABELS: Record<ChampionshipStatus, string> = {
 };
 
 function getPhaseName(phase: number, totalPhases: number): string {
+  if (phase > totalPhases) return 'Campeão';
   if (phase === totalPhases) return 'Final';
   if (phase === totalPhases - 1) return 'Semifinal';
   if (phase === totalPhases - 2) return 'Quartas de final';
@@ -582,8 +584,9 @@ export function ChampionshipDetailPage({
               type="button"
               className="championships-toast-close"
               onClick={() => setActionError(null)}
+              aria-label="Fechar mensagem"
             >
-              ×
+              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -605,7 +608,7 @@ export function ChampionshipDetailPage({
             <h2>Campeonato não encontrado</h2>
             <p className="championships-empty-desc">{errorMessage}</p>
             <div className="championships-empty-actions">
-              <button type="button" className="btn-secondary" onClick={onBack}>
+              <button type="button" className="game-ghost" onClick={onBack}>
                 Voltar à lista
               </button>
               <button type="button" className="game-cta" onClick={loadData}>

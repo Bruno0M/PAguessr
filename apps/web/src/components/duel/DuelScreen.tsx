@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { PAULO_AFONSO_CENTER, type LatLng } from '@paguessr/shared';
 import { submitGuess } from '../../api/client';
 import {
@@ -253,15 +255,15 @@ export function DuelScreen({
   if (gameState === 'error') {
     return (
       <div className="status-screen">
-        <span className="screen-emoji">⚠️</span>
+        <FontAwesomeIcon icon={faTriangleExclamation} className="screen-emoji" aria-hidden="true" />
         <h2>Não foi possível iniciar o duelo</h2>
         <p className="error-text">{loadError}</p>
-        <div className="status-actions" style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="button" className="admin-btn admin-btn-secondary" onClick={onBackToBracket}>
-            Voltar para a Chave
+        <div className="status-actions">
+          <button type="button" className="game-ghost" onClick={onBackToBracket}>
+            Voltar para a chave
           </button>
-          <button type="button" className="admin-btn admin-btn-secondary" onClick={initMatch}>
-            Tentar Novamente
+          <button type="button" className="game-cta" onClick={initMatch}>
+            Tentar novamente
           </button>
         </div>
       </div>
@@ -340,7 +342,7 @@ export function DuelScreen({
           )}
 
           {isWaitingNextRound && latestResult && (
-            <div className="duel-waiting-card">
+            <div className="game-card duel-waiting-card">
               <div className="duel-waiting-spinner-wrap">
                 <div className="spinner"></div>
               </div>
@@ -362,9 +364,13 @@ export function DuelScreen({
                 <div className="duel-opponent-status">
                   <span>{opponentNick}:</span>
                   <span className="duel-opp-status-pill">
-                    {opponentRoundsAnswered > currentRoundIndex
-                      ? '✓ Já respondeu'
-                      : 'Pensando no palpite...'}
+                    {opponentRoundsAnswered > currentRoundIndex ? (
+                      <>
+                        <FontAwesomeIcon icon={faCheck} aria-hidden="true" /> Já respondeu
+                      </>
+                    ) : (
+                      'Pensando no palpite...'
+                    )}
                   </span>
                   <span>
                     · Placar parcial: <strong>{opponentScore.toLocaleString('pt-BR')} pts</strong>
