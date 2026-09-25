@@ -25,11 +25,27 @@ Quando uma fase abre, o servidor grava `opens_at` no confronto e deriva o `start
 todas as rodadas dos dois jogadores a partir dele:
 
 ```
-started_at(rodada N) = opens_at + (N - 1) * round_duration_seconds
+started_at(rodada k) = opens_at + (k - 1) * (round_duration_seconds + DUEL_REVEAL_SECONDS)
 ```
 
-Como `round_duration_seconds` é do campeonato, os dois lados do duelo usam
-obrigatoriamente o mesmo valor — a configuração não abre brecha de justiça.
+`DUEL_REVEAL_SECONDS` (5 s) é a revelação entre rodadas: todo mundo vê o local certo e os
+dois palpites antes de a próxima começar. Como `round_duration_seconds` é do campeonato, os
+dois lados do duelo usam obrigatoriamente o mesmo valor: a configuração não abre brecha de
+justiça.
+
+**Fechamento antecipado.** A rodada k fecha quando o segundo palpite chega ou em
+`início(k) + duração`, o que vier antes. Se fechar antes do tempo, no instante T, o servidor
+puxa o início das rodadas seguintes dos **dois** jogos:
+
+```
+início(j) = T + R + (j - k - 1) * (round_duration_seconds + R)      para j > k
+```
+
+Só adianta, nunca atrasa (um horário que já é mais cedo fica como está). Isso roda em
+`closeDuelRoundIfReady`, depois de o palpite já estar gravado, numa transação com trava no
+confronto: dois palpites simultâneos não se perdem. Se só um responde, vale o relógio cheio,
+como antes. Os horários continuam gravados em `rounds.started_at`; o relógio é sempre do
+servidor.
 
 Os dois jogadores caem exatamente na mesma rodada no mesmo instante, tenham entrado na
 tela ou não. Quem chega atrasado perde o tempo que passou — não atrasa o adversário nem
@@ -198,10 +214,16 @@ O projeto não tem cron nem fila, e esta spec não adiciona um. O avanço é **p
 avaliado quando alguém lê o campeonato (`GET /api/championships/:id` e o endpoint de
 polling), dentro de uma transação idempotente:
 
-1. Todo confronto da fase atual com o tempo esgotado e sem `resolved_at` é consolidado
-   (§3.3) e o vencedor é promovido (§3.2).
+1. Todo confronto da fase atual cujo **fim real** já passou e sem `resolved_at` é consolidado
+   (§3.3) e o vencedor é promovido (§3.2). O fim real é: se os dois jogos têm `finished_at`,
+   o menor entre o instante em que o último terminou e `início(N) + duração` (um palpite
+   automático que chega depois do prazo não estica o duelo); senão `início(N) + duração`,
+   lendo o `started_at` gravado da última rodada (já com os adiantamentos da §1.1); sem
+   jogos criados, o fim planejado `opens_at + N * duração + (N - 1) * revelação`. O
+   `resolved_at` é esse fim real.
 2. Se **toda** a fase está resolvida e ainda há fase seguinte, ela recebe
-   `opens_at = max(resolved_at da fase) + phase_interval_seconds`.
+   `opens_at = max(resolved_at da fase) + phase_interval_seconds`. Um duelo que acaba antes
+   do tempo, porque os dois terminaram tudo, adianta o intervalo até a próxima fase.
 3. Se a fase resolvida era a final, `status = 'finalizado'`.
 
 Consequência aceita: um campeonato sem ninguém olhando não avança sozinho — ele avança no
@@ -241,11 +263,22 @@ O endpoint `live` devolve, além do progresso, o adversário (`opponent`: id, ni
 quando os dois responderam ou o tempo dela acabou. Os pontos e a distância do adversário só
 aparecem em rodada fechada (`null` antes disso, ou se ele não respondeu), e `opponentScore` soma
 só as fechadas: sem isso o placar dele vira dica para quem ainda está pensando. As coordenadas do
-palpite dele não saem neste endpoint. `finalScore` (`me` e `opponent`, do lado de quem pergunta)
+palpite dele e o local certo só saem das rodadas fechadas (`location`, `myGuess` e
+`opponentGuess`); de rodada aberta nada disso sai. `finalScore` (`me` e `opponent`, do lado de quem pergunta)
 vem do placar consolidado do servidor e só existe depois de `resolved_at`. `phase` e
 `totalPhases` dizem em que fase está o confronto e quantas o campeonato tem (o resultado do
 duelo precisa saber se era a final). Os campos novos vêm
 só em camelCase; as chaves antigas em snake_case continuam nas respostas.
+
+Cada rodada de `rounds` também traz `startedAt` e `durationSeconds`, e o `live` traz
+`revealSeconds`: a tela guia o duelo por esses horários (que andam pra frente quando os dois
+respondem, §1.1). `currentRound` é a maior rodada cujo `started_at` já passou.
+
+Palpite, imagem e panorama de rodada que ainda não começou são recusados: o palpite e o
+panorama respondem 409 (`Rodada ainda não começou`) e a imagem cai no placeholder sem gastar
+a cota do Google. Sem isso dava pra pedir as imagens de todas as rodadas logo no início do
+duelo. A regra vale também no Ranqueado para o panorama, que antes devolvia o `pano_id` de
+rodada ainda não ativada.
 
 `GET /api/championships/:id`, `enter` e `live` também devolvem `serverTime` (ISO, hora do
 servidor). O navegador usa esse valor para calibrar o relógio do duelo, já que o fim de cada
@@ -385,9 +418,22 @@ Reaproveita o `game-stage` inteiro (`ImagePanel`/`PanoramaPanel` + `GuessMap` +
 `RoundResultModal`). Muda o cabeçalho, que passa a ser de duelo: meu placar × placar do
 adversário, rodada `N/total`, cronômetro.
 
-Quem responde antes do tempo cai num estado **"aguardando a próxima rodada"** com o
-relógio correndo — consequência direta do jogo simultâneo (§1.1), e é onde o polling de
-3 s alimenta o placar do adversário.
+A tela é uma máquina de estados guiada pela linha do tempo do servidor (§1.1) e pelo
+relógio calibrado com o `serverTime`:
+
+| Fase         | Quando                                               | O que aparece                                                                     |
+| ------------ | ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `pre_start`  | antes de a rodada 1 abrir                            | o confronto e "o duelo começa em"                                                 |
+| `guessing`   | rodada aberta, eu ainda não respondi                 | imagem e mapa                                                                     |
+| `submitting` | enviando o palpite                                   | igual                                                                             |
+| `waiting`    | eu respondi e a rodada segue aberta                  | meus pontos e distância, "fecha em Xs ou quando o adversário responder"           |
+| `reveal`     | rodada fechada, até a próxima abrir (na última, 5 s) | mapa com os três pinos (local, o meu, o dele) e o cartão com os pontos de cada um |
+| `finished`   | última rodada fechada e revelação acabada            | tela de resultado                                                                 |
+
+O polling do `live` é de 1 s em `pre_start`, `waiting` e `reveal` e de 3 s em `guessing`, com
+uma busca imediata logo depois de cada palpite. O envio automático sai 500 ms antes do fim
+do relógio do servidor. A revelação mostra "Próxima rodada em Xs" (na última, "Resultado em
+Xs"); sem palpite de um dos lados aparece "sem palpite".
 
 Se a pessoa entra antes de a rodada 1 abrir (a contagem da sala, ou o intervalo entre
 fases), o duelo mostra o confronto e "o duelo começa em", sem montar a imagem: pedir a
