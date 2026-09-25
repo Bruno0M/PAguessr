@@ -11,11 +11,13 @@ import {
   locations,
   users,
   type Location,
+  type Round,
 } from '../db/schema.js';
 import { requireAuth, isAdminNick } from '../auth/session.js';
 import { isChampionshipsVisible, parseChampionshipsMode } from '../championship/featureFlag.js';
 import { calculateRoundStartedAt, createInitialBracket } from '../championship/bracket.js';
 import { advanceChampionship } from '../championship/advance.js';
+import { isRoundClosed } from '../championship/timeline.js';
 import { resolveStreetviewMode } from '../streetview.js';
 
 async function pickLocationsForMatch(
@@ -649,28 +651,73 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         currentRound = Math.min(champ.rounds_per_match, Math.max(1, calculated));
       }
 
-      let myScore = 0;
-      if (myGameId) {
-        const myRounds = await db
-          .select({ pontos: rounds.pontos })
-          .from(rounds)
-          .where(eq(rounds.game_id, myGameId));
-        myScore = myRounds.reduce((acc, r) => acc + (r.pontos ?? 0), 0);
-      }
+      const loadRounds = (gameId: string | null): Promise<Round[]> =>
+        gameId
+          ? db.select().from(rounds).where(eq(rounds.game_id, gameId)).orderBy(asc(rounds.ordem))
+          : Promise.resolve([]);
+      const [myRounds, oppRounds] = await Promise.all([
+        loadRounds(myGameId),
+        loadRounds(oppGameId),
+      ]);
 
-      let opponentRoundsAnswered = 0;
-      if (oppGameId) {
-        const oppRounds = await db
-          .select({
-            pontos: rounds.pontos,
-            guess_lat: rounds.guess_lat,
-          })
-          .from(rounds)
-          .where(eq(rounds.game_id, oppGameId));
-        opponentRoundsAnswered = oppRounds.filter(
-          (r) => r.pontos !== null || r.guess_lat !== null
-        ).length;
-      }
+      const myScore = myRounds.reduce((acc, r) => acc + (r.pontos ?? 0), 0);
+      const opponentRoundsAnswered = oppRounds.filter(
+        (r) => r.pontos !== null || r.guess_lat !== null
+      ).length;
+
+      const opponentId = isPlayerA ? match.player_b_id : match.player_a_id;
+      const [opponentRow] = opponentId
+        ? await db
+            .select({ id: users.id, nick: users.nick, avatarId: users.avatar_id })
+            .from(users)
+            .where(eq(users.id, opponentId))
+        : [];
+      const opponent = opponentRow ?? null;
+
+      // Os dois jogos têm os mesmos locais e horários, então casam por `ordem`. Os
+      // pontos e a distância do adversário só saem depois que a rodada fecha:
+      // antes disso o placar dele viraria dica pra quem ainda está pensando.
+      const now = new Date();
+      const myByOrder = new Map(myRounds.map((r) => [r.ordem, r]));
+      const oppByOrder = new Map(oppRounds.map((r) => [r.ordem, r]));
+      const orders = [...new Set([...myByOrder.keys(), ...oppByOrder.keys()])].sort(
+        (a, b) => a - b
+      );
+
+      let opponentScore = 0;
+      const roundsView = orders.map((order) => {
+        const mine = myByOrder.get(order);
+        const theirs = oppByOrder.get(order);
+        const reference = (mine ?? theirs)!;
+        const myAnswered = mine !== undefined && mine.pontos !== null;
+        const opponentAnswered = theirs !== undefined && theirs.pontos !== null;
+        const closed = isRoundClosed({
+          startedAt: reference.started_at,
+          durationSeconds: reference.duration_seconds,
+          myAnswered,
+          opponentAnswered,
+          now,
+        });
+
+        const showOpponent = closed && opponentAnswered;
+        if (showOpponent) opponentScore += theirs.pontos ?? 0;
+
+        return {
+          order,
+          closed,
+          myPoints: myAnswered ? mine.pontos : null,
+          myDistance: myAnswered ? mine.distancia : null,
+          opponentPoints: showOpponent ? theirs.pontos : null,
+          opponentDistance: showOpponent ? theirs.distancia : null,
+        };
+      });
+
+      const finalScore = match.resolved_at
+        ? {
+            me: (isPlayerA ? match.score_a : match.score_b) ?? 0,
+            opponent: (isPlayerA ? match.score_b : match.score_a) ?? 0,
+          }
+        : null;
 
       return reply.send({
         currentRound,
@@ -683,6 +730,10 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         resolved_at: match.resolved_at?.toISOString() ?? null,
         winnerId: match.winner_id,
         winner_id: match.winner_id,
+        opponent,
+        opponentScore,
+        rounds: roundsView,
+        finalScore,
       });
     }
   );

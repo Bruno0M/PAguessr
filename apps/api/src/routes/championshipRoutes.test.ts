@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { PAULO_AFONSO_CENTER } from '@paguessr/shared';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
+import { advanceChampionship } from '../championship/advance.js';
 import {
   championships,
   championshipParticipants,
@@ -435,6 +437,65 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       return { champ, host, players, matches };
     }
 
+    type ActiveSetup = Awaited<ReturnType<typeof setupActiveChampionship>>;
+
+    async function enterMatch(
+      champId: string,
+      matchId: string,
+      player: { cookie: string }
+    ): Promise<{ gameId: string; rounds: { id: number }[] }> {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/championships/${champId}/matches/${matchId}/enter`,
+        headers: { cookie: player.cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      return JSON.parse(res.body);
+    }
+
+    async function guessRound(
+      player: { cookie: string },
+      roundId: number,
+      point: { lat: number; lng: number } | null
+    ): Promise<{ score: number; distancia: number | null }> {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/rounds/${roundId}/guess`,
+        headers: { cookie: player.cookie },
+        payload: point ?? {},
+      });
+      expect(res.statusCode).toBe(200);
+      return JSON.parse(res.body);
+    }
+
+    async function locationOfRound(roundId: number): Promise<{ lat: number; lng: number }> {
+      const [row] = await db
+        .select({ lat: locations.lat, lng: locations.lng })
+        .from(rounds)
+        .innerJoin(locations, eq(rounds.location_id, locations.id))
+        .where(eq(rounds.id, roundId));
+      return row;
+    }
+
+    async function getLive(champId: string, matchId: string, player: { cookie: string }) {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/championships/${champId}/matches/${matchId}/live`,
+        headers: { cookie: player.cookie },
+      });
+      expect(res.statusCode).toBe(200);
+      return JSON.parse(res.body);
+    }
+
+    function sidesOf(setup: ActiveSetup) {
+      const match = setup.matches[0];
+      return {
+        match,
+        playerA: setup.players.find((p) => p.userId === match.player_a_id)!,
+        playerB: setup.players.find((p) => p.userId === match.player_b_id)!,
+      };
+    }
+
     it('POST /api/championships/:id/matches/:matchId/enter sem sessão retorna 401', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -636,7 +697,161 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       expect(liveData).not.toHaveProperty('guess');
       expect(liveData).not.toHaveProperty('guess_lat');
       expect(liveData).not.toHaveProperty('opponent_guess');
-      expect(liveData).not.toHaveProperty('opponentScore');
+
+      // O adversário respondeu, mas a rodada segue aberta pra mim: nada dele aparece.
+      expect(liveData.opponentScore).toBe(0);
+      expect(liveData.rounds[0]).toEqual({
+        order: 1,
+        closed: false,
+        myPoints: null,
+        myDistance: null,
+        opponentPoints: null,
+        opponentDistance: null,
+      });
+    });
+
+    it('live: os pontos do adversário entram quando a rodada fecha, pros dois lados', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f6_close' });
+      const { match, playerA, playerB } = sidesOf(setup);
+      const { champ } = setup;
+
+      const dataA = await enterMatch(champ.id, match.id, playerA);
+      const dataB = await enterMatch(champ.id, match.id, playerB);
+      const target = await locationOfRound(dataB.rounds[0].id);
+
+      const guessB = await guessRound(playerB, dataB.rounds[0].id, target);
+      expect(guessB.score).toBe(5000);
+
+      const beforeClose = await getLive(champ.id, match.id, playerA);
+      expect(beforeClose.opponentScore).toBe(0);
+      expect(beforeClose.rounds[0].closed).toBe(false);
+      expect(beforeClose.rounds[0].opponentPoints).toBeNull();
+
+      const guessA = await guessRound(playerA, dataA.rounds[0].id, PAULO_AFONSO_CENTER);
+
+      const liveA = await getLive(champ.id, match.id, playerA);
+      expect(liveA.rounds[0]).toEqual({
+        order: 1,
+        closed: true,
+        myPoints: guessA.score,
+        myDistance: guessA.distancia,
+        opponentPoints: 5000,
+        opponentDistance: guessB.distancia,
+      });
+      expect(liveA.opponentScore).toBe(5000);
+      expect(liveA.myScore).toBe(guessA.score);
+      expect(liveA.rounds[1].closed).toBe(false);
+      expect(liveA.rounds).toHaveLength(3);
+
+      const liveB = await getLive(champ.id, match.id, playerB);
+      expect(liveB.opponentScore).toBe(guessA.score);
+      expect(liveB.rounds[0].opponentPoints).toBe(guessA.score);
+      expect(liveB.rounds[0].myPoints).toBe(5000);
+    });
+
+    it('live: rodada com o tempo esgotado fecha sem os pontos de quem não respondeu', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f6_time' });
+      const { match, playerA, playerB } = sidesOf(setup);
+      const { champ } = setup;
+
+      const dataA = await enterMatch(champ.id, match.id, playerA);
+      const dataB = await enterMatch(champ.id, match.id, playerB);
+      const guessA = await guessRound(playerA, dataA.rounds[0].id, PAULO_AFONSO_CENTER);
+
+      const past = new Date(Date.now() - 200 * 1000);
+      await db
+        .update(rounds)
+        .set({ started_at: past })
+        .where(and(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]), eq(rounds.ordem, 1)));
+
+      const liveA = await getLive(champ.id, match.id, playerA);
+      expect(liveA.rounds[0]).toEqual({
+        order: 1,
+        closed: true,
+        myPoints: guessA.score,
+        myDistance: guessA.distancia,
+        opponentPoints: null,
+        opponentDistance: null,
+      });
+      expect(liveA.opponentScore).toBe(0);
+      expect(liveA.rounds[1].closed).toBe(false);
+
+      // Do outro lado: eu não respondi, então myPoints é nulo e o dele aparece.
+      const liveB = await getLive(champ.id, match.id, playerB);
+      expect(liveB.rounds[0]).toEqual({
+        order: 1,
+        closed: true,
+        myPoints: null,
+        myDistance: null,
+        opponentPoints: guessA.score,
+        opponentDistance: guessA.distancia,
+      });
+      expect(liveB.opponentScore).toBe(guessA.score);
+    });
+
+    it('live: duelo resolvido devolve o placar final consolidado do lado certo', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f6_final' });
+      const { match, playerA, playerB } = sidesOf(setup);
+      const { champ } = setup;
+
+      const dataA = await enterMatch(champ.id, match.id, playerA);
+      const dataB = await enterMatch(champ.id, match.id, playerB);
+
+      const beforeResolve = await getLive(champ.id, match.id, playerA);
+      expect(beforeResolve.finalScore).toBeNull();
+
+      let totalA = 0;
+      let totalB = 0;
+      for (let i = 0; i < dataA.rounds.length; i++) {
+        const target = await locationOfRound(dataA.rounds[i].id);
+        totalA += (await guessRound(playerA, dataA.rounds[i].id, target)).score;
+        totalB += (await guessRound(playerB, dataB.rounds[i].id, PAULO_AFONSO_CENTER)).score;
+      }
+
+      await advanceChampionship(champ.id, { force: true });
+
+      const [resolved] = await db
+        .select()
+        .from(championshipMatches)
+        .where(eq(championshipMatches.id, match.id));
+      expect(resolved.resolved_at).not.toBeNull();
+      expect(resolved.score_a).toBe(totalA);
+      expect(resolved.score_b).toBe(totalB);
+
+      const liveA = await getLive(champ.id, match.id, playerA);
+      expect(liveA.finalScore).toEqual({ me: totalA, opponent: totalB });
+      expect(liveA.winnerId).toBe(playerA.userId);
+      expect(liveA.opponentScore).toBe(totalB);
+
+      const liveB = await getLive(champ.id, match.id, playerB);
+      expect(liveB.finalScore).toEqual({ me: totalB, opponent: totalA });
+      expect(liveB.opponentScore).toBe(totalA);
+    });
+
+    it('live: devolve o adversário com nick e avatar, do lado de cada jogador', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f6_opp' });
+      const { match, playerA, playerB } = sidesOf(setup);
+      const { champ } = setup;
+
+      await enterMatch(champ.id, match.id, playerA);
+      await enterMatch(champ.id, match.id, playerB);
+
+      const [rowA] = await db.select().from(users).where(eq(users.id, playerA.userId));
+      const [rowB] = await db.select().from(users).where(eq(users.id, playerB.userId));
+
+      const liveA = await getLive(champ.id, match.id, playerA);
+      expect(liveA.opponent).toEqual({
+        id: playerB.userId,
+        nick: rowB.nick,
+        avatarId: rowB.avatar_id,
+      });
+
+      const liveB = await getLive(champ.id, match.id, playerB);
+      expect(liveB.opponent).toEqual({
+        id: playerA.userId,
+        nick: rowA.nick,
+        avatarId: rowA.avatar_id,
+      });
     });
 
     it('consolidação de duelo: vitória por pontos promove o vencedor para a próxima fase', async () => {
