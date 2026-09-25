@@ -93,3 +93,31 @@ export const LOBBY_COUNTDOWN_SECONDS = 60;
 
 export type ChampionshipStatus =
   'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';
+
+export type RankingPeriod = 'semana' | 'geral';
+
+export interface RankingEntry {
+  userId: string;
+  nick: string;
+  avatarId: number;
+  score: number;
+  achievedAt: string;
+  position: number;
+}
+
+export interface FraudNoticePendingResponse {
+  pending: true;
+  penalty: number;
+  before: { position: number; score: number } | null;
+  after: { position: number; score: number };
+  total: number;
+  entries: RankingEntry[];
+  gap: boolean;
+}
+
+export interface FraudNoticeNotPendingResponse {
+  pending: false;
+}
+
+export type FraudNoticeResponse = FraudNoticePendingResponse | FraudNoticeNotPendingResponse;
+

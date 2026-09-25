@@ -233,22 +233,55 @@ describe('Ranking Routes Integration', () => {
     expect(second.position).toBe(first.position + 1);
   });
 
-  it('partida com flagged_reason não entra no ranking, prevalecendo a melhor válida', async () => {
-    const cookie = await loginNewUser(app, 'partidamarcada');
+  it('jogador com dívida aparece negativo no geral e na semana', async () => {
+    const cookie = await loginNewUser(app, 'jogadorcomdivida');
     await finishGame(app, cookie, 2);
     await finishGame(app, cookie, 5, 'offset_constante');
 
-    const res = await app.inject({
+    const geralRes = await app.inject({
       method: 'GET',
       url: '/api/ranking?period=geral',
       headers: { cookie },
     });
+    expect(geralRes.statusCode).toBe(200);
+    const geralBody = JSON.parse(geralRes.body);
+    expect(geralBody.me.score).toBe(-25000);
+    expect(geralBody.me.position).toBe(geralBody.total);
 
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.me.score).toBe(10000);
-    const entry = body.entries.find((e: { nick: string }) => e.nick === 'partidamarcada');
-    expect(entry.score).toBe(10000);
+    const semanaRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=semana',
+      headers: { cookie },
+    });
+    expect(semanaRes.statusCode).toBe(200);
+    const semanaBody = JSON.parse(semanaRes.body);
+    expect(semanaBody.me.score).toBe(-25000);
+    expect(semanaBody.me.position).toBe(semanaBody.total);
+  });
+
+  it('depois de quitar a dívida volta a melhor partida (incluindo as de antes da fraude)', async () => {
+    const cookie = await loginNewUser(app, 'jogadorquitou');
+    await finishGame(app, cookie, 3);
+    await finishGame(app, cookie, 2, 'tempo_desumano');
+
+    const midRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+    expect(JSON.parse(midRes.body).me.score).toBe(-10000);
+
+    await finishGame(app, cookie, 2);
+
+    const finalRes = await app.inject({
+      method: 'GET',
+      url: '/api/ranking?period=geral',
+      headers: { cookie },
+    });
+    const finalBody = JSON.parse(finalRes.body);
+    expect(finalBody.me.score).toBe(15000);
+    const entry = finalBody.entries.find((e: { nick: string }) => e.nick === 'jogadorquitou');
+    expect(entry.score).toBe(15000);
   });
 
   it('partida de campeonato finalizada não entra no ranking geral nem no da semana', async () => {

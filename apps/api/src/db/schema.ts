@@ -39,6 +39,7 @@ export const games = pgTable(
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     finished_at: timestamp('finished_at', { withTimezone: true }),
     flagged_reason: text('flagged_reason'),
+    flag_acknowledged_at: timestamp('flag_acknowledged_at', { withTimezone: true }),
   },
   (table) => [index('games_user_id_idx').on(table.user_id)]
 );

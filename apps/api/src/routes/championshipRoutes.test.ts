@@ -803,7 +803,8 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       let totalA = 0;
       let totalB = 0;
       for (let i = 0; i < dataA.rounds.length; i++) {
-        const target = await locationOfRound(dataA.rounds[i].id);
+        const loc = await locationOfRound(dataA.rounds[i].id);
+        const target = { lat: loc.lat + i * 0.0001, lng: loc.lng };
         totalA += (await guessRound(playerA, dataA.rounds[i].id, target)).score;
         totalB += (await guessRound(playerB, dataB.rounds[i].id, PAULO_AFONSO_CENTER)).score;
       }

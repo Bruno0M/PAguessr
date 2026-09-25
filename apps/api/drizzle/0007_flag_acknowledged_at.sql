@@ -1,0 +1,1 @@
+ALTER TABLE "games" ADD COLUMN "flag_acknowledged_at" timestamp with time zone;
