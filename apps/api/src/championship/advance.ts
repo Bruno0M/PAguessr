@@ -65,26 +65,31 @@ async function getPlayerDuelStats(
   const [game] = await tx.select().from(games).where(eq(games.id, gameId));
   const gameRounds = await tx.select().from(rounds).where(eq(rounds.game_id, gameId));
 
-  const validGuesses = gameRounds.filter(
+  // Rodada respondida: entra no placar, inclusive o timeout explícito (que zera).
+  const answeredRounds = gameRounds.filter(
     (r) => r.pontos !== null || r.guess_lat !== null || r.distancia !== null
   );
 
-  const hasGuessed = validGuesses.length > 0;
+  // Rodada jogada de verdade: tem coordenada de palpite. A diferença importa —
+  // quem só deixou o cronômetro zerar não jogou, e não pode levar o duelo.
+  const playedRounds = answeredRounds.filter((r) => r.guess_lat !== null || r.distancia !== null);
+
+  const hasGuessed = playedRounds.length > 0;
   const isFlagged = Boolean(game?.flagged_reason);
   const totalScore = isFlagged
     ? 0
-    : (game?.total_score ?? validGuesses.reduce((sum, r) => sum + (r.pontos ?? 0), 0));
+    : (game?.total_score ?? answeredRounds.reduce((sum, r) => sum + (r.pontos ?? 0), 0));
   const totalDistance =
     isFlagged || !hasGuessed
       ? Infinity
-      : validGuesses.reduce((sum, r) => sum + (r.distancia ?? 0), 0);
+      : playedRounds.reduce((sum, r) => sum + (r.distancia ?? 0), 0);
 
   return {
     userId,
     seed,
     totalScore,
     totalDistanceMeters: totalDistance,
-    guessesCount: validGuesses.length,
+    guessesCount: playedRounds.length,
     hasGuessedAtLeastOnce: hasGuessed,
     lastGuessAt: game?.finished_at ?? null,
   };
@@ -130,13 +135,15 @@ async function realMatchEnd(tx: Tx, champ: Championship, match: ChampionshipMatc
   });
 }
 
+// Resolve o confronto e promove o vencedor. Devolve `true` só quando alguém
+// realmente foi promovido para a fase seguinte.
 async function resolveSingleMatch(
   tx: Tx,
   champ: Championship,
   match: ChampionshipMatch,
   totalPhases: number,
   resolvedAt: Date
-): Promise<void> {
+): Promise<boolean> {
   const participantIds = [match.player_a_id, match.player_b_id].filter(Boolean) as string[];
   const participants =
     participantIds.length > 0
@@ -180,6 +187,17 @@ async function resolveSingleMatch(
     winnerId = match.player_b_id;
   }
 
+  // Ninguém joga, ninguém ganha. Sem esta trava, um campeonato em que o tempo
+  // estourou com todo mundo em 0 ponto resolvia os confrontos por W.O. e
+  // consagrava o menor seed como campeão — uma vitória que ninguém chegou a
+  // disputar. Sem vencedor não há perdedor (ninguém é eliminado) e não há
+  // promoção: o confronto fica resolvido, mas vazio.
+  const winnerStats = winnerId === match.player_b_id ? statsB : statsA;
+  if (winnerId && !winnerStats.hasGuessedAtLeastOnce) {
+    winnerId = null;
+    loserId = null;
+  }
+
   await tx
     .update(championshipMatches)
     .set({
@@ -214,7 +232,10 @@ async function resolveSingleMatch(
           eq(championshipMatches.slot, dest.slot)
         )
       );
+    return true;
   }
+
+  return false;
 }
 
 export async function advanceChampionship(
@@ -316,10 +337,18 @@ export async function advanceChampionship(
         const resolvedAtTimestamp =
           options?.force && now.getTime() < matchEnd.getTime() ? now : matchEnd;
 
-        await resolveSingleMatch(tx, champ, match, totalPhases, resolvedAtTimestamp);
+        const promoted = await resolveSingleMatch(
+          tx,
+          champ,
+          match,
+          totalPhases,
+          resolvedAtTimestamp
+        );
 
         resolvedMatchesCount++;
-        promotedCount++;
+        if (promoted) {
+          promotedCount++;
+        }
         anyAdvanced = true;
       }
 
@@ -369,6 +398,9 @@ export async function advanceChampionship(
           break;
         }
       } else {
+        // A chave acabou. Ela pode ter acabado sem campeão (final abandonada,
+        // sem ninguém dentro): `winner_id` da final fica nulo e o ranking não
+        // coroa ninguém — melhor do que um campeão com 0 ponto e 0 rodada.
         await tx
           .update(championships)
           .set({

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { PAULO_AFONSO_CENTER } from '@paguessr/shared';
+import { LOBBY_COUNTDOWN_SECONDS, PAULO_AFONSO_CENTER } from '@paguessr/shared';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { createDuelHelpers, loginNewUser } from '../test/duelHelpers.js';
@@ -137,7 +137,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       expect(res.statusCode).toBe(200);
     }
 
-    // Tentar sair agora que está chaveado retorna 409
+    // Tentar sair agora que a chave já foi sorteada retorna 409
     const leaveRes = await app.inject({
       method: 'DELETE',
       url: `/api/championships/${champ.id}/join`,
@@ -172,7 +172,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     });
     expect(lastRes.statusCode).toBe(200);
     const lastData = JSON.parse(lastRes.body);
-    expect(lastData.status).toBe('chaveado');
+    expect(lastData.status).toBe('em_andamento');
     expect(lastData.seeded).toBe(true);
 
     // Verifica campeonato no banco
@@ -180,8 +180,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       .select()
       .from(championships)
       .where(eq(championships.id, champ.id));
-    expect(updatedChamp.status).toBe('chaveado');
+    expect(updatedChamp.status).toBe('em_andamento');
     expect(updatedChamp.seeded_at).not.toBeNull();
+    expect(updatedChamp.started_at).not.toBeNull();
 
     // Verifica participantes e seeds de 0 a 3
     const participants = await db
@@ -214,6 +215,80 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     expect(phase2[0].player_b_id).toBeNull();
   });
 
+  it('larga sozinho no sorteio: started_at agora e fase 1 abrindo depois da contagem da sala', async () => {
+    const admin = await loginNewUser(app, 'host_autostart');
+    const champ = await createChampionship(admin.userId, 4);
+
+    const players = await Promise.all([
+      loginNewUser(app, 'autostart_1'),
+      loginNewUser(app, 'autostart_2'),
+      loginNewUser(app, 'autostart_3'),
+      loginNewUser(app, 'autostart_4'),
+    ]);
+
+    for (const p of players.slice(0, 3)) {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/championships/${champ.id}/join`,
+        headers: { cookie: p.cookie },
+      });
+      expect(JSON.parse(res.body).status).toBe('inscricoes');
+    }
+
+    // Antes de lotar: nada started_at, nenhum opens_at.
+    const [beforeDraw] = await db
+      .select()
+      .from(championships)
+      .where(eq(championships.id, champ.id));
+    expect(beforeDraw.started_at).toBeNull();
+    expect(beforeDraw.seeded_at).toBeNull();
+
+    const before = Date.now();
+    const lastRes = await app.inject({
+      method: 'POST',
+      url: `/api/championships/${champ.id}/join`,
+      headers: { cookie: players[3].cookie },
+    });
+    const after = Date.now();
+    expect(lastRes.statusCode).toBe(200);
+    expect(JSON.parse(lastRes.body).status).toBe('em_andamento');
+
+    const [drawn] = await db.select().from(championships).where(eq(championships.id, champ.id));
+    expect(drawn.status).toBe('em_andamento');
+    expect(drawn.started_at).not.toBeNull();
+    expect(drawn.seeded_at).not.toBeNull();
+    const startedAtMs = drawn.started_at!.getTime();
+    expect(startedAtMs).toBeGreaterThanOrEqual(before);
+    expect(startedAtMs).toBeLessThanOrEqual(after);
+
+    // Fase 1 abre depois da contagem da sala; as outras continuam fechadas.
+    const matches = await db
+      .select()
+      .from(championshipMatches)
+      .where(eq(championshipMatches.championship_id, champ.id));
+
+    const phase1 = matches.filter((m) => m.phase === 1);
+    expect(phase1).toHaveLength(2);
+    for (const match of phase1) {
+      expect(match.opens_at!.getTime()).toBe(startedAtMs + LOBBY_COUNTDOWN_SECONDS * 1000);
+    }
+    for (const match of matches.filter((m) => m.phase > 1)) {
+      expect(match.opens_at).toBeNull();
+    }
+
+    // O endpoint de detalhe já devolve o campeonato em andamento: a sala de
+    // espera mostra a contagem em vez de esperar o admin.
+    const detailRes = await app.inject({
+      method: 'GET',
+      url: `/api/championships/${champ.id}`,
+      headers: { cookie: players[0].cookie },
+    });
+    expect(detailRes.statusCode).toBe(200);
+    const detail = JSON.parse(detailRes.body);
+    expect(detail.status).toBe('em_andamento');
+    expect(detail.myStatus).toBe('ready_to_play');
+  });
+
   it('sorteio com 8 participantes gera chave completa de 3 fases e 7 confrontos', async () => {
     const admin = await loginNewUser(app, 'host_s8');
     const champ = await createChampionship(admin.userId, 8);
@@ -232,7 +307,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       .select()
       .from(championships)
       .where(eq(championships.id, champ.id));
-    expect(updatedChamp.status).toBe('chaveado');
+    expect(updatedChamp.status).toBe('em_andamento');
 
     const matches = await db
       .select()
@@ -262,7 +337,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       .select()
       .from(championships)
       .where(eq(championships.id, champ.id));
-    expect(updatedChamp.status).toBe('chaveado');
+    expect(updatedChamp.status).toBe('em_andamento');
 
     const matches = await db
       .select()
@@ -294,7 +369,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       .select()
       .from(championships)
       .where(eq(championships.id, champ.id));
-    expect(updatedChamp.status).toBe('chaveado');
+    expect(updatedChamp.status).toBe('em_andamento');
 
     const matches = await db
       .select()
@@ -347,7 +422,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     const statuses = [resA.statusCode, resB.statusCode].sort();
     expect(statuses).toEqual([200, 409]);
 
-    // O campeonato foi chaveado com exatamente 4 participantes
+    // O campeonato foi sorteado com exatamente 4 participantes
     const participants = await db
       .select()
       .from(championshipParticipants)
@@ -365,7 +440,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       .select()
       .from(championships)
       .where(eq(championships.id, champ.id));
-    expect(finalChamp.status).toBe('chaveado');
+    expect(finalChamp.status).toBe('em_andamento');
   });
 
   describe('Fatia 5: Largada e Duelo', () => {
@@ -932,7 +1007,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       expect(liveData.winnerId).toBe(playerA.userId);
     });
 
-    it('consolidação com W.O. dos dois lados (nenhum jogou) desempata por menor seed e não trava a chave', async () => {
+    it('consolidação com W.O. dos dois lados (nenhum jogou) resolve o confronto sem inventar vencedor', async () => {
       const { champ, players, matches } = await setupActiveChampionship({ prefix: 'f5_wob' });
       const match = matches[0];
       const playerA = players.find((p) => p.userId === match.player_a_id)!;
@@ -950,8 +1025,25 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       });
       const liveData = JSON.parse(liveRes.body);
 
+      // O confronto passa (a chave não trava), mas sem palpite de ninguém não
+      // existe vitória: 0 a 0 e ninguém coroado.
       expect(liveData.resolvedAt).not.toBeNull();
-      expect(liveData.winnerId).not.toBeNull();
+      expect(liveData.winnerId).toBeNull();
+
+      const [resolved] = await db
+        .select()
+        .from(championshipMatches)
+        .where(eq(championshipMatches.id, match.id));
+      expect(resolved.winner_id).toBeNull();
+      expect(resolved.score_a).toBe(0);
+      expect(resolved.score_b).toBe(0);
+
+      // E ninguém é eliminado por um confronto que não aconteceu.
+      const participants = await db
+        .select()
+        .from(championshipParticipants)
+        .where(eq(championshipParticipants.championship_id, champ.id));
+      expect(participants.every((p) => p.eliminated_in_phase === null)).toBe(true);
     });
 
     it('GET /api/championships lista campeonatos com status e flag joined', async () => {

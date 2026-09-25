@@ -76,6 +76,11 @@ export function ChampionshipsPage({
     setFeedbackToast(null);
     try {
       await joinChampionship(id);
+      const joined = items.find((item) => item.id === id);
+      // Se a vaga que eu preenchi era a última, a chave foi sorteada e o
+      // campeonato já largou (fase 1 abrindo depois da contagem da sala).
+      const isFullAfterJoin =
+        (joined?.participants ?? 0) + 1 >= (joined?.max_participants ?? Number.POSITIVE_INFINITY);
       setItems((prev) =>
         prev.map((item) => {
           if (item.id !== id) return item;
@@ -85,11 +90,16 @@ export function ChampionshipsPage({
             ...item,
             joined: true,
             participants: nextParticipants,
-            status: isFull ? 'chaveado' : item.status,
+            // Lotou a última vaga: a chave é sorteada e a partida já começa.
+            status: isFull ? 'em_andamento' : item.status,
           };
         })
       );
-      setFeedbackToast('Inscrição confirmada com sucesso!');
+      setFeedbackToast(
+        isFullAfterJoin
+          ? 'Inscrição confirmada! O campeonato começou, abra a sala!'
+          : 'Inscrição confirmada com sucesso!'
+      );
       onOpenLobby?.(id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao se inscrever no campeonato.';

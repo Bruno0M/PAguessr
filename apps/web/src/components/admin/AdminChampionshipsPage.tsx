@@ -41,6 +41,13 @@ const STATUS_LABELS: Record<ChampionshipStatus, string> = {
   cancelado: 'Cancelado',
 };
 
+// O intervalo aceita segundos (o piso é curto), então "10/60 = 0min" não serve.
+function formatPhaseInterval(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}min`;
+  return `${Math.round((seconds / 3600) * 10) / 10}h`;
+}
+
 export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps = {}) {
   const [championships, setChampionships] = useState<AdminChampionship[]>([]);
   const [loading, setLoading] = useState(true);
@@ -428,7 +435,7 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                             className="admin-action-btn admin-action-start"
                             title={
                               champ.status === 'chaveado'
-                                ? 'Dar a largada no campeonato'
+                                ? 'Dar a largada (só para chave antiga: hoje o campeonato larga sozinho no sorteio)'
                                 : 'Só é possível iniciar quando o status for "Chaveado"'
                             }
                             disabled={champ.status !== 'chaveado' || isActionBusy}
@@ -631,8 +638,8 @@ export function AdminChampionshipsPage({ onError }: AdminChampionshipsPageProps 
                     onChange={(e) => setPhaseIntervalSeconds(Number(e.target.value))}
                   />
                   <span className="admin-form-hint">
-                    {Math.round(phaseIntervalSeconds / 60)} min (
-                    {Math.round((phaseIntervalSeconds / 3600) * 10) / 10}h)
+                    {formatPhaseInterval(phaseIntervalSeconds)} entre as fases (mínimo{' '}
+                    {CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS}s)
                   </span>
                 </div>
               </div>

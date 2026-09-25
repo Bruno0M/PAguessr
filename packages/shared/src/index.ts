@@ -84,7 +84,10 @@ export const CHAMPIONSHIP_DESCRIPTION_MAX_LENGTH = 500;
 export const CHAMPIONSHIP_BANNER_URL_MAX_LENGTH = 500;
 export const CHAMPIONSHIP_ROUNDS_PER_MATCH_MIN = 1;
 export const CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX = 10;
-export const CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS = 60;
+// Intervalo entre uma fase e a seguinte. O piso é curto de propósito: com o
+// avanço de fase preguiçoso, um intervalo de minutos deixava o campeonato
+// parado mesmo com todo mundo pronto pra jogar.
+export const CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS = 10;
 export const CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS = 604800;
 
 // Contagem regressiva entre o "Iniciar" do admin e a abertura da fase 1: dá tempo de
