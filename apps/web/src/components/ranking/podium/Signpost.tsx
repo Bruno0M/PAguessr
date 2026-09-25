@@ -3,6 +3,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SIGNPOST_POSITION } from './layout';
 import { createSignTexture, glowColor } from './textures';
+import { ARENA, CREAM, SUN_SOFT } from './palette';
 
 const SIGN_LENGTH = 1.3;
 const SIGN_HEIGHT = 0.32;
@@ -61,7 +62,7 @@ function Sign({
     if (materialRef.current) {
       materialRef.current.emissiveIntensity = THREE.MathUtils.damp(
         materialRef.current.emissiveIntensity,
-        hovered ? 0.9 : 0.25,
+        hovered ? 0.3 : 0.05,
         10,
         delta
       );
@@ -93,9 +94,9 @@ function Sign({
       <mesh geometry={getArrowGeometry()}>
         <meshPhysicalMaterial
           ref={materialRef}
-          color="#1395aa"
-          emissive="#2fd6ec"
-          emissiveIntensity={0.25}
+          color={ARENA.signBoard}
+          emissive={CREAM}
+          emissiveIntensity={0.05}
           metalness={0.3}
           roughness={0.25}
           clearcoat={1}
@@ -132,15 +133,15 @@ export function Signpost({
     >
       <mesh position-y={1.02}>
         <cylinderGeometry args={[0.045, 0.055, 2.04, 12]} />
-        <meshStandardMaterial color="#27405a" metalness={0.8} roughness={0.35} />
+        <meshStandardMaterial color={ARENA.signPost} metalness={0.8} roughness={0.35} />
       </mesh>
       <mesh position-y={2.06}>
         <sphereGeometry args={[0.07, 16, 12]} />
-        <meshBasicMaterial color={glowColor('#4fe3ff', 3)} toneMapped={false} />
+        <meshBasicMaterial color={glowColor(SUN_SOFT, 3)} toneMapped={false} />
       </mesh>
       <mesh position-y={0.03}>
         <cylinderGeometry args={[0.16, 0.2, 0.06, 16]} />
-        <meshStandardMaterial color="#27405a" metalness={0.8} roughness={0.35} />
+        <meshStandardMaterial color={ARENA.signPost} metalness={0.8} roughness={0.35} />
       </mesh>
       {actions.map((action, i) => (
         <Sign

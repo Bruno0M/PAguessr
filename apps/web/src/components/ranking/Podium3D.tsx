@@ -14,6 +14,7 @@ import { GhostPin, PlayerPin } from './podium/PlayerPin';
 import { Scenery } from './podium/Scenery';
 import { Signpost, type SignAction } from './podium/Signpost';
 import './Podium3D.css';
+import { ARENA, CREAM, NIGHT, SKY, SUN, SUN_SOFT } from './podium/palette';
 
 const FOV = 30;
 const RISE_ORDER: Record<1 | 2 | 3, number> = { 3: 0, 2: 1, 1: 2 };
@@ -109,27 +110,27 @@ export function Podium3D({
         gl={{ antialias: false, powerPreference: 'high-performance', toneMappingExposure: 1.2 }}
         fallback={<PodiumFallback entries={entries} />}
       >
-        <color attach="background" args={['#0b1a2c']} />
+        <color attach="background" args={[NIGHT]} />
         <CameraRig reducedMotion={reducedMotion} />
 
-        <hemisphereLight args={['#9ad7ff', '#0a1522', 0.55]} />
-        <directionalLight position={[-3, 9, 7]} intensity={1.5} color="#eaf4ff" />
-        <directionalLight position={[5, 4, -7]} intensity={1.6} color="#46d4ff" />
+        <hemisphereLight args={[ARENA.fillSky, ARENA.fillGround, 0.55]} />
+        <directionalLight position={[-3, 9, 7]} intensity={1.5} color={ARENA.key} />
+        <directionalLight position={[5, 4, -7]} intensity={1.4} color={SKY} />
         {hasWinner && (
-          <pointLight
-            position={[0, 3.3, PODIUM_Z + 0.9]}
-            intensity={14}
-            distance={6}
-            color="#ffc46b"
-          />
+          <pointLight position={[0, 3.3, PODIUM_Z + 0.9]} intensity={14} distance={6} color={SUN} />
         )}
 
         <Environment resolution={256} frames={1}>
-          <Lightformer intensity={5} color="#eef8ff" position={[0, 7, 3]} scale={[14, 4, 1]} />
-          <Lightformer intensity={3.5} color="#ffe2b0" position={[0, 1.5, 9]} scale={[14, 3, 1]} />
-          <Lightformer intensity={2} color="#9fb4c8" position={[0, -3, 7]} scale={[14, 3, 1]} />
-          <Lightformer intensity={3.5} color="#3fdcff" position={[-8, 2, 0]} scale={[2, 6, 1]} />
-          <Lightformer intensity={3.5} color="#3fdcff" position={[8, 2, 0]} scale={[2, 6, 1]} />
+          <Lightformer intensity={5} color={CREAM} position={[0, 7, 3]} scale={[14, 4, 1]} />
+          <Lightformer intensity={3.5} color={SUN_SOFT} position={[0, 1.5, 9]} scale={[14, 3, 1]} />
+          <Lightformer
+            intensity={2}
+            color={ARENA.bounce}
+            position={[0, -3, 7]}
+            scale={[14, 3, 1]}
+          />
+          <Lightformer intensity={3} color={SKY} position={[-8, 2, 0]} scale={[2, 6, 1]} />
+          <Lightformer intensity={3} color={SKY} position={[8, 2, 0]} scale={[2, 6, 1]} />
         </Environment>
 
         <Platform reflective={highQuality} reducedMotion={reducedMotion} />
@@ -182,7 +183,7 @@ export function Podium3D({
                   scale={[1.6, 2.2, 1.6]}
                   size={4}
                   speed={reducedMotion ? 0 : 0.3}
-                  color="#ffd166"
+                  color={SUN_SOFT}
                 />
               )}
             </Pedestal>
@@ -198,7 +199,7 @@ export function Podium3D({
           blur={2.2}
           opacity={0.55}
           far={3}
-          color="#02070d"
+          color={ARENA.shadow}
         />
         <Sparkles
           count={140}
@@ -206,8 +207,8 @@ export function Podium3D({
           scale={[34, 16, 8]}
           size={1.4}
           speed={reducedMotion ? 0 : 0.15}
-          color="#9fd8ff"
-          opacity={0.5}
+          color={CREAM}
+          opacity={0.4}
         />
 
         <EffectComposer multisampling={highQuality ? 4 : 0}>

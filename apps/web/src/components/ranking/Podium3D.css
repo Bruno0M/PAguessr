@@ -80,6 +80,10 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--pa-cream-soft);
+  /* Sem cartão atrás: a sombra segura a leitura sobre a cena. */
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.8),
+    0 0 12px rgb(0 0 0 / 0.8);
 }
 
 .podium-fallback {
