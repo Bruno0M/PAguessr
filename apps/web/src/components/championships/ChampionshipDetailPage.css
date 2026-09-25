@@ -126,8 +126,8 @@
 }
 
 .championship-status-card.is-active {
-  border-color: #3ee3ad;
-  box-shadow: 0 0 24px rgb(62 227 173 / 0.18);
+  border-color: var(--pa-cream);
+  box-shadow: 0 0 24px rgb(var(--pa-cream-rgb) / 0.14);
 }
 
 .championship-status-card.is-waiting {
@@ -172,7 +172,7 @@
 }
 
 .status-badge-inline.live-pulse {
-  color: #3ee3ad;
+  color: var(--pa-cream);
   animation: pulse-glow 1.8s infinite;
 }
 
@@ -184,6 +184,16 @@
   50% {
     opacity: 0.5;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-badge-inline.live-pulse {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion='true'] .status-badge-inline.live-pulse {
+  animation: none;
 }
 
 .status-trophy-large {
