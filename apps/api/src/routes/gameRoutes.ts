@@ -64,6 +64,9 @@ async function pickLocationsForUser(userId: string, count: number): Promise<Loca
 // já começou, ainda não tem palpite, não passou do tempo e não esgotou o limite.
 async function reserveImageFetch(round: Round): Promise<boolean> {
   if (round.pontos !== null || round.started_at === null) return false;
+  // Rodada de duelo que ainda não começou: sem imagem (cai no placeholder, como
+  // rodada fechada). Senão dava pra pedir as imagens de todas as rodadas de uma vez.
+  if (round.started_at.getTime() > Date.now()) return false;
   const durationMs = round.duration_seconds * 1000;
   if (Date.now() - round.started_at.getTime() > durationMs + IMAGE_FETCH_GRACE_MS) {
     return false;
@@ -371,6 +374,10 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         return reply.status(409).send({ error: 'Rodada não utiliza o modo panorama' });
       }
 
+      if (round.started_at === null || round.started_at.getTime() > Date.now()) {
+        return reply.status(409).send({ error: 'Rodada ainda não começou' });
+      }
+
       const [loc] = await db.select().from(locations).where(eq(locations.id, round.location_id));
       if (!loc) {
         return reply.status(404).send({ error: 'Local não encontrado' });
@@ -433,6 +440,10 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       if (round.started_at === null) {
         return reply.status(409).send({ error: 'Rodada ainda não iniciada' });
+      }
+
+      if (round.started_at.getTime() > Date.now()) {
+        return reply.status(409).send({ error: 'Rodada ainda não começou' });
       }
 
       const [loc] = await db.select().from(locations).where(eq(locations.id, round.location_id));
