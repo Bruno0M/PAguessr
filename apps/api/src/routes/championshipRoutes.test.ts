@@ -276,6 +276,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     expect(matches.filter((m) => m.phase === 4)).toHaveLength(1);
   });
 
+  // Cadastrar 32 jogadores leva ~5 s, no limite padrão do Vitest: timeout maior só aqui.
   it('sorteio com 32 participantes gera chave completa de 5 fases e 31 confrontos', async () => {
     const admin = await loginNewUser(app, 'host_s32');
     const champ = await createChampionship(admin.userId, 32);
@@ -306,7 +307,7 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     expect(matches.filter((m) => m.phase === 3)).toHaveLength(4);
     expect(matches.filter((m) => m.phase === 4)).toHaveLength(2);
     expect(matches.filter((m) => m.phase === 5)).toHaveLength(1);
-  });
+  }, 20_000);
 
   it('corrida da última vaga: duas inscrições concorrentes não geram dois sorteios nem passam de max_participants', async () => {
     const admin = await loginNewUser(app, 'host_race');
@@ -675,6 +676,13 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
 
       const beforeResolve = await getLive(champ.id, match.id, playerA);
       expect(beforeResolve.finalScore).toBeNull();
+
+      // As rodadas seguintes só abrem depois da revelação; aqui todas ficam abertas
+      // de uma vez pra o teste palpitar nas três em seguida.
+      await db
+        .update(rounds)
+        .set({ started_at: new Date(Date.now() - 1000) })
+        .where(inArray(rounds.game_id, [dataA.gameId, dataB.gameId]));
 
       let totalA = 0;
       let totalB = 0;

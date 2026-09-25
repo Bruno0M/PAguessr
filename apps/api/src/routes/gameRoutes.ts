@@ -12,6 +12,7 @@ import { db } from '../db/index.js';
 import { games, locations, rounds, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
 import { resolveStreetviewMode } from '../streetview.js';
+import { closeDuelRoundIfReady } from '../championship/closeRound.js';
 
 const MIN_LOCATIONS_PER_GAME = 5;
 const RECENT_GAMES_TO_AVOID = 2;
@@ -499,6 +500,18 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           ...(allFinished ? { finished_at: new Date() } : {}),
         })
         .where(eq(games.id, round.game_id));
+
+      // Duelo: com os dois palpites feitos, a próxima rodada é puxada pra logo
+      // depois da revelação. Vem antes do `activateRound` pra o `nextRound` da
+      // resposta já sair adiantado. Falhar aqui não pode perder o palpite: sem o
+      // adiantamento vale a linha do tempo planejada.
+      if (game.championship_match_id) {
+        try {
+          await closeDuelRoundIfReady(round.id);
+        } catch (err) {
+          request.log.error({ err, roundId: round.id }, 'falha ao adiantar a rodada do duelo');
+        }
+      }
 
       const nextRound = await activateRound(round.game_id, round.ordem + 1);
       const nextRoundStartedAt = nextRound?.started_at ? nextRound.started_at.toISOString() : null;
