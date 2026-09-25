@@ -87,5 +87,9 @@ export const CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX = 10;
 export const CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS = 60;
 export const CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS = 604800;
 
+// Contagem regressiva entre o "Iniciar" do admin e a abertura da fase 1: dá tempo de
+// todo mundo estar na sala de espera antes de o relógio das rodadas começar.
+export const LOBBY_COUNTDOWN_SECONDS = 60;
+
 export type ChampionshipStatus =
   'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import { type ChampionshipSize, shuffle } from '@paguessr/shared';
+import { type ChampionshipSize, phasesFor, shuffle } from '@paguessr/shared';
 import { db, type Tx } from '../db/index.js';
 import {
   championships,
@@ -731,6 +731,8 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
         resolved_at: match.resolved_at?.toISOString() ?? null,
         winnerId: match.winner_id,
         winner_id: match.winner_id,
+        phase: match.phase,
+        totalPhases: phasesFor(champ.max_participants),
         opponent,
         opponentScore,
         rounds: roundsView,

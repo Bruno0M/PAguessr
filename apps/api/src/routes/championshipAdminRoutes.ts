@@ -13,6 +13,7 @@ import {
   CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX,
   CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS,
   CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS,
+  LOBBY_COUNTDOWN_SECONDS,
   type ChampionshipSize,
 } from '@paguessr/shared';
 import { db } from '../db/index.js';
@@ -308,7 +309,9 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
       });
     }
 
+    // `started_at` é a hora do clique; a fase 1 só abre depois da contagem da sala.
     const now = new Date();
+    const phase1OpensAt = new Date(now.getTime() + LOBBY_COUNTDOWN_SECONDS * 1000);
     const [updated] = await db.transaction(async (tx) => {
       const [u] = await tx
         .update(championships)
@@ -321,7 +324,7 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
 
       await tx
         .update(championshipMatches)
-        .set({ opens_at: now })
+        .set({ opens_at: phase1OpensAt })
         .where(and(eq(championshipMatches.championship_id, id), eq(championshipMatches.phase, 1)));
 
       return [u];

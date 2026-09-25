@@ -885,6 +885,49 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
       expectServerTime((await getLive(champ.id, match.id, playerA)).serverTime);
     });
 
+    it('enter antes da hora (opens_at no futuro) devolve as rodadas com os horários certos', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f7_pre', roundDurationSeconds: 45 });
+      const { match, playerA, playerB } = sidesOf(setup);
+      const { champ } = setup;
+
+      const opensAt = new Date(Date.now() + 60 * 1000);
+      await db
+        .update(championshipMatches)
+        .set({ opens_at: opensAt })
+        .where(eq(championshipMatches.id, match.id));
+
+      const dataA = await enterMatch(champ.id, match.id, playerA);
+      const dataB = await enterMatch(champ.id, match.id, playerB);
+      expect(dataA.rounds).toHaveLength(3);
+
+      const roundsA = await db
+        .select()
+        .from(rounds)
+        .where(eq(rounds.game_id, dataA.gameId))
+        .orderBy(asc(rounds.ordem));
+      expect(roundsA.map((r) => r.started_at!.getTime())).toEqual([
+        opensAt.getTime(),
+        opensAt.getTime() + 45 * 1000,
+        opensAt.getTime() + 90 * 1000,
+      ]);
+      expect(dataB.gameId).not.toBe(dataA.gameId);
+
+      const live = await getLive(champ.id, match.id, playerA);
+      expect(live.currentRound).toBe(1);
+      expect(live.resolvedAt).toBeNull();
+      expect(live.rounds).toHaveLength(3);
+      expect(live.rounds.every((r: { closed: boolean }) => !r.closed)).toBe(true);
+    });
+
+    it('live informa a fase do confronto e o total de fases do campeonato', async () => {
+      const setup = await setupActiveChampionship({ prefix: 'f7_phase' });
+      const { match, playerA } = sidesOf(setup);
+
+      const live = await getLive(setup.champ.id, match.id, playerA);
+      expect(live.phase).toBe(1);
+      expect(live.totalPhases).toBe(2);
+    });
+
     it('consolidação de duelo: vitória por pontos promove o vencedor para a próxima fase', async () => {
       const { champ, players, matches } = await setupActiveChampionship({ prefix: 'f5_pts' });
       const match = matches[0];
