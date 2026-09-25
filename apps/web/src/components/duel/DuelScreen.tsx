@@ -10,6 +10,7 @@ import {
   type LiveMatchResponse,
 } from '../../api/championships';
 import type { PublicUser } from '../../api/auth';
+import { serverNow } from '../../lib/serverClock';
 import type { RoundResult, GameState } from '../../types';
 import { ImagePanel } from '../ImagePanel';
 import { PanoramaPanel } from '../PanoramaPanel';
@@ -26,6 +27,9 @@ export interface DuelScreenProps {
   opponentNick?: string;
   onBackToBracket: () => void;
 }
+
+/** Quanto antes do fim da rodada o palpite sai sozinho, em ms do relógio do servidor. */
+const AUTO_SUBMIT_LEAD_MS = 500;
 
 function formatDistance(meters: number): string {
   if (meters < 1000) {
@@ -74,7 +78,7 @@ export function DuelScreen({
 
       setRounds(matchRounds);
 
-      const now = Date.now();
+      const now = serverNow();
       let activeIndex = matchRounds.length;
       for (let i = 0; i < matchRounds.length; i++) {
         const r = matchRounds[i];
@@ -215,7 +219,7 @@ export function DuelScreen({
     if (!currentRound) return;
 
     const startMs = new Date(
-      currentRound.started_at ?? currentRound.startedAt ?? Date.now()
+      currentRound.started_at ?? currentRound.startedAt ?? serverNow()
     ).getTime();
     const durationSeconds = currentRound.duration_seconds ?? currentRound.durationSeconds ?? 60;
     const endMs = startMs + durationSeconds * 1000;
@@ -223,17 +227,17 @@ export function DuelScreen({
     let timeoutDispatched = false;
 
     const tick = () => {
-      const remainingMs = endMs - Date.now();
+      const remainingMs = endMs - serverNow();
       const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
       setSecondsLeft(remainingSec);
 
-      if (remainingMs <= 0) {
-        if (!hasSubmittedRef.current && !timeoutDispatched) {
-          timeoutDispatched = true;
-          submitOnlineGuess(currentGuess);
-        } else if (hasSubmittedRef.current) {
-          advanceRound();
-        }
+      // O envio sai um pouco antes do fim: o palpite leva um tempo pra chegar e o
+      // servidor zera o que chega depois do prazo.
+      if (!hasSubmittedRef.current && !timeoutDispatched && remainingMs <= AUTO_SUBMIT_LEAD_MS) {
+        timeoutDispatched = true;
+        submitOnlineGuess(currentGuess);
+      } else if (hasSubmittedRef.current && remainingMs <= 0) {
+        advanceRound();
       }
     };
 
