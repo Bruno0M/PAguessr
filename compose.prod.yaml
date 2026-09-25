@@ -19,6 +19,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-paguessr}
       NODE_ENV: production
       ADMIN_NICKS: ${ADMIN_NICKS:-}
+      CHAMPIONSHIPS_MODE: ${CHAMPIONSHIPS_MODE:-off}
 
   web:
     expose:

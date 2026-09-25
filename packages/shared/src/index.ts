@@ -55,6 +55,41 @@ export function isValidNickFormat(nick: string): boolean {
 
 export const AVATAR_COUNT = 8;
 
-// Tempo por rodada no modo Ranqueado, compartilhado entre API (autoridade,
-// decide a pontuação) e front (só exibe a contagem regressiva).
+// Tempo por rodada no modo Ranqueado (padrão quando não houver duração específica).
 export const ROUND_DURATION_MS = 60_000;
+
+export function shuffle<T>(items: T[]): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+export const CHAMPIONSHIP_SIZES = [4, 8, 16, 32] as const;
+export type ChampionshipSize = (typeof CHAMPIONSHIP_SIZES)[number];
+
+export const ROUND_DURATION_MIN_SECONDS = 10;
+export const ROUND_DURATION_MAX_SECONDS = 300;
+export const ROUND_DURATION_DEFAULT_SECONDS = 60;
+
+export function phasesFor(size: number): number {
+  return Math.log2(size);
+}
+
+export const CHAMPIONSHIP_TITLE_MIN_LENGTH = 3;
+export const CHAMPIONSHIP_TITLE_MAX_LENGTH = 80;
+export const CHAMPIONSHIP_DESCRIPTION_MAX_LENGTH = 500;
+export const CHAMPIONSHIP_BANNER_URL_MAX_LENGTH = 500;
+export const CHAMPIONSHIP_ROUNDS_PER_MATCH_MIN = 1;
+export const CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX = 10;
+export const CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS = 60;
+export const CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS = 604800;
+
+// Contagem regressiva entre o "Iniciar" do admin e a abertura da fase 1: dá tempo de
+// todo mundo estar na sala de espera antes de o relógio das rodadas começar.
+export const LOBBY_COUNTDOWN_SECONDS = 60;
+
+export type ChampionshipStatus =
+  'inscricoes' | 'chaveado' | 'em_andamento' | 'finalizado' | 'cancelado';

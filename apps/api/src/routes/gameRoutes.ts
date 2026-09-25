@@ -1,6 +1,13 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
-import { haversine, score, ROUND_DURATION_MS, LatLng } from '@paguessr/shared';
+import {
+  haversine,
+  score,
+  shuffle,
+  ROUND_DURATION_MS,
+  ROUND_DURATION_DEFAULT_SECONDS,
+  LatLng,
+} from '@paguessr/shared';
 import { db } from '../db/index.js';
 import { games, locations, rounds, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
@@ -17,15 +24,6 @@ const IMAGE_FETCH_GRACE_MS = 10_000;
 
 function currentUserId(request: FastifyRequest): string {
   return request.authUser!.id;
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const shuffled = [...items];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 }
 
 // Evita repetir, na medida do possível, locais já vistos pelo jogador nas
@@ -67,7 +65,8 @@ async function pickLocationsForUser(userId: string, count: number): Promise<Loca
 // já começou, ainda não tem palpite, não passou do tempo e não esgotou o limite.
 async function reserveImageFetch(round: Round): Promise<boolean> {
   if (round.pontos !== null || round.started_at === null) return false;
-  if (Date.now() - round.started_at.getTime() > ROUND_DURATION_MS + IMAGE_FETCH_GRACE_MS) {
+  const durationMs = round.duration_seconds * 1000;
+  if (Date.now() - round.started_at.getTime() > durationMs + IMAGE_FETCH_GRACE_MS) {
     return false;
   }
   const [reserved] = await db
@@ -131,6 +130,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         location_id: selected[idx].id,
         ordem: idx + 1,
         streetview_mode: mode,
+        duration_seconds: ROUND_DURATION_DEFAULT_SECONDS,
       });
     }
 
@@ -148,6 +148,8 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         ordem: r.ordem,
         order: r.ordem,
         streetview_mode: r.streetview_mode,
+        duration_seconds: r.duration_seconds,
+        durationSeconds: r.duration_seconds,
         started_at: r.ordem === 1 ? firstRoundStartedAt : null,
         startedAt: r.ordem === 1 ? firstRoundStartedAt : null,
       })),
@@ -184,6 +186,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           distancia: rounds.distancia,
           pontos: rounds.pontos,
           started_at: rounds.started_at,
+          duration_seconds: rounds.duration_seconds,
           created_at: rounds.created_at,
           streetview_mode: rounds.streetview_mode,
           location_lat: locations.lat,
@@ -202,6 +205,8 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           ordem: r.ordem,
           order: r.ordem,
           streetview_mode: r.streetview_mode,
+          duration_seconds: r.duration_seconds,
+          durationSeconds: r.duration_seconds,
           guess_lat: r.guess_lat,
           guess_lng: r.guess_lng,
           guess:
@@ -437,7 +442,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       }
 
       const elapsedMs = Date.now() - round.started_at.getTime();
-      const isLate = elapsedMs > ROUND_DURATION_MS;
+      const isLate = elapsedMs > round.duration_seconds * 1000;
 
       let roundedDist: number | null = null;
       let roundScore = 0;

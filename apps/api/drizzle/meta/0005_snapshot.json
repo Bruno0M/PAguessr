@@ -1,9 +1,399 @@
 {
-  "id": "4d17985c-b16e-40b1-9123-5cecbeaa4435",
+  "id": "f2a3146b-15d6-4e41-a6f8-d05f80f19e17",
   "prevId": "d87886d3-6356-4c0c-bb01-73386e61d790",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.championship_matches": {
+      "name": "championship_matches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "championship_id": {
+          "name": "championship_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase": {
+          "name": "phase",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "player_a_id": {
+          "name": "player_a_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "player_b_id": {
+          "name": "player_b_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "game_a_id": {
+          "name": "game_a_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "game_b_id": {
+          "name": "game_b_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_a": {
+          "name": "score_a",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "score_b": {
+          "name": "score_b",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "winner_id": {
+          "name": "winner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "opens_at": {
+          "name": "opens_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "championship_matches_championship_id_championships_id_fk": {
+          "name": "championship_matches_championship_id_championships_id_fk",
+          "tableFrom": "championship_matches",
+          "tableTo": "championships",
+          "columnsFrom": [
+            "championship_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "championship_matches_player_a_id_users_id_fk": {
+          "name": "championship_matches_player_a_id_users_id_fk",
+          "tableFrom": "championship_matches",
+          "tableTo": "users",
+          "columnsFrom": [
+            "player_a_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "championship_matches_player_b_id_users_id_fk": {
+          "name": "championship_matches_player_b_id_users_id_fk",
+          "tableFrom": "championship_matches",
+          "tableTo": "users",
+          "columnsFrom": [
+            "player_b_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "championship_matches_game_a_id_games_id_fk": {
+          "name": "championship_matches_game_a_id_games_id_fk",
+          "tableFrom": "championship_matches",
+          "tableTo": "games",
+          "columnsFrom": [
+            "game_a_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "championship_matches_game_b_id_games_id_fk": {
+          "name": "championship_matches_game_b_id_games_id_fk",
+          "tableFrom": "championship_matches",
+          "tableTo": "games",
+          "columnsFrom": [
+            "game_b_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "championship_matches_winner_id_users_id_fk": {
+          "name": "championship_matches_winner_id_users_id_fk",
+          "tableFrom": "championship_matches",
+          "tableTo": "users",
+          "columnsFrom": [
+            "winner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "championship_matches_championship_id_phase_slot_unique": {
+          "name": "championship_matches_championship_id_phase_slot_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "championship_id",
+            "phase",
+            "slot"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.championship_participants": {
+      "name": "championship_participants",
+      "schema": "",
+      "columns": {
+        "championship_id": {
+          "name": "championship_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seed": {
+          "name": "seed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "eliminated_in_phase": {
+          "name": "eliminated_in_phase",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "championship_participants_championship_id_idx": {
+          "name": "championship_participants_championship_id_idx",
+          "columns": [
+            {
+              "expression": "championship_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "championship_participants_championship_id_championships_id_fk": {
+          "name": "championship_participants_championship_id_championships_id_fk",
+          "tableFrom": "championship_participants",
+          "tableTo": "championships",
+          "columnsFrom": [
+            "championship_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "championship_participants_user_id_users_id_fk": {
+          "name": "championship_participants_user_id_users_id_fk",
+          "tableFrom": "championship_participants",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "championship_participants_championship_id_user_id_pk": {
+          "name": "championship_participants_championship_id_user_id_pk",
+          "columns": [
+            "championship_id",
+            "user_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.championships": {
+      "name": "championships",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "banner_url": {
+          "name": "banner_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "max_participants": {
+          "name": "max_participants",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rounds_per_match": {
+          "name": "rounds_per_match",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "round_duration_seconds": {
+          "name": "round_duration_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 60
+        },
+        "phase_interval_seconds": {
+          "name": "phase_interval_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "seeded_at": {
+          "name": "seeded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "championships_created_by_users_id_fk": {
+          "name": "championships_created_by_users_id_fk",
+          "tableFrom": "championships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.games": {
       "name": "games",
       "schema": "",
@@ -20,6 +410,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "championship_match_id": {
+          "name": "championship_match_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "total_score": {
           "name": "total_score",
@@ -38,12 +434,6 @@
         "finished_at": {
           "name": "finished_at",
           "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "flagged_reason": {
-          "name": "flagged_reason",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
@@ -72,6 +462,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "games_championship_match_id_championship_matches_id_fk": {
+          "name": "games_championship_match_id_championship_matches_id_fk",
+          "tableFrom": "games",
+          "tableTo": "championship_matches",
+          "columnsFrom": [
+            "championship_match_id"
           ],
           "columnsTo": [
             "id"
@@ -209,6 +612,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'static'"
+        },
+        "duration_seconds": {
+          "name": "duration_seconds",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 60
         },
         "started_at": {
           "name": "started_at",

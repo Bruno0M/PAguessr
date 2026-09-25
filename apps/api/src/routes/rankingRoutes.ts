@@ -55,6 +55,7 @@ export const rankingRoutes: FastifyPluginAsync = async (app: FastifyInstance) =>
           and(
             isNotNull(games.finished_at),
             isNull(games.flagged_reason),
+            isNull(games.championship_match_id),
             period === 'semana' ? gte(games.finished_at, getWeekStartBRT()) : undefined
           )
         )

@@ -34,6 +34,7 @@ services:
       STREETVIEW_PANORAMA_ENABLED: ${STREETVIEW_PANORAMA_ENABLED:-false}
       STREETVIEW_PANORAMA_MONTHLY_BUDGET: ${STREETVIEW_PANORAMA_MONTHLY_BUDGET:-4500}
       ADMIN_NICKS: ${ADMIN_NICKS:-}
+      CHAMPIONSHIPS_MODE: ${CHAMPIONSHIPS_MODE:-public}
     depends_on:
       postgres:
         condition: service_healthy
