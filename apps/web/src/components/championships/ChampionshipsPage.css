@@ -210,8 +210,8 @@
 }
 
 .championship-badge-em_andamento {
-  background: #3ee3ad;
-  color: #062319;
+  background: var(--pa-cream);
+  color: var(--pa-ink);
 }
 
 .championship-badge-finalizado {
