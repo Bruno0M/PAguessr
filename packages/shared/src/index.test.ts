@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   AVATAR_COUNT,
+  CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS,
+  CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS,
   CHAMPIONSHIP_SIZES,
+  DUEL_REVEAL_SECONDS,
   LatLng,
+  LOBBY_COUNTDOWN_SECONDS,
   NICK_MAX_LENGTH,
   NICK_MIN_LENGTH,
   PAULO_AFONSO_CENTER,
@@ -128,6 +132,16 @@ describe('@paguessr/shared', () => {
       expect(ROUND_DURATION_DEFAULT_SECONDS).toBe(60);
       expect(ROUND_DURATION_MIN_SECONDS).toBe(10);
       expect(ROUND_DURATION_MAX_SECONDS).toBe(300);
+    });
+
+    it('intervalo entre fases aceita de 10 segundos a 7 dias', () => {
+      expect(CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS).toBe(10);
+      expect(CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS).toBe(604800);
+    });
+
+    it('contagem da sala e pausa entre rodadas do duelo', () => {
+      expect(LOBBY_COUNTDOWN_SECONDS).toBe(60);
+      expect(DUEL_REVEAL_SECONDS).toBe(5);
     });
   });
 });

@@ -229,7 +229,7 @@ describe('Championship Admin Routes Integration', () => {
       expect(res2.statusCode).toBe(400);
     });
 
-    it('recusa phase_interval_seconds fora de 60..604800', async () => {
+    it('recusa phase_interval_seconds fora de 10..604800', async () => {
       const res1 = await app.inject({
         method: 'POST',
         url: '/api/admin/championships',
@@ -238,7 +238,7 @@ describe('Championship Admin Routes Integration', () => {
           title: 'Intervalo Pequeno Demais',
           max_participants: 8,
           rounds_per_match: 5,
-          phase_interval_seconds: 59,
+          phase_interval_seconds: 9,
         },
       });
       expect(res1.statusCode).toBe(400);
@@ -255,6 +255,22 @@ describe('Championship Admin Routes Integration', () => {
         },
       });
       expect(res2.statusCode).toBe(400);
+    });
+
+    it('aceita phase_interval_seconds no novo mínimo (10s)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/admin/championships',
+        headers: { cookie: adminCookie },
+        payload: {
+          title: 'Intervalo Curto',
+          max_participants: 8,
+          rounds_per_match: 5,
+          phase_interval_seconds: 10,
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      expect(JSON.parse(res.body).phase_interval_seconds).toBe(10);
     });
   });
 
@@ -380,6 +396,80 @@ describe('Championship Admin Routes Integration', () => {
         },
       });
       expect(conflictRes.statusCode).toBe(409);
+    });
+
+    it('em "em_andamento": recusa mexer nos tempos (409) porque o relógio dos duelos já está rodando', async () => {
+      const [champ] = await db
+        .insert(championships)
+        .values({
+          title: 'Ja Started',
+          max_participants: 8,
+          rounds_per_match: 5,
+          round_duration_seconds: 60,
+          phase_interval_seconds: 3600,
+          status: 'em_andamento',
+          seeded_at: new Date(),
+          started_at: new Date(),
+          created_by: adminUserId,
+        })
+        .returning();
+
+      for (const payload of [
+        { phase_interval_seconds: 10 },
+        { round_duration_seconds: 15 },
+        { rounds_per_match: 3 },
+        { max_participants: 4 },
+      ]) {
+        const res = await app.inject({
+          method: 'PATCH',
+          url: `/api/admin/championships/${champ.id}`,
+          headers: { cookie: adminCookie },
+          payload,
+        });
+        expect(res.statusCode).toBe(409);
+      }
+
+      // A recusa não pode ir junto de nenhuma alteração: o estado fica intacto.
+      const [unchanged] = await db
+        .select()
+        .from(championships)
+        .where(eq(championships.id, champ.id));
+      expect(unchanged.phase_interval_seconds).toBe(3600);
+      expect(unchanged.round_duration_seconds).toBe(60);
+      expect(unchanged.rounds_per_match).toBe(5);
+      expect(unchanged.max_participants).toBe(8);
+
+      // Título continua editável.
+      const okRes = await app.inject({
+        method: 'PATCH',
+        url: `/api/admin/championships/${champ.id}`,
+        headers: { cookie: adminCookie },
+        payload: { title: 'Ja Started Renomeado' },
+      });
+      expect(okRes.statusCode).toBe(200);
+    });
+
+    it('com chave já sorteada (seeded_at) recusa config mesmo se o status ainda for "inscricoes" (409)', async () => {
+      const [champ] = await db
+        .insert(championships)
+        .values({
+          title: 'Sorteado Com Status Antigo',
+          max_participants: 8,
+          rounds_per_match: 5,
+          phase_interval_seconds: 3600,
+          status: 'inscricoes',
+          seeded_at: new Date(),
+          created_by: adminUserId,
+        })
+        .returning();
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/admin/championships/${champ.id}`,
+        headers: { cookie: adminCookie },
+        payload: { phase_interval_seconds: 10 },
+      });
+      expect(res.statusCode).toBe(409);
     });
 
     it('em "finalizado": recusa qualquer alteração (409)', async () => {

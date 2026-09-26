@@ -17,6 +17,7 @@ import { requireAuth, isAdminNick } from '../auth/session.js';
 import { isChampionshipsVisible, parseChampionshipsMode } from '../championship/featureFlag.js';
 import { createInitialBracket } from '../championship/bracket.js';
 import { advanceChampionship } from '../championship/advance.js';
+import { startChampionship } from '../championship/start.js';
 import { currentRoundOrder, isRoundClosed, plannedRoundStart } from '../championship/timeline.js';
 import { resolveStreetviewMode } from '../streetview.js';
 
@@ -356,13 +357,14 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
             }))
           );
 
-          await tx
-            .update(championships)
-            .set({
-              status: 'chaveado',
-              seeded_at: new Date(),
-            })
-            .where(eq(championships.id, id));
+          // Sortear e largar na mesma transação: quem lotou a vaga não precisa
+          // (e não consegue) esperar o admin apertar "Iniciar". A fase 1 fica
+          // abrindo depois da contagem da sala, e o helper `startChampionship`
+          // é o mesmo do `POST /admin/.../start`.
+          const now = new Date();
+          await tx.update(championships).set({ seeded_at: now }).where(eq(championships.id, id));
+
+          await startChampionship(tx, id, now);
 
           seeded = true;
         }
@@ -377,7 +379,7 @@ export const championshipRoutes: FastifyPluginAsync = async (app: FastifyInstanc
       return reply.send({
         success: true,
         seeded: result.seeded,
-        status: result.seeded ? 'chaveado' : 'inscricoes',
+        status: result.seeded ? 'em_andamento' : 'inscricoes',
       });
     }
   );
