@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import {
   CHAMPIONSHIP_SIZES,
   ROUND_DURATION_MIN_SECONDS,
@@ -13,7 +13,6 @@ import {
   CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX,
   CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS,
   CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS,
-  LOBBY_COUNTDOWN_SECONDS,
   type ChampionshipSize,
 } from '@paguessr/shared';
 import { db } from '../db/index.js';
@@ -21,6 +20,7 @@ import { championships, championshipParticipants, championshipMatches } from '..
 import { requireAdmin } from '../auth/session.js';
 import { parseChampionshipsMode } from '../championship/featureFlag.js';
 import { advanceChampionship } from '../championship/advance.js';
+import { startChampionship } from '../championship/start.js';
 
 interface CreateChampionshipBody {
   title: string;
@@ -226,17 +226,25 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
         });
       }
 
-      if (champ.status === 'chaveado' || champ.status === 'em_andamento') {
-        if (
-          body.rounds_per_match !== undefined ||
+      // A configuração de partida deixa de ser editável assim que a chave é
+      // sorteada, porque dela sai o relógio de todos os duelos: mudar a duração
+      // ou o intervalo reescreve no passado a hora de abrir e de fechar
+      // confrontos que já estão rolando. O sinal é `seeded_at` (e não o
+      // status) para não depender do estado exato: `chaveado`, `em_andamento` e
+      // qualquer estado futuro caem todos aqui.
+      const bracketDrawn = champ.seeded_at !== null || champ.status !== 'inscricoes';
+      if (
+        bracketDrawn &&
+        (body.rounds_per_match !== undefined ||
           body.round_duration_seconds !== undefined ||
           body.phase_interval_seconds !== undefined ||
-          body.max_participants !== undefined
-        ) {
-          return reply.status(409).send({
-            error: 'Configurações de partida não podem ser alteradas após o sorteio das chaves.',
-          });
-        }
+          body.max_participants !== undefined)
+      ) {
+        return reply.status(409).send({
+          error:
+            'Configurações de partida não podem ser alteradas após o sorteio das chaves: ' +
+            'duração e intervalo são o relógio dos duelos e mudá-los agora reabriria a contagem de confrontos em andamento.',
+        });
       }
 
       if (champ.status === 'inscricoes' && body.max_participants !== undefined) {
@@ -309,26 +317,9 @@ export const championshipAdminRoutes: FastifyPluginAsync = async (app: FastifyIn
       });
     }
 
-    // `started_at` é a hora do clique; a fase 1 só abre depois da contagem da sala.
-    const now = new Date();
-    const phase1OpensAt = new Date(now.getTime() + LOBBY_COUNTDOWN_SECONDS * 1000);
-    const [updated] = await db.transaction(async (tx) => {
-      const [u] = await tx
-        .update(championships)
-        .set({
-          status: 'em_andamento',
-          started_at: now,
-        })
-        .where(eq(championships.id, id))
-        .returning();
-
-      await tx
-        .update(championshipMatches)
-        .set({ opens_at: phase1OpensAt })
-        .where(and(eq(championshipMatches.championship_id, id), eq(championshipMatches.phase, 1)));
-
-      return [u];
-    });
+    // A chave já larga sozinha; este endpoint existe para o campeonato antigo
+    // que ficou parado em `chaveado` (sorteado antes da largada automática).
+    const updated = await db.transaction(async (tx) => startChampionship(tx, id));
 
     return reply.send(updated);
   });

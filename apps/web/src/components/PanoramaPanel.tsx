@@ -34,14 +34,22 @@ export function PanoramaPanel({
 
     let cancelled = false;
     let listener: google.maps.MapsEventListener | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     async function setupPanorama() {
       try {
+        timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            setLoadState('error');
+          }
+        }, 8000);
+
         const [panoData, config] = await Promise.all([getRoundPanorama(roundId!), getAppConfig()]);
 
         if (cancelled) return;
 
         if (!config.googleMapsBrowserKey) {
+          if (timeoutId) clearTimeout(timeoutId);
           setFallbackToImage(true);
           return;
         }
@@ -66,17 +74,21 @@ export function PanoramaPanel({
           if (cancelled) return;
           const status = panorama.getStatus();
           if (status === google.maps.StreetViewStatus.OK) {
+            if (timeoutId) clearTimeout(timeoutId);
             setLoadState('loaded');
           } else {
+            if (timeoutId) clearTimeout(timeoutId);
             setFallbackToImage(true);
           }
         });
 
         if (panorama.getStatus() === google.maps.StreetViewStatus.OK) {
+          if (timeoutId) clearTimeout(timeoutId);
           setLoadState('loaded');
         }
       } catch {
         if (!cancelled) {
+          if (timeoutId) clearTimeout(timeoutId);
           setFallbackToImage(true);
         }
       }
@@ -86,6 +98,7 @@ export function PanoramaPanel({
 
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
       if (listener) {
         google.maps.event.removeListener(listener);
       }

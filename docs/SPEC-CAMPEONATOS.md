@@ -1,7 +1,7 @@
 # Spec: Campeonatos
 
 Torneios mata-mata 1v1 dentro do PAguessr. O admin cria o campeonato, jogadores se
-inscrevem, o chaveamento é sorteado ao lotar e o admin dá a largada.
+inscrevem e, ao lotar, o chaveamento é sorteado **e a partida começa na hora**.
 
 Registrado em 2026-09-17. Complementa [DECISIONS.md](DECISIONS.md).
 
@@ -12,7 +12,7 @@ Registrado em 2026-09-17. Complementa [DECISIONS.md](DECISIONS.md).
 | Formato                   | Mata-mata de eliminatória simples, 1v1. Sem repescagem.                                       |
 | Vagas                     | Só potências de 2: **4, 8, 16 ou 32**. Chave perfeita, sem bye.                               |
 | "Quantidade de rodadas"   | Quantos **locais** cada duelo tem (igual às 5 do Ranqueado).                                  |
-| "Tempo entre cada rodada" | Intervalo entre **fases** do chaveamento (ex.: 24 h da fase 1 para a semi).                   |
+| "Tempo entre cada rodada" | Intervalo entre **fases** do chaveamento (ex.: 24 h da fase 1 para a semi). Mínimo de 10 s.   |
 | Duelo                     | **Ao vivo, simultâneo**: os dois adversários jogam os mesmos locais no mesmo relógio.         |
 | Tempo por local           | **Configurável por campeonato**, 10 a 300 s. Padrão 60 s, o `ROUND_DURATION_MS` do Ranqueado. |
 
@@ -57,7 +57,7 @@ O que sobra para "ver o adversário ao vivo" (placar parcial, se ele já respond
 enfeite, e vem de **polling** de ~3 s num endpoint leve. Se o polling falhar, o duelo
 continua correto: o servidor é a fonte da verdade do relógio e da pontuação.
 
-O "Iniciar" do admin não abre o relógio na hora: a fase 1 abre 60 s depois
+A fase 1 não abre o relógio na hora: ela abre 60 s depois da largada
 (`LOBBY_COUNTDOWN_SECONDS`). A sala de espera (§7.3) mostra essa contagem, inclusive no
 título da aba, e leva a pessoa para o duelo quando ela zera. Nas fases seguintes a sala
 mostra a contagem até o `opens_at` (intervalo entre fases).
@@ -86,7 +86,7 @@ Migration nova: `0005_championships.sql`. Três tabelas novas e uma coluna em `g
 | `created_by`             | `uuid` not null → `users.id` |                                   |
 | `created_at`             | `timestamptz` not null       | `defaultNow()`                    |
 | `seeded_at`              | `timestamptz`                | quando o chaveamento foi sorteado |
-| `started_at`             | `timestamptz`                | quando o admin deu a largada      |
+| `started_at`             | `timestamptz`                | largada (no sorteio, ver §3.1)    |
 | `finished_at`            | `timestamptz`                |                                   |
 
 ### 2.2. `championship_participants`
@@ -160,15 +160,20 @@ O Ranqueado continua gravando 60 s e nada muda para ele. A constante segue em `s
 ### 2.6. Estados do campeonato
 
 ```
-inscricoes ──(lotou)──> chaveado ──(admin inicia)──> em_andamento ──> finalizado
-     │                      │                             │
-     └──────────────────────┴─────────────────────────────┴──> cancelado (admin exclui)
+inscricoes ──(lotou)──> em_andamento ──(final resolvida)──> finalizado
+     │                        │                                 │
+     └────────────────────────┴─────────────────────────────────┴──> cancelado (admin exclui)
 ```
 
 - `inscricoes`: aceita entradas. Admin pode editar tudo.
-- `chaveado`: lotou, chave sorteada e visível. **Não começou.** Participantes veem a tela de espera.
-- `em_andamento`: fase 1 aberta. Duelos rolando.
-- `finalizado`: a final foi resolvida. `winner_id` da última fase é o campeão.
+- `em_andamento`: chave sorteada e campeonato **já largado** (§3.1). A fase 1 abre 60 s
+  depois, para todo mundo chegar na sala. Duelos rolando.
+- `finalizado`: a final foi resolvida. `winner_id` da última fase é o campeão — e pode ser
+  **nulo**, se ninguém jogou a final (§3.3).
+
+`chaveado` continua existindo no tipo só para o campeonato **antigo**, sorteado antes da
+largada automática: ele fica parado nesse estado até o admin apertar "Iniciar"
+(`POST /api/admin/championships/:id/start`). Nada mais produz esse estado.
 
 ## 3. Chaveamento
 
@@ -181,7 +186,12 @@ entrando ao mesmo tempo na última vaga.
 1. Embaralha os participantes (mesmo `shuffle` de `gameRoutes.ts`, vale extrair para `shared`).
 2. Grava `seed` = 0..N-1 na ordem embaralhada.
 3. Cria **todos** os confrontos de **todas** as fases de uma vez, inclusive os vazios.
-4. `status = 'chaveado'`, `seeded_at = now()`.
+4. `seeded_at = now()` e **larga na mesma transação**: `status = 'em_andamento'`,
+   `started_at = now()` e `opens_at` da fase 1 = `now() + LOBBY_COUNTDOWN_SECONDS` (§1.1).
+
+O passo 4 é o mesmo código do `POST /api/admin/championships/:id/start`
+(`championship/start.ts`), chamado dentro da transação do sorteio: quem lotou a vaga não
+precisa — e não consegue — esperar o admin. Nadie chega a ver o campeonato parado.
 
 Criar as fases futuras vazias desde já deixa a tela de chave trivial de renderizar (a
 estrutura é fixa) e dá um destino determinístico para o vencedor.
@@ -205,8 +215,19 @@ Maior soma de pontos das `rounds_per_match` rodadas. Empate resolve nesta ordem:
 2. quem enviou o último palpite mais cedo;
 3. menor `seed` (determinístico, nunca sorteia de novo).
 
-**Ausência (W.O.):** quem não palpitar em nenhuma rodada fica com 0 e perde. Se os **dois**
-faltarem, avança o de menor `seed` — a chave nunca trava por ausência.
+**Ausência (W.O.):** quem não palpitar em nenhuma rodada fica com 0 e perde. Se só um
+faltar, o que jogou leva o confronto por 1 a 0.
+
+**Ninguém joga, ninguém ganha.** Se os **dois** faltarem, o confronto é resolvido com
+`winner_id = null`, ninguém é eliminado e ninguém é promovido. A chave não trava, mas
+também não inventa campeão: sem palpite de verdade, um 0 a 0 não pode virar vitória de
+ninguém. Em particular, um campeonato em que o relógio estourou com todo mundo em 0 ponto
+(termina sem campeão) é o resultado honesto, e o ranking não coroa ninguém. Isso substitui
+a regra antiga de "avança o de menor `seed`", que consagrava um campeão que nem entrou em
+campo.
+
+"Palpitou" significa ter enviado coordenada em alguma rodada. Quem entra no duelo e só
+deixa o cronômetro zerar (timeout em todas as rodadas) conta como ausente.
 
 ## 4. Progressão das fases sem agendador
 
@@ -232,7 +253,9 @@ tempo de jogo por causa disso, porque o relógio do duelo vem de `opens_at`, nã
 instante da consolidação.
 
 Escape hatch: `POST /api/admin/championships/:id/advance` força a avaliação. Útil para
-destravar na mão e para testar.
+destravar na mão e para testar. Ele não pula a fase que ainda não abriu (a fase seguinte só
+abre depois do `phase_interval_seconds`) e, com a trava do §3.3, não consegue coroa quem
+não jogou.
 
 ## 5. API
 
@@ -286,14 +309,14 @@ rodada é decidido pelo servidor.
 
 ### 5.2. Admin
 
-| Método   | Rota                                   | Descrição                                                        |
-| -------- | -------------------------------------- | ---------------------------------------------------------------- |
-| `GET`    | `/api/admin/championships`             | Lista com contadores.                                            |
-| `POST`   | `/api/admin/championships`             | Cria.                                                            |
-| `PATCH`  | `/api/admin/championships/:id`         | Edita (§5.3).                                                    |
-| `DELETE` | `/api/admin/championships/:id`         | Exclui (cascade).                                                |
-| `POST`   | `/api/admin/championships/:id/start`   | Largada. Só de `chaveado`. Fase 1 abre em `now() + 60 s` (§1.1). |
-| `POST`   | `/api/admin/championships/:id/advance` | Força a avaliação de avanço.                                     |
+| Método   | Rota                                   | Descrição                                            |
+| -------- | -------------------------------------- | ---------------------------------------------------- |
+| `GET`    | `/api/admin/championships`             | Lista com contadores.                                |
+| `POST`   | `/api/admin/championships`             | Cria.                                                |
+| `PATCH`  | `/api/admin/championships/:id`         | Edita (§5.3).                                        |
+| `DELETE` | `/api/admin/championships/:id`         | Exclui (cascade).                                    |
+| `POST`   | `/api/admin/championships/:id/start`   | Largada. Só de `chaveado` (campeonato antigo, §2.6). |
+| `POST`   | `/api/admin/championships/:id/advance` | Força a avaliação de avanço.                         |
 
 ### 5.3. O que dá para editar, e quando
 
@@ -304,7 +327,10 @@ rodada é decidido pelo servidor.
 | `max_participants`                                                     | ✅, desde que ≥ inscritos | ❌                          | ❌           |
 
 Mudar `max_participants` depois do sorteio significaria refazer a chave com gente já
-eliminada — a API recusa com 409.
+eliminada — a API recusa com 409. Os tempos recusam pelo mesmo motivo, e mais um: eles são
+o relógio dos duelos (§1.1), então mudá-los com confronto em andamento reescreveria no
+passado a hora de abrir e de fechar rodadas que já estão rolando. A trava é o
+`seeded_at`, não o `status` — assim ela não depende do estado exato da linha.
 
 `DELETE` funciona em qualquer estado (cascade em participantes, confrontos e partidas),
 mas a UI exige confirmação digitando o título quando o campeonato não está em `inscricoes`.
@@ -318,7 +344,7 @@ banner_url              http(s), até 500, opcional
 max_participants        ∈ {4, 8, 16, 32}
 rounds_per_match        1..10
 round_duration_seconds  10..300     (default 60)
-phase_interval_seconds  60..604800  (1 min a 7 dias)
+phase_interval_seconds  10..604800  (10 s a 7 dias)
 ```
 
 Constantes em `packages/shared` (`CHAMPIONSHIP_SIZES`, `ROUND_DURATION_MIN_SECONDS`,
@@ -360,8 +386,8 @@ Cards com banner (ou fundo padrão quando não houver), título, selo de status 
 (`5/8`). Ação por estado:
 
 - `inscricoes` → **Entrar**; se já inscrito, **Abrir sala** (com **Sair**, menor, ao lado);
-- `chaveado` → **Abrir sala**, se inscrito, ou **Ver chave**;
-- `em_andamento` → **Abrir sala**, se inscrito, ou **Acompanhar**;
+- `em_andamento` → **Abrir sala**, se inscrito, ou **Acompanhar** (é o estado normal: o
+  campeonato já começa junto com o sorteio, §3.1);
 - `finalizado` → **Ver resultado**, com o campeão no card.
 
 Depois de **Entrar** a pessoa cai direto na sala de espera (§7.3).
@@ -377,7 +403,8 @@ confronto fica destacado.
 Estados do meu ponto de vista:
 
 - não inscrito, tem vaga → botão Entrar;
-- inscrito, `chaveado` → **tela de espera**: meu adversário, e "aguardando o admin iniciar";
+- inscrito, `em_andamento` com a fase 1 ainda fechada → "chave sorteada, seu primeiro duelo
+  abre às HH:MM" (a contagem da sala, §1.1);
 - `em_andamento`, minha fase aberta → contagem para a rodada e botão Jogar;
 - `em_andamento`, fase futura → "próxima fase abre em HH:MM";
 - eliminado → "eliminado na fase X", chave continua acessível.
@@ -394,10 +421,10 @@ O estado da sala é derivado do `GET /api/championships/:id`, que a sala consult
 (1 s quando faltam 15 s ou menos para o `opens_at`):
 
 - `inscricoes`: as vagas em grade, enchendo ao vivo; **Ver chave** e **Sair do campeonato**;
-- `chaveado`: o meu confronto (eu × adversário, com o seed de cada um) e "aguardando a
-  largada"; **sorteio**: se a sala estava aberta quando a chave saiu, uma animação de cerca
-  de 1,2 s troca os avatares de lugar e depois os dois cartões entram pelos lados (vai direto
-  ao estado final com "reduzir movimento");
+- **sorteio**: se a sala estava aberta quando a chave saiu, uma animação de cerca de 1,2 s
+  troca os avatares de lugar e depois os dois cartões entram pelos lados (vai direto ao
+  estado final com "reduzir movimento"). A sala já entra no estado seguinte, de contagem
+  regressiva, sem esperar ninguém;
 - `em_andamento`, confronto com `opens_at` no futuro: contagem regressiva (`m:ss` abaixo de
   1 h, `h:mm:ss` abaixo de 24 h, "abre dd/mm às HH:MM" acima disso), com pulso e dígitos
   maiores nos últimos 10 s;
@@ -463,13 +490,15 @@ no esquema manual de `pushState` do `App.tsx` — sem adicionar router:
 
 - `/admin` → redireciona para `/admin/locais`
 - `/admin/locais` → página atual
-- `/admin/campeonatos` → lista + criar/editar/excluir/iniciar
+- `/admin/campeonatos` → lista + criar/editar/excluir
 
 `App.tsx` hoje compara `currentPath === '/admin'`; passa a casar por prefixo.
 
 A tela de campeonatos do admin é uma tabela (título, status, vagas, fase atual) com as
 ações por linha e um formulário de criação/edição em `<dialog>`, no mesmo padrão dos
-diálogos já existentes. O botão **Iniciar** só habilita em `chaveado`.
+diálogos já existentes. Não há botão **Iniciar**: a largada é o sorteio (§3.1). O
+`POST .../start` continua existindo só para o campeonato antigo que ficou preso em
+`chaveado` (§2.6), e a UI mostra esse botão apenas nesses casos.
 
 ## 8. Plano de implementação
 

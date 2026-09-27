@@ -356,13 +356,23 @@ export function ChampionshipDetailPage({
           );
         }
 
+        // Fase 1 com o relógio ainda parado é a contagem da sala logo depois do
+        // sorteio (a chave já largou junto); das outras em diante é a espera pelo
+        // intervalo entre fases.
+        const isOpeningCountdown = match.phase === 1;
+
         return (
           <div className="game-card championship-status-card is-waiting">
             <div className="status-card-content">
               <span className="status-badge-inline">
-                <FontAwesomeIcon icon={faClock} aria-hidden="true" /> Aguardando fase
+                <FontAwesomeIcon icon={faClock} aria-hidden="true" />{' '}
+                {isOpeningCountdown ? 'Chave sorteada' : 'Aguardando fase'}
               </span>
-              <h3>Próxima fase abre às {formatDateTime(opensAt)}</h3>
+              <h3>
+                {isOpeningCountdown
+                  ? `Seu primeiro duelo abre às ${formatDateTime(opensAt)}`
+                  : `Próxima fase abre às ${formatDateTime(opensAt)}`}
+              </h3>
               <p>Prepare-se para o seu confronto na {getPhaseName(match.phase, totalPhases)}.</p>
             </div>
             {lobbyButton('game-cta status-card-cta')}
