@@ -54,7 +54,7 @@ export function App() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [authUser, setAuthUser] = useState<PublicUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [features, setFeatures] = useState<Features>({ championships: false });
+  const [features, setFeatures] = useState<Features | null>(null);
   const [authView, setAuthView] = useState<AuthView>('login');
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export function App() {
 
   useEffect(() => {
     let active = true;
-    setFeatures({ championships: false });
+    setFeatures(null);
     getFeatures().then((data) => {
       if (active) setFeatures(data);
     });
@@ -95,12 +95,12 @@ export function App() {
   }, [authUser]);
 
   useEffect(() => {
-    if (!features.championships) {
+    if (features !== null && !features.championships) {
       if (currentPath === '/campeonatos' || currentPath.startsWith('/campeonatos/')) {
         navigate('/');
       }
     }
-  }, [features.championships, currentPath, navigate]);
+  }, [features, currentPath, navigate]);
 
   const [fraudNotice, setFraudNotice] = useState<FraudNoticePendingResponse | null>(null);
   const wasInGameRef = useRef(false);
@@ -581,7 +581,7 @@ export function App() {
           onLogout={handleLogout}
           onUnauthorized={() => setAuthUser(null)}
           onGoHome={() => navigate('/')}
-          championships={features.championships}
+          championships={features?.championships ?? false}
         />
         {fraudModal}
       </>
@@ -590,6 +590,8 @@ export function App() {
 
   if (gameState === 'home') {
     let homeContent: React.ReactNode = null;
+    const isChampionshipRoute =
+      currentPath === '/campeonatos' || currentPath.startsWith('/campeonatos/');
     if (showRanking) {
       homeContent = (
         <Suspense
@@ -609,7 +611,13 @@ export function App() {
           />
         </Suspense>
       );
-    } else if (features.championships) {
+    } else if (features === null && isChampionshipRoute) {
+      homeContent = (
+        <div className="status-screen">
+          <div className="spinner large"></div>
+        </div>
+      );
+    } else if (features?.championships) {
       const duelMatch = currentPath.match(/^\/campeonatos\/([^/]+)\/(?:duelo|matches)\/([^/]+)$/);
       if (duelMatch) {
         const [, champId, matchId] = duelMatch;
@@ -669,7 +677,7 @@ export function App() {
       homeContent = (
         <HomeScreen
           user={authUser}
-          championships={features.championships}
+          championships={features?.championships ?? false}
           onLogout={handleLogout}
           onStartRanked={() => startNewGame(false, 'home')}
           onOpenRanking={() => setShowRanking(true)}
