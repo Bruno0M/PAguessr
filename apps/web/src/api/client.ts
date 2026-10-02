@@ -1,5 +1,14 @@
 import type { LatLng, StreetviewMode } from '@paguessr/shared';
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 export interface ApiRoundInitial {
   id: string | number;
   order?: number;
@@ -103,7 +112,13 @@ export async function submitGuess(
   });
 
   if (!res.ok) {
-    throw new Error(`Falha ao registrar palpite (${res.status} ${res.statusText})`);
+    if (res.status === 409) {
+      throw new ApiError('Este palpite já foi registrado.', 409);
+    }
+    if (res.status === 401) {
+      throw new ApiError('Sua sessão expirou.', 401);
+    }
+    throw new ApiError('Não foi possível enviar o palpite. Tente de novo.', res.status);
   }
 
   return res.json();
@@ -113,7 +128,10 @@ export async function getGameSummary(gameId: string): Promise<ApiGameSummary> {
   const res = await fetch(`/api/games/${gameId}`);
 
   if (!res.ok) {
-    throw new Error(`Falha ao obter resultado da partida (${res.status} ${res.statusText})`);
+    if (res.status === 401) {
+      throw new ApiError('Sua sessão expirou.', 401);
+    }
+    throw new ApiError('Não foi possível obter o resultado da partida.', res.status);
   }
 
   return res.json();
@@ -156,15 +174,6 @@ export async function getRoundPanorama(roundId: string | number): Promise<ApiRou
     throw new Error(`Falha ao obter panorama da rodada (${res.status} ${res.statusText})`);
   }
   return res.json();
-}
-
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
 }
 
 export interface AdminLocation {

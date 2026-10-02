@@ -8,15 +8,17 @@ export function LoginScreen({
   onGoToRegister,
   onGoToRecover,
   onGoToTitle,
+  initialNotice,
 }: {
   onSuccess: (user: PublicUser) => void;
   onGoToRegister: () => void;
   onGoToRecover: () => void;
   onGoToTitle: () => void;
+  initialNotice?: string | null;
 }) {
   const [nick, setNick] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialNotice ?? null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
