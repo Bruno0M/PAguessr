@@ -11,7 +11,14 @@ import { haversine, score, PAULO_AFONSO_CENTER, ROUND_DURATION_MS } from '@pague
 import type { LatLng } from '@paguessr/shared';
 import { MOCK_LOCATIONS } from './data/mockLocations';
 import type { GameState, RoundResult, RoundData } from './types';
-import { createGame, submitGuess, getGameSummary, type ApiRoundInitial } from './api/client';
+import {
+  createGame,
+  submitGuess,
+  getGameSummary,
+  ApiError,
+  type ApiRoundInitial,
+  type ApiRoundSummary,
+} from './api/client';
 import { me, logout, type PublicUser } from './api/auth';
 import { getRanking } from './api/ranking';
 import { getFeatures, type Features } from './api/features';
@@ -50,6 +57,7 @@ export function App() {
   const [features, setFeatures] = useState<Features>({ championships: false });
   const [authView, setAuthView] = useState<AuthView>('login');
   const [pendingRecoveryCode, setPendingRecoveryCode] = useState<string | null>(null);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname);
@@ -136,6 +144,7 @@ export function App() {
     setShowRanking(false);
     setShowTitle(true);
     setFraudNotice(null);
+    setSessionExpiredMessage(null);
     returnHome();
   }, [returnHome]);
 
@@ -150,7 +159,11 @@ export function App() {
   const [results, setResults] = useState<RoundResult[]>([]);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [submittingError, setSubmittingError] = useState<string | null>(null);
+  type SubmitIssue =
+    | { kind: 'dismissible'; message: string }
+    | { kind: 'retryable'; message: string; guess: LatLng | null };
+  const [submitIssue, setSubmitIssue] = useState<SubmitIssue | null>(null);
+  const autoSubmittedRoundsRef = useRef<Set<string | number>>(new Set());
 
   useEffect(() => {
     if (gameState !== 'home' && gameState !== 'loading' && gameState !== 'error') {
@@ -176,10 +189,11 @@ export function App() {
     const version = ++sessionVersion.current;
     setGameState('loading');
     setErrorMessage(null);
-    setSubmittingError(null);
+    setSubmitIssue(null);
     setCurrentGuess(null);
     setResults([]);
     setCurrentRoundIndex(0);
+    autoSubmittedRoundsRef.current = new Set();
     track('game_start', { mode: forceMock ? 'offline' : 'ranked', source });
 
     if (forceMock) {
@@ -240,68 +254,147 @@ export function App() {
 
   const handleSelectGuess = (coords: LatLng) => {
     if (gameState !== 'guessing') return;
-    setSubmittingError(null);
+    setSubmitIssue(null);
     setCurrentGuess(coords);
   };
 
   const submitOnlineGuess = useCallback(
-    async (guess: LatLng | null) => {
+    async (guess: LatLng | null, options?: { isAutoSubmit?: boolean }) => {
       if (!currentRound) return;
       const version = sessionVersion.current;
+      const isAutoSubmit = options?.isAutoSubmit ?? false;
+      const roundId = currentRound.id;
+      const roundNumber = currentRoundIndex + 1;
+
+      const applyRoundTiming = (timing: {
+        id: string | number;
+        startedAt?: string | null;
+        started_at?: string | null;
+        streetview_mode?: typeof currentRound.streetview_mode;
+        duration_seconds?: number;
+        durationSeconds?: number;
+      }) => {
+        const startedAt = timing.startedAt ?? timing.started_at ?? null;
+        const duration = timing.duration_seconds ?? timing.durationSeconds;
+        setRounds((prev) =>
+          prev.map((r) =>
+            String(r.id) === String(timing.id)
+              ? {
+                  ...r,
+                  startedAt,
+                  ...(timing.streetview_mode ? { streetview_mode: timing.streetview_mode } : {}),
+                  ...(duration !== undefined ? { durationSeconds: duration } : {}),
+                }
+              : r
+          )
+        );
+      };
+
+      // O servidor já tinha o palpite (reenvio automático que chegou depois de
+      // outro que já tinha sido aceito): busca o resumo pra montar o resultado
+      // real em vez de travar a tela em "Enviando palpite...".
+      const resolveConflict = async () => {
+        if (!gameId) {
+          setGameState('round_result');
+          return;
+        }
+        try {
+          const summary = await getGameSummary(gameId);
+          if (version !== sessionVersion.current) return;
+          const summaryRound = summary.rounds.find((r) => String(r.id) === String(roundId));
+          if (!summaryRound) {
+            setGameState('round_result');
+            return;
+          }
+          const newResult: RoundResult = {
+            roundNumber,
+            location: {
+              lat: summaryRound.location?.lat ?? 0,
+              lng: summaryRound.location?.lng ?? 0,
+              name: summaryRound.location?.name,
+              description: summaryRound.location?.description,
+            },
+            guess: summaryRound.guess ?? null,
+            distanceMeters: summaryRound.distance ?? summaryRound.distanceMeters ?? null,
+            score: summaryRound.points ?? summaryRound.score ?? 0,
+          };
+          setResults((prev) => [...prev, newResult]);
+          summary.rounds.forEach((r: ApiRoundSummary) => applyRoundTiming(r));
+          setGameState('round_result');
+        } catch {
+          setGameState('round_result');
+        }
+      };
 
       setGameState('submitting');
-      setSubmittingError(null);
+      setSubmitIssue(null);
 
-      try {
-        const res = await submitGuess(currentRound.id, guess);
-        if (version !== sessionVersion.current) return;
-        const distanceMeters = res.distance ?? res.distanceMeters ?? null;
-        const roundScore = res.points ?? res.score ?? 0;
+      const backoffMs = [1000, 2000, 4000];
 
-        const newResult: RoundResult = {
-          roundNumber: currentRoundIndex + 1,
-          location: {
-            lat: res.location.lat,
-            lng: res.location.lng,
-            name: res.location.name,
-            description: res.location.description,
-          },
-          guess,
-          distanceMeters,
-          score: roundScore,
-        };
+      const attempt = async (retryIndex: number): Promise<void> => {
+        try {
+          const res = await submitGuess(roundId, guess);
+          if (version !== sessionVersion.current) return;
+          const distanceMeters = res.distance ?? res.distanceMeters ?? null;
+          const roundScore = res.points ?? res.score ?? 0;
 
-        setResults((prev) => [...prev, newResult]);
+          const newResult: RoundResult = {
+            roundNumber,
+            location: {
+              lat: res.location.lat,
+              lng: res.location.lng,
+              name: res.location.name,
+              description: res.location.description,
+            },
+            guess,
+            distanceMeters,
+            score: roundScore,
+          };
 
-        const nextRound = res.nextRound;
-        if (nextRound) {
-          const nextStartedAt = nextRound.startedAt ?? nextRound.started_at ?? null;
-          const nextDuration = nextRound.duration_seconds ?? nextRound.durationSeconds;
-          setRounds((prev) =>
-            prev.map((r) =>
-              r.id === nextRound.id
-                ? {
-                    ...r,
-                    startedAt: nextStartedAt,
-                    ...(nextRound.streetview_mode
-                      ? { streetview_mode: nextRound.streetview_mode }
-                      : {}),
-                    ...(nextDuration !== undefined ? { durationSeconds: nextDuration } : {}),
-                  }
-                : r
-            )
+          setResults((prev) => [...prev, newResult]);
+
+          if (res.nextRound) {
+            applyRoundTiming(res.nextRound);
+          }
+
+          setGameState('round_result');
+        } catch (err: unknown) {
+          if (version !== sessionVersion.current) return;
+
+          if (err instanceof ApiError && err.status === 409) {
+            await resolveConflict();
+            return;
+          }
+
+          if (err instanceof ApiError && err.status === 401) {
+            setAuthUser(null);
+            setGameState('home');
+            setSessionExpiredMessage('Sua sessão expirou. Entre novamente para continuar.');
+            return;
+          }
+
+          const isServerOrNetworkError = !(err instanceof ApiError) || err.status >= 500;
+
+          if (isAutoSubmit && isServerOrNetworkError && retryIndex < backoffMs.length) {
+            await new Promise((resolve) => setTimeout(resolve, backoffMs[retryIndex]));
+            if (version !== sessionVersion.current) return;
+            await attempt(retryIndex + 1);
+            return;
+          }
+
+          const msg = err instanceof Error ? err.message : 'Erro ao enviar palpite.';
+          setSubmitIssue(
+            isServerOrNetworkError
+              ? { kind: 'retryable', message: msg, guess }
+              : { kind: 'dismissible', message: msg }
           );
+          setGameState('guessing');
         }
+      };
 
-        setGameState('round_result');
-      } catch (err: unknown) {
-        if (version !== sessionVersion.current) return;
-        const msg = err instanceof Error ? err.message : 'Erro ao enviar palpite.';
-        setSubmittingError(msg);
-        setGameState('guessing');
-      }
+      await attempt(0);
     },
-    [currentRound, currentRoundIndex]
+    [currentRound, currentRoundIndex, gameId]
   );
 
   const handleConfirmGuess = async () => {
@@ -352,15 +445,15 @@ export function App() {
       typeof durationSeconds === 'number' ? durationSeconds * 1000 : ROUND_DURATION_MS;
 
     const deadline = new Date(currentRound.startedAt).getTime() + durationMs;
-    let timeoutFired = false;
+    const roundId = currentRound.id;
 
     const tick = () => {
       const remainingMs = deadline - Date.now();
       setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
-      if (remainingMs <= 0 && !timeoutFired) {
-        timeoutFired = true;
+      if (remainingMs <= 0 && !autoSubmittedRoundsRef.current.has(roundId)) {
+        autoSubmittedRoundsRef.current.add(roundId);
         track('guess_timeout', { roundIndex: currentRoundIndex, hadGuess: !!currentGuess });
-        submitOnlineGuess(currentGuess);
+        submitOnlineGuess(currentGuess, { isAutoSubmit: true });
       }
     };
 
@@ -370,6 +463,7 @@ export function App() {
   }, [
     isOfflineMode,
     gameState,
+    currentRound?.id,
     currentRound?.startedAt,
     currentRound?.durationSeconds,
     currentRound?.duration_seconds,
@@ -383,7 +477,7 @@ export function App() {
     if (currentRoundIndex + 1 < totalRounds) {
       setCurrentRoundIndex((prev) => prev + 1);
       setCurrentGuess(null);
-      setSubmittingError(null);
+      setSubmitIssue(null);
       setGameState('guessing');
     } else {
       if (!isOfflineMode && gameId) {
@@ -465,10 +559,14 @@ export function App() {
     }
     return (
       <LoginScreen
-        onSuccess={(user) => setAuthUser(user)}
+        onSuccess={(user) => {
+          setSessionExpiredMessage(null);
+          setAuthUser(user);
+        }}
         onGoToRegister={() => setAuthView('register')}
         onGoToRecover={() => setAuthView('recover')}
         onGoToTitle={() => setShowTitle(true)}
+        initialNotice={sessionExpiredMessage}
       />
     );
   }
@@ -660,20 +758,45 @@ export function App() {
           gameState === 'submitting' ||
           gameState === 'round_result') && (
           <div className="game-stage">
-            {submittingError && (
-              <div className="submission-error-toast">
+            {submitIssue && (
+              <div
+                className={
+                  submitIssue.kind === 'retryable'
+                    ? 'submission-error-toast has-actions'
+                    : 'submission-error-toast'
+                }
+              >
                 <span>
                   <FontAwesomeIcon icon={faTriangleExclamation} aria-hidden="true" />{' '}
-                  {submittingError}
+                  {submitIssue.message}
                 </span>
-                <button
-                  type="button"
-                  className="btn-toast-close"
-                  onClick={() => setSubmittingError(null)}
-                  aria-label="Fechar aviso"
-                >
-                  <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
-                </button>
+                {submitIssue.kind === 'retryable' ? (
+                  <div className="submission-error-actions">
+                    <button
+                      type="button"
+                      className="game-ghost"
+                      onClick={() => {
+                        const { guess } = submitIssue;
+                        setSubmitIssue(null);
+                        submitOnlineGuess(guess);
+                      }}
+                    >
+                      Tentar de novo
+                    </button>
+                    <button type="button" className="game-ghost" onClick={returnHome}>
+                      Voltar ao início
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-toast-close"
+                    onClick={() => setSubmitIssue(null)}
+                    aria-label="Fechar aviso"
+                  >
+                    <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+                  </button>
+                )}
               </div>
             )}
 
