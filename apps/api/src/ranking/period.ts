@@ -21,3 +21,14 @@ export function getWeekStartBRT(now: Date = new Date()): Date {
 
   return new Date(mondayShifted + BRT_OFFSET_MS);
 }
+
+// Chave do dia civil em BRT (ex.: "2026-10-02"), pra orçamentos/contadores
+// diários. Mesmo truque de fuso fixo acima: desloca antes de ler os campos em
+// UTC, o que equivale a ler os campos locais em BRT.
+export function getDayKeyBRT(now: Date = new Date()): string {
+  const shifted = new Date(now.getTime() - BRT_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(shifted.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}

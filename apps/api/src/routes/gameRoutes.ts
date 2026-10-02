@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { FastifyBaseLogger, FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { and, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import {
   haversine,
@@ -9,11 +9,12 @@ import {
   LatLng,
 } from '@paguessr/shared';
 import { db } from '../db/index.js';
-import { games, locations, rounds, Location, Round } from '../db/schema.js';
+import { games, locations, rounds, streetviewStaticUsage, Location, Round } from '../db/schema.js';
 import { requireAuth } from '../auth/session.js';
 import { resolveStreetviewMode } from '../streetview.js';
 import { closeDuelRoundIfReady } from '../championship/closeRound.js';
 import { detectGame, FlagReason, RoundSample } from '../antifraude/detect.js';
+import { getDayKeyBRT } from '../ranking/period.js';
 
 const MIN_LOCATIONS_PER_GAME = 5;
 const RECENT_GAMES_TO_AVOID = 2;
@@ -65,9 +66,15 @@ async function pickLocationsForUser(userId: string, count: number): Promise<Loca
   return shuffle(pool).slice(0, count);
 }
 
+// Teto diário global de buscas estáticas no Google (cada uma é cobrada acima da
+// cota grátis). Fica acima do limite por rodada: protege o orçamento do mês
+// mesmo que muita gente jogue ao mesmo tempo. Dia em BRT (ver period.ts).
+const STREETVIEW_STATIC_DAILY_BUDGET_DEFAULT = 320;
+
 // Reserva uma busca no Google pra rodada, de forma atômica: só conta se a rodada
-// já começou, ainda não tem palpite, não passou do tempo e não esgotou o limite.
-async function reserveImageFetch(round: Round): Promise<boolean> {
+// já começou, ainda não tem palpite, não passou do tempo, não esgotou o limite
+// por rodada e o orçamento diário global ainda não estourou.
+async function reserveImageFetch(round: Round, log: FastifyBaseLogger): Promise<boolean> {
   if (round.pontos !== null || round.started_at === null) return false;
   // Rodada de duelo que ainda não começou: sem imagem (cai no placeholder, como
   // rodada fechada). Senão dava pra pedir as imagens de todas as rodadas de uma vez.
@@ -87,7 +94,29 @@ async function reserveImageFetch(round: Round): Promise<boolean> {
       )
     )
     .returning({ id: rounds.id });
-  return Boolean(reserved);
+  if (!reserved) return false;
+
+  const day = getDayKeyBRT();
+  const [usage] = await db
+    .insert(streetviewStaticUsage)
+    .values({ day, count: 1 })
+    .onConflictDoUpdate({
+      target: streetviewStaticUsage.day,
+      set: { count: sql`${streetviewStaticUsage.count} + 1` },
+    })
+    .returning({ count: streetviewStaticUsage.count });
+
+  const budget = Number(
+    process.env.STREETVIEW_STATIC_DAILY_BUDGET || STREETVIEW_STATIC_DAILY_BUDGET_DEFAULT
+  );
+  if (usage.count > budget) {
+    log.warn(
+      `Orçamento diário de buscas de imagem do Street View esgotado: ${usage.count}/${budget}`
+    );
+    return false;
+  }
+
+  return true;
 }
 
 // Ativa o cronômetro de uma rodada (define started_at = agora) na primeira vez
@@ -289,7 +318,7 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_STREET_VIEW_API_KEY;
 
-      if (apiKey && (await reserveImageFetch(round))) {
+      if (apiKey && (await reserveImageFetch(round, request.log))) {
         try {
           const usePano =
             loc.pano_id && !loc.pano_id.startsWith('mock-') && !loc.pano_id.startsWith('seed-');

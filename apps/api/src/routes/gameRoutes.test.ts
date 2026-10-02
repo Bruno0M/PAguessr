@@ -5,7 +5,15 @@ import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
-import { championships, championshipMatches, games, locations, rounds } from '../db/schema.js';
+import {
+  championships,
+  championshipMatches,
+  games,
+  locations,
+  rounds,
+  streetviewStaticUsage,
+} from '../db/schema.js';
+import { getDayKeyBRT } from '../ranking/period.js';
 import { MAX_IMAGE_FETCHES_PER_ROUND } from './gameRoutes.js';
 
 async function locationIdsOf(gameId: string): Promise<number[]> {
@@ -221,6 +229,37 @@ describe('Game Routes Integration', () => {
       expect(extra.headers['content-type']).toContain('image/svg+xml');
       expect(extra.headers['cache-control']).toBe('no-store');
       expect(fetchSpy).toHaveBeenCalledTimes(MAX_IMAGE_FETCHES_PER_ROUND);
+    });
+
+    it('com o orçamento diário global esgotado, devolve o placeholder sem chamar o Google', async () => {
+      const budget = 3;
+      const origBudget = process.env.STREETVIEW_STATIC_DAILY_BUDGET;
+      process.env.STREETVIEW_STATIC_DAILY_BUDGET = String(budget);
+
+      try {
+        await db
+          .insert(streetviewStaticUsage)
+          .values({ day: getDayKeyBRT(), count: budget })
+          .onConflictDoUpdate({
+            target: streetviewStaticUsage.day,
+            set: { count: budget },
+          });
+
+        const game = await createAuthenticatedGame(app, authCookie);
+        const roundId = game.rounds[0].id;
+
+        const res = await getImage(roundId);
+        expect(res.headers['content-type']).toContain('image/svg+xml');
+        expect(res.headers['cache-control']).toBe('no-store');
+        expect(fetchSpy).not.toHaveBeenCalled();
+
+        // A tentativa por rodada foi reservada; só o Google não foi chamado.
+        const [row] = await db.select().from(rounds).where(eq(rounds.id, roundId));
+        expect(row.image_fetches).toBe(1);
+      } finally {
+        if (origBudget === undefined) delete process.env.STREETVIEW_STATIC_DAILY_BUDGET;
+        else process.env.STREETVIEW_STATIC_DAILY_BUDGET = origBudget;
+      }
     });
 
     it('não busca imagem de rodada ainda não iniciada', async () => {
