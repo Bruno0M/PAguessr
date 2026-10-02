@@ -56,6 +56,9 @@ Registrado em 2026-09-10.
   - alerta de orçamento: só avisa, não bloqueia.
 - **A imagem não pode ser guardada no servidor.** A política do Street View Static API proíbe pré-carregar, indexar, armazenar ou fazer cache do conteúdo; só o `pano_id` pode ser guardado indefinidamente. Por isso não existe cache de imagem por local.
 - No lugar do cache, o proxy limita as buscas (cada uma é cobrada): só busca no Google enquanto a rodada está aberta (iniciada, sem palpite, dentro dos 60 s + 10 s de folga) e no máximo 3 vezes por rodada (`rounds.image_fetches`, incrementado de forma atômica). Fora disso devolve o placeholder com `no-store`.
+- **Teto diário global de buscas estáticas:** acima do limite por rodada, a tabela `streetview_static_usage` (chave é o dia em BRT, ver `ranking/period.ts`) soma o total de buscas de todo mundo no dia. Acima de `STREETVIEW_STATIC_DAILY_BUDGET` (padrão 320, cerca de 9.900 por mês, abaixo das 10.000 grátis) o proxy para de chamar o Google e cai no placeholder pro resto do dia, com um aviso no log.
+- **Limite de partidas por jogador:** `POST /games` responde `429` acima de `GAMES_PER_HOUR_MAX` partidas (padrão 30) criadas pelo mesmo jogador na última hora, contando só fora de campeonato. Protege contra um script que cria partidas sem parar (cada uma pode gastar até 3 buscas).
+- **Limite de cadastro por IP:** `POST /auth/register` aceita no máximo `REGISTER_RATE_LIMIT_MAX` cadastros por hora do mesmo IP (padrão 5). Protege a mesma cota (conta nova vira partida fácil) e evita encher o ranking de contas descartáveis.
 - A resposta com a foto sai com `Cache-Control: private, max-age=300`: só o navegador do jogador guarda, pelo tempo da rodada.
 
 Fontes: <https://developers.google.com/maps/billing-and-pricing/pricing>, <https://developers.google.com/maps/documentation/streetview/policies>

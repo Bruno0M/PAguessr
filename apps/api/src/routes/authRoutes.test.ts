@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
@@ -255,5 +255,45 @@ describe('Auth Routes Integration', () => {
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error).toBe('Nick ou código de recuperação inválidos');
     });
+  });
+});
+
+describe('Limite de cadastro por IP', () => {
+  // App e IP simulado próprios, pra não herdar o contador de outros testes
+  // deste arquivo (que registram vários usuários do mesmo IP simulado).
+  const app = buildApp();
+  const origMax = process.env.REGISTER_RATE_LIMIT_MAX;
+
+  beforeAll(() => {
+    process.env.LOG_LEVEL = 'silent';
+    process.env.REGISTER_RATE_LIMIT_MAX = '5';
+  });
+
+  afterAll(async () => {
+    if (origMax === undefined) delete process.env.REGISTER_RATE_LIMIT_MAX;
+    else process.env.REGISTER_RATE_LIMIT_MAX = origMax;
+    await app.close();
+  });
+
+  it('6º cadastro do mesmo IP na mesma hora devolve 429', async () => {
+    const ip = '203.0.113.77';
+
+    for (let i = 0; i < 5; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/auth/register',
+        headers: { 'x-forwarded-for': ip },
+        payload: { nick: `limiteip${i}`, password: 'senha123', avatarId: 1 },
+      });
+      expect(res.statusCode).toBe(201);
+    }
+
+    const blocked = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      headers: { 'x-forwarded-for': ip },
+      payload: { nick: 'limiteip5', password: 'senha123', avatarId: 1 },
+    });
+    expect(blocked.statusCode).toBe(429);
   });
 });

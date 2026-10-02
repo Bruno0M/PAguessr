@@ -29,6 +29,14 @@ const AUTH_RATE_LIMIT = {
   timeWindow: '1 minute',
 };
 
+// Protege a cota do Google (cada cadastro pode virar partidas) e evita encher
+// o ranking de contas. `max` como função: lê o env a cada request, não só na
+// primeira vez que o módulo carrega (deixa os testes ajustarem o teto).
+const REGISTER_RATE_LIMIT = {
+  max: async () => Number(process.env.REGISTER_RATE_LIMIT_MAX || 5),
+  timeWindow: '1 hour',
+};
+
 const PUBLIC_USER_COLUMNS = {
   id: users.id,
   nick: users.nick,
@@ -82,55 +90,59 @@ const recoverPasswordBodySchema = {
 } as const;
 
 export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
-  app.post('/auth/register', { schema: { body: registerBodySchema } }, async (request, reply) => {
-    const { nick, password, avatarId } = request.body as {
-      nick: string;
-      password: string;
-      avatarId: number;
-    };
+  app.post(
+    '/auth/register',
+    { schema: { body: registerBodySchema }, config: { rateLimit: REGISTER_RATE_LIMIT } },
+    async (request, reply) => {
+      const { nick, password, avatarId } = request.body as {
+        nick: string;
+        password: string;
+        avatarId: number;
+      };
 
-    if (containsBlockedWord(nick)) {
-      return reply.status(400).send({ error: 'Esse nick não é permitido' });
-    }
+      if (containsBlockedWord(nick)) {
+        return reply.status(400).send({ error: 'Esse nick não é permitido' });
+      }
 
-    const nickNormalizado = normalizeNick(nick);
+      const nickNormalizado = normalizeNick(nick);
 
-    const [existing] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.nick_normalizado, nickNormalizado));
-    if (existing) {
-      return reply.status(409).send({ error: 'Esse nick já está em uso' });
-    }
-
-    const passwordHash = await hashSecret(password);
-    const recoveryCode = generateRecoveryCode();
-    const recoveryCodeHash = await hashSecret(normalizeRecoveryCode(recoveryCode));
-
-    let created;
-    try {
-      [created] = await db
-        .insert(users)
-        .values({
-          nick,
-          nick_normalizado: nickNormalizado,
-          password_hash: passwordHash,
-          recovery_code_hash: recoveryCodeHash,
-          avatar_id: avatarId,
-        })
-        .returning(PUBLIC_USER_COLUMNS);
-    } catch (err) {
-      if (isUniqueViolation(err)) {
+      const [existing] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.nick_normalizado, nickNormalizado));
+      if (existing) {
         return reply.status(409).send({ error: 'Esse nick já está em uso' });
       }
-      throw err;
+
+      const passwordHash = await hashSecret(password);
+      const recoveryCode = generateRecoveryCode();
+      const recoveryCodeHash = await hashSecret(normalizeRecoveryCode(recoveryCode));
+
+      let created;
+      try {
+        [created] = await db
+          .insert(users)
+          .values({
+            nick,
+            nick_normalizado: nickNormalizado,
+            password_hash: passwordHash,
+            recovery_code_hash: recoveryCodeHash,
+            avatar_id: avatarId,
+          })
+          .returning(PUBLIC_USER_COLUMNS);
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          return reply.status(409).send({ error: 'Esse nick já está em uso' });
+        }
+        throw err;
+      }
+
+      const { token, expiresAt } = await createSession(created.id);
+      setSessionCookie(reply, request, token, expiresAt);
+
+      return reply.status(201).send({ user: created, recoveryCode });
     }
-
-    const { token, expiresAt } = await createSession(created.id);
-    setSessionCookie(reply, request, token, expiresAt);
-
-    return reply.status(201).send({ user: created, recoveryCode });
-  });
+  );
 
   app.post(
     '/auth/login',

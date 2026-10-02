@@ -5,7 +5,15 @@ import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { extractSessionCookie, registerUser } from '../test/authHelpers.js';
 import { db } from '../db/index.js';
-import { locations, rounds } from '../db/schema.js';
+import {
+  championships,
+  championshipMatches,
+  games,
+  locations,
+  rounds,
+  streetviewStaticUsage,
+} from '../db/schema.js';
+import { getDayKeyBRT } from '../ranking/period.js';
 import { MAX_IMAGE_FETCHES_PER_ROUND } from './gameRoutes.js';
 
 async function locationIdsOf(gameId: string): Promise<number[]> {
@@ -87,6 +95,69 @@ describe('Game Routes Integration', () => {
     expect(res.statusCode).toBe(201);
   });
 
+  describe('limite de partidas por hora', () => {
+    const origMax = process.env.GAMES_PER_HOUR_MAX;
+
+    afterEach(() => {
+      if (origMax === undefined) delete process.env.GAMES_PER_HOUR_MAX;
+      else process.env.GAMES_PER_HOUR_MAX = origMax;
+    });
+
+    it('recusa a próxima partida depois do limite, com 429', async () => {
+      const cookie = await loginNewUser(app, 'jogadorlimitado');
+      process.env.GAMES_PER_HOUR_MAX = '2';
+
+      const first = await app.inject({ method: 'POST', url: '/api/games', headers: { cookie } });
+      expect(first.statusCode).toBe(201);
+      const second = await app.inject({ method: 'POST', url: '/api/games', headers: { cookie } });
+      expect(second.statusCode).toBe(201);
+
+      const third = await app.inject({ method: 'POST', url: '/api/games', headers: { cookie } });
+      expect(third.statusCode).toBe(429);
+      expect(JSON.parse(third.body)).toEqual({
+        error: 'Muitas partidas em pouco tempo. Tente de novo em alguns minutos.',
+      });
+    });
+
+    it('partida de campeonato não conta pro limite', async () => {
+      const cookie = await loginNewUser(app, 'jogcampeonato');
+      const meRes = await app.inject({
+        method: 'GET',
+        url: '/api/auth/me',
+        headers: { cookie },
+      });
+      const userId = JSON.parse(meRes.body).user.id as string;
+
+      const [champ] = await db
+        .insert(championships)
+        .values({
+          title: 'Torneio do teste de limite',
+          max_participants: 2,
+          rounds_per_match: 5,
+          round_duration_seconds: 60,
+          phase_interval_seconds: 3600,
+          status: 'em_andamento',
+          created_by: userId,
+        })
+        .returning();
+      const [match] = await db
+        .insert(championshipMatches)
+        .values({ championship_id: champ.id, phase: 1, slot: 0, player_a_id: userId })
+        .returning();
+
+      process.env.GAMES_PER_HOUR_MAX = '1';
+
+      // 3 partidas de campeonato direto no banco (fora do fluxo público) não
+      // devem contar pro limite por hora do POST /games.
+      for (let i = 0; i < 3; i++) {
+        await db.insert(games).values({ user_id: userId, championship_match_id: match.id });
+      }
+
+      const res = await app.inject({ method: 'POST', url: '/api/games', headers: { cookie } });
+      expect(res.statusCode).toBe(201);
+    });
+  });
+
   it('GET /api/rounds/:id/image retorna imagem placeholder quando sem chave do Google', async () => {
     const origKey = process.env.GOOGLE_STREET_VIEW_API_KEY;
     const origMapsKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -158,6 +229,37 @@ describe('Game Routes Integration', () => {
       expect(extra.headers['content-type']).toContain('image/svg+xml');
       expect(extra.headers['cache-control']).toBe('no-store');
       expect(fetchSpy).toHaveBeenCalledTimes(MAX_IMAGE_FETCHES_PER_ROUND);
+    });
+
+    it('com o orçamento diário global esgotado, devolve o placeholder sem chamar o Google', async () => {
+      const budget = 3;
+      const origBudget = process.env.STREETVIEW_STATIC_DAILY_BUDGET;
+      process.env.STREETVIEW_STATIC_DAILY_BUDGET = String(budget);
+
+      try {
+        await db
+          .insert(streetviewStaticUsage)
+          .values({ day: getDayKeyBRT(), count: budget })
+          .onConflictDoUpdate({
+            target: streetviewStaticUsage.day,
+            set: { count: budget },
+          });
+
+        const game = await createAuthenticatedGame(app, authCookie);
+        const roundId = game.rounds[0].id;
+
+        const res = await getImage(roundId);
+        expect(res.headers['content-type']).toContain('image/svg+xml');
+        expect(res.headers['cache-control']).toBe('no-store');
+        expect(fetchSpy).not.toHaveBeenCalled();
+
+        // A tentativa por rodada foi reservada; só o Google não foi chamado.
+        const [row] = await db.select().from(rounds).where(eq(rounds.id, roundId));
+        expect(row.image_fetches).toBe(1);
+      } finally {
+        if (origBudget === undefined) delete process.env.STREETVIEW_STATIC_DAILY_BUDGET;
+        else process.env.STREETVIEW_STATIC_DAILY_BUDGET = origBudget;
+      }
     });
 
     it('não busca imagem de rodada ainda não iniciada', async () => {

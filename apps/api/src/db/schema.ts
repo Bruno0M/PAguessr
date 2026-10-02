@@ -70,6 +70,11 @@ export const streetviewPanoramaUsage = pgTable('streetview_panorama_usage', {
   count: integer('count').notNull().default(0),
 });
 
+export const streetviewStaticUsage = pgTable('streetview_static_usage', {
+  day: text('day').primaryKey(),
+  count: integer('count').notNull().default(0),
+});
+
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   nick: varchar('nick', { length: 16 }).notNull(),
