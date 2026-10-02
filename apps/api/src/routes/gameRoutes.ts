@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import {
   haversine,
   score,
@@ -17,6 +17,9 @@ import { detectGame, FlagReason, RoundSample } from '../antifraude/detect.js';
 
 const MIN_LOCATIONS_PER_GAME = 5;
 const RECENT_GAMES_TO_AVOID = 2;
+// Protege a cota do Google contra um script que cria partidas sem parar: conta
+// só partidas fora de campeonato (campeonato já tem o próprio ritmo).
+const GAMES_PER_HOUR_MAX_DEFAULT = 30;
 // Cada busca no Street View Static API é cobrada. A imagem não pode ser guardada
 // no servidor (política do Google: só o pano_id pode), então o que protege a cota
 // é limitar quando e quantas vezes o proxy busca por rodada.
@@ -119,12 +122,26 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       });
     }
 
-    const selected = await pickLocationsForUser(currentUserId(request), MIN_LOCATIONS_PER_GAME);
+    const userId = currentUserId(request);
+    const gamesPerHourMax = Number(process.env.GAMES_PER_HOUR_MAX || GAMES_PER_HOUR_MAX_DEFAULT);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentGamesCount = await db.$count(
+      games,
+      and(
+        eq(games.user_id, userId),
+        gte(games.created_at, oneHourAgo),
+        isNull(games.championship_match_id)
+      )
+    );
+    if (recentGamesCount >= gamesPerHourMax) {
+      return reply
+        .status(429)
+        .send({ error: 'Muitas partidas em pouco tempo. Tente de novo em alguns minutos.' });
+    }
 
-    const [newGame] = await db
-      .insert(games)
-      .values({ user_id: currentUserId(request) })
-      .returning();
+    const selected = await pickLocationsForUser(userId, MIN_LOCATIONS_PER_GAME);
+
+    const [newGame] = await db.insert(games).values({ user_id: userId }).returning();
 
     const roundsToInsert = [];
     for (let idx = 0; idx < selected.length; idx++) {
