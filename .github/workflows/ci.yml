@@ -139,7 +139,7 @@ jobs:
       - name: Build de todos os pacotes
         run: pnpm build
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build da imagem da API
         uses: docker/build-push-action@v6
