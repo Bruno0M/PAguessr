@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @paguessr/shared build
 RUN pnpm --filter @paguessr/api build
 
-FROM node:22-alpine AS runner
+FROM node:25-alpine AS runner
 
 WORKDIR /app
 
