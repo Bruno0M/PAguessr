@@ -90,10 +90,6 @@ export const CHAMPIONSHIP_ROUNDS_PER_MATCH_MAX = 10;
 export const CHAMPIONSHIP_PHASE_INTERVAL_MIN_SECONDS = 10;
 export const CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS = 604800;
 
-// Contagem regressiva entre o "Iniciar" do admin e a abertura da fase 1: dá tempo de
-// todo mundo estar na sala de espera antes de o relógio das rodadas começar.
-export const LOBBY_COUNTDOWN_SECONDS = 60;
-
 // Pausa entre uma rodada do duelo e a seguinte: todo mundo vê o local certo e os dois
 // palpites antes de a próxima começar. Vale pro fechamento antecipado e pro fim do tempo.
 export const DUEL_REVEAL_SECONDS = 5;

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
-import { LOBBY_COUNTDOWN_SECONDS } from '@paguessr/shared';
+import { parseLobbyCountdownSeconds } from '../championship/lobbyCountdown.js';
 import { buildApp } from '../app.js';
 import { db } from '../db/index.js';
 import {
@@ -585,7 +585,9 @@ describe('Championship Admin Routes Integration', () => {
         );
       expect(phase1).toHaveLength(2);
       for (const match of phase1) {
-        expect(match.opens_at!.getTime()).toBe(startedAt + LOBBY_COUNTDOWN_SECONDS * 1000);
+        expect(match.opens_at!.getTime()).toBe(
+          startedAt + parseLobbyCountdownSeconds(process.env.LOBBY_COUNTDOWN_SECONDS) * 1000
+        );
       }
 
       const [finalMatch] = await db

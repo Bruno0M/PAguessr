@@ -57,8 +57,8 @@ O que sobra para "ver o adversário ao vivo" (placar parcial, se ele já respond
 enfeite, e vem de **polling** de ~3 s num endpoint leve. Se o polling falhar, o duelo
 continua correto: o servidor é a fonte da verdade do relógio e da pontuação.
 
-A fase 1 não abre o relógio na hora: ela abre 60 s depois da largada
-(`LOBBY_COUNTDOWN_SECONDS`). A sala de espera (§7.3) mostra essa contagem, inclusive no
+A fase 1 abre `LOBBY_COUNTDOWN_SECONDS` segundos depois da largada (env da API,
+default 0 = abre na hora). A sala de espera (§7.3) mostra essa contagem, inclusive no
 título da aba, e leva a pessoa para o duelo quando ela zera. Nas fases seguintes a sala
 mostra a contagem até o `opens_at` (intervalo entre fases).
 
@@ -187,7 +187,7 @@ entrando ao mesmo tempo na última vaga.
 2. Grava `seed` = 0..N-1 na ordem embaralhada.
 3. Cria **todos** os confrontos de **todas** as fases de uma vez, inclusive os vazios.
 4. `seeded_at = now()` e **larga na mesma transação**: `status = 'em_andamento'`,
-   `started_at = now()` e `opens_at` da fase 1 = `now() + LOBBY_COUNTDOWN_SECONDS` (§1.1).
+   `started_at = now()` e `opens_at` da fase 1 = `now() + LOBBY_COUNTDOWN_SECONDS` (env, §1.1).
 
 O passo 4 é o mesmo código do `POST /api/admin/championships/:id/start`
 (`championship/start.ts`), chamado dentro da transação do sorteio: quem lotou a vaga não
