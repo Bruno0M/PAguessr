@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRight,
@@ -25,6 +26,8 @@ export interface DuelResultProps {
   onBackToBracket: () => void;
   onBackToLobby?: () => void;
 }
+
+const AUTO_LOBBY_SECONDS = 5;
 
 function formatDistance(meters: number): string {
   if (meters < 1000) {
@@ -79,6 +82,20 @@ export function DuelResult({
     phase !== null &&
     totalPhases !== null &&
     phase < totalPhases;
+
+  // Em ref: o pai passa uma arrow nova a cada render, o que reiniciaria o timer.
+  const onBackToLobbyRef = useRef(onBackToLobby);
+  onBackToLobbyRef.current = onBackToLobby;
+  const [lobbyInSec, setLobbyInSec] = useState(AUTO_LOBBY_SECONDS);
+  useEffect(() => {
+    if (!returnsToLobby) return;
+    if (lobbyInSec <= 0) {
+      onBackToLobbyRef.current?.();
+      return;
+    }
+    const timer = setTimeout(() => setLobbyInSec((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [returnsToLobby, lobbyInSec]);
 
   const totalMe = finalScore?.me ?? myScore;
   const totalOpponent = finalScore?.opponent ?? opponentScore;
@@ -163,7 +180,8 @@ export function DuelResult({
           {returnsToLobby ? (
             <>
               <button type="button" className="game-cta" onClick={onBackToLobby}>
-                Voltar para a sala <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+                Ir para a sala ({lobbyInSec}s){' '}
+                <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
               </button>
               <button type="button" className="game-ghost" onClick={onBackToBracket}>
                 Ver chave

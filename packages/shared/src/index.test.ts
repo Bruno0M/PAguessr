@@ -6,7 +6,6 @@ import {
   CHAMPIONSHIP_SIZES,
   DUEL_REVEAL_SECONDS,
   LatLng,
-  LOBBY_COUNTDOWN_SECONDS,
   NICK_MAX_LENGTH,
   NICK_MIN_LENGTH,
   PAULO_AFONSO_CENTER,
@@ -139,8 +138,7 @@ describe('@paguessr/shared', () => {
       expect(CHAMPIONSHIP_PHASE_INTERVAL_MAX_SECONDS).toBe(604800);
     });
 
-    it('contagem da sala e pausa entre rodadas do duelo', () => {
-      expect(LOBBY_COUNTDOWN_SECONDS).toBe(60);
+    it('pausa entre rodadas do duelo', () => {
       expect(DUEL_REVEAL_SECONDS).toBe(5);
     });
   });

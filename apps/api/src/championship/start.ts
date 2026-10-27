@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
-import { LOBBY_COUNTDOWN_SECONDS } from '@paguessr/shared';
 import type { Tx } from '../db/index.js';
 import { championships, championshipMatches, type Championship } from '../db/schema.js';
+import { parseLobbyCountdownSeconds } from './lobbyCountdown.js';
 
 /**
  * Largada do campeonato: grava `started_at` e abre a fase 1 depois da contagem
@@ -22,7 +22,8 @@ export async function startChampionship(
 ): Promise<Championship | undefined> {
   // `started_at` é o instante da largada; a fase 1 só abre depois da contagem,
   // tempo de todo mundo chegar na sala antes do relógio das rodadas começar.
-  const phase1OpensAt = new Date(now.getTime() + LOBBY_COUNTDOWN_SECONDS * 1000);
+  const countdownSeconds = parseLobbyCountdownSeconds(process.env.LOBBY_COUNTDOWN_SECONDS);
+  const phase1OpensAt = new Date(now.getTime() + countdownSeconds * 1000);
 
   const [updated] = await tx
     .update(championships)

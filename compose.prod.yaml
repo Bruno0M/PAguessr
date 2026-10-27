@@ -20,6 +20,7 @@ services:
       NODE_ENV: production
       ADMIN_NICKS: ${ADMIN_NICKS:-}
       CHAMPIONSHIPS_MODE: ${CHAMPIONSHIPS_MODE:-off}
+      LOBBY_COUNTDOWN_SECONDS: ${LOBBY_COUNTDOWN_SECONDS:-0}
 
   web:
     expose:

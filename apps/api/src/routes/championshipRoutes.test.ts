@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { LOBBY_COUNTDOWN_SECONDS, PAULO_AFONSO_CENTER } from '@paguessr/shared';
+import { PAULO_AFONSO_CENTER } from '@paguessr/shared';
+import { parseLobbyCountdownSeconds } from '../championship/lobbyCountdown.js';
 import { buildApp } from '../app.js';
 import { resetTestDatabase } from '../test/fixtures.js';
 import { createDuelHelpers, loginNewUser } from '../test/duelHelpers.js';
@@ -270,7 +271,9 @@ describe('Championship Routes Integration (Fatia 4: Inscrição e Sorteio)', () 
     const phase1 = matches.filter((m) => m.phase === 1);
     expect(phase1).toHaveLength(2);
     for (const match of phase1) {
-      expect(match.opens_at!.getTime()).toBe(startedAtMs + LOBBY_COUNTDOWN_SECONDS * 1000);
+      expect(match.opens_at!.getTime()).toBe(
+        startedAtMs + parseLobbyCountdownSeconds(process.env.LOBBY_COUNTDOWN_SECONDS) * 1000
+      );
     }
     for (const match of matches.filter((m) => m.phase > 1)) {
       expect(match.opens_at).toBeNull();
