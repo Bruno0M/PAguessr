@@ -310,6 +310,27 @@ describe('Game Routes Integration', () => {
       expect(row.image_fetches).toBe(1);
     });
 
+    it('pano_id aposentado (404) tenta pela coordenada na mesma busca', async () => {
+      fetchSpy.mockImplementation(async (input) =>
+        String(input).includes('pano=')
+          ? new Response('', { status: 404 })
+          : new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
+              status: 200,
+              headers: { 'content-type': 'image/jpeg' },
+            })
+      );
+      const game = await createAuthenticatedGame(app, authCookie);
+      const roundId = game.rounds[0].id;
+
+      const res = await getImage(roundId);
+      expect(res.headers['content-type']).toContain('image/jpeg');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(String(fetchSpy.mock.calls[1][0])).toContain('location=');
+
+      const [row] = await db.select().from(rounds).where(eq(rounds.id, roundId));
+      expect(row.image_fetches).toBe(1);
+    });
+
     it('respeita a janela do proxy (duration + 10s) para rodada de 10s', async () => {
       const game = await createAuthenticatedGame(app, authCookie);
       const roundId = game.rounds[0].id;

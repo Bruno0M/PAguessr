@@ -318,43 +318,49 @@ export const gameRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_STREET_VIEW_API_KEY;
 
+      let fallbackReason = apiKey ? 'fora da janela ou do limite de buscas' : 'sem chave do Google';
       if (apiKey && (await reserveImageFetch(round, request.log))) {
+        const usePano =
+          loc.pano_id && !loc.pano_id.startsWith('mock-') && !loc.pano_id.startsWith('seed-');
+        const byLocation = { location: `${loc.lat},${loc.lng}`, source: 'outdoor' };
+        // O Google aposenta pano_ids quando refotografa a rua (404); a coordenada
+        // ainda acha o panorama novo.
+        const attempts = usePano ? [{ pano: loc.pano_id }, byLocation] : [byLocation];
+
         try {
-          const usePano =
-            loc.pano_id && !loc.pano_id.startsWith('mock-') && !loc.pano_id.startsWith('seed-');
-
-          const params = new URLSearchParams({
-            size: '800x600',
-            fov: '90',
-            heading: '0',
-            pitch: '0',
-            return_error_code: 'true',
-            key: apiKey,
-          });
-
-          if (usePano) {
-            params.set('pano', loc.pano_id);
-          } else {
-            params.set('location', `${loc.lat},${loc.lng}`);
-            params.set('source', 'outdoor');
+          for (const target of attempts) {
+            const params = new URLSearchParams({
+              size: '800x600',
+              fov: '90',
+              heading: '0',
+              pitch: '0',
+              return_error_code: 'true',
+              key: apiKey,
+              ...target,
+            });
+            const googleUrl = `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
+            const res = await fetch(googleUrl, { signal: AbortSignal.timeout(6000) });
+            if (res.ok) {
+              const contentType = res.headers.get('content-type') || 'image/jpeg';
+              const buffer = Buffer.from(await res.arrayBuffer());
+              // `private` e curto: só o navegador do próprio jogador guarda, pelo
+              // tempo da rodada — nada de cache compartilhado com conteúdo do Google.
+              return reply
+                .type(contentType)
+                .header('Cache-Control', 'private, max-age=300')
+                .send(buffer);
+            }
+            fallbackReason = `Google respondeu ${res.status}`;
+            if (res.status !== 404) break;
           }
-
-          const googleUrl = `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
-          const res = await fetch(googleUrl, { signal: AbortSignal.timeout(6000) });
-          if (res.ok) {
-            const contentType = res.headers.get('content-type') || 'image/jpeg';
-            const buffer = Buffer.from(await res.arrayBuffer());
-            // `private` e curto: só o navegador do próprio jogador guarda, pelo
-            // tempo da rodada — nada de cache compartilhado com conteúdo do Google.
-            return reply
-              .type(contentType)
-              .header('Cache-Control', 'private, max-age=300')
-              .send(buffer);
-          }
-        } catch {
-          // prossegue para o fallback se a API do Google falhar
+        } catch (err) {
+          fallbackReason = `falha ao chamar o Google: ${err instanceof Error ? err.message : err}`;
         }
       }
+      request.log.warn(
+        { roundId: round.id, locationId: loc.id, panoId: loc.pano_id, reason: fallbackReason },
+        'imagem da rodada caiu no placeholder'
+      );
 
       const svgPlaceholder = `
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
